@@ -1,0 +1,8 @@
+Django==4.2.*
+djangorestframework
+django-redis
+django-cors-headers
+python-dotenv
+mysqlclient
+drf-spectacular
+pytest pytest-django
