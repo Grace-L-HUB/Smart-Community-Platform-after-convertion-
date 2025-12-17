@@ -1,5 +1,6 @@
 "use strict";
 var defaultAvatarUrl = 'https://mmbiz.qpic.cn/mmbiz/icTdbqWNOwNRna42FI242Lcia07jQodd2FJGIYQfG0LAJGFxM4FbnQP6yfMxBgJ0F3YRqJCJ1aPAK2dQagdusBZg/0';
+var API_BASE_URL = 'http://127.0.0.1:8000/api/auth';
 Page({
     data: {
         phone: '',
@@ -11,7 +12,8 @@ Page({
             nickName: '',
         },
         // Internal state
-        tempOpenId: '', // Stored during profile completion step
+        isUserExists: true,
+        loginType: 'phone', // 'phone' or 'wechat'
     },
     onPhoneInput: function (e) {
         this.setData({ phone: e.detail.value });
@@ -20,67 +22,142 @@ Page({
         this.setData({ code: e.detail.value });
     },
     getVerificationCode: function () {
+        var _this = this;
         if (!this.data.phone || this.data.phone.length !== 11) {
             wx.showToast({ title: '请输入正确的手机号', icon: 'none' });
             return;
         }
-        wx.showToast({ title: '验证码已发送(模拟)', icon: 'none' });
+        wx.showLoading({ title: '发送中...' });
+        wx.request({
+            url: API_BASE_URL + "/send-sms-code",
+            method: 'POST',
+            data: { phone: this.data.phone },
+            success: function (res) {
+                wx.hideLoading();
+                if (res.statusCode === 200 && res.data.code === 200) {
+                    wx.showToast({ title: '验证码已发送', icon: 'success' });
+                    // Check if user exists
+                    var userExists = res.data.data.user_exists;
+                    _this.setData({ isUserExists: userExists });
+                    if (res.data.data.code) {
+                        console.log('DEV ONLY: SMS Code is', res.data.data.code);
+                        wx.showModal({ title: '测试验证码', content: res.data.data.code, showCancel: false });
+                    }
+                }
+                else {
+                    wx.showToast({ title: res.data.message || '发送失败', icon: 'none' });
+                }
+            },
+            fail: function (err) {
+                wx.hideLoading();
+                wx.showToast({ title: '网络请求失败', icon: 'none' });
+            }
+        });
     },
     handlePhoneLogin: function () {
-        var _this = this;
-        var _a = this.data, phone = _a.phone, code = _a.code;
+        var _a = this.data, phone = _a.phone, code = _a.code, isUserExists = _a.isUserExists;
+        this.setData({ loginType: 'phone' });
         if (!phone || !code) {
             wx.showToast({ title: '请填写手机号和验证码', icon: 'none' });
             return;
         }
-        wx.showLoading({ title: '登录中...' });
-        // Mock API
-        setTimeout(function () {
-            wx.hideLoading();
-            _this.loginSuccess({
-                id: 123,
-                role: 1,
-                token: 'mock_token_phone'
-            });
-        }, 1000);
+        wx.showLoading({ title: '处理中...' });
+        if (isUserExists) {
+            this.performPhoneLogin();
+        }
+        else {
+            this.verifyCodeForRegister();
+        }
+    },
+    performPhoneLogin: function () {
+        var _this = this;
+        var _a = this.data, phone = _a.phone, code = _a.code;
+        wx.request({
+            url: API_BASE_URL + "/sms-login",
+            method: 'POST',
+            data: { phone: phone, code: code },
+            success: function (res) {
+                wx.hideLoading();
+                if (res.statusCode === 200 && res.data.code === 200) {
+                    _this.loginSuccess(res.data.data);
+                }
+                else {
+                    wx.showToast({ title: res.data.message || '登录失败', icon: 'none' });
+                }
+            },
+            fail: function () {
+                wx.hideLoading();
+                wx.showToast({ title: '登录请求失败', icon: 'none' });
+            }
+        });
+    },
+    verifyCodeForRegister: function () {
+        var _this = this;
+        var _a = this.data, phone = _a.phone, code = _a.code;
+        wx.request({
+            url: API_BASE_URL + "/verify-code",
+            method: 'POST',
+            data: { phone: phone, code: code },
+            success: function (res) {
+                wx.hideLoading();
+                if (res.statusCode === 200 && res.data.code === 200) {
+                    _this.setData({ showProfileInput: true });
+                }
+                else {
+                    wx.showToast({ title: res.data.message || '验证码错误', icon: 'none' });
+                }
+            },
+            fail: function () {
+                wx.hideLoading();
+                wx.showToast({ title: '验证请求失败', icon: 'none' });
+            }
+        });
     },
     handleWechatLogin: function () {
         var _this = this;
-        wx.showLoading({ title: '授权中...' });
+        wx.showLoading({ title: '微信授权中...' });
         wx.login({
             success: function (res) {
                 if (res.code) {
-                    // Mock Backend Check
-                    _this.mockBackendWechatLogin(res.code).then(function (result) {
-                        wx.hideLoading();
-                        if (result.needProfile) {
-                            _this.setData({
-                                showProfileInput: true,
-                                tempOpenId: result.openid
-                            });
-                        }
-                        else {
-                            _this.loginSuccess(result.user);
+                    // Call backend wechat-login
+                    wx.request({
+                        url: API_BASE_URL + "/wechat-login",
+                        method: 'POST',
+                        data: { code: res.code },
+                        success: function (apiRes) {
+                            wx.hideLoading();
+                            if (apiRes.statusCode === 200 && apiRes.data.code === 200) {
+                                var data = apiRes.data.data;
+                                if (data.need_profile) {
+                                    // New user
+                                    _this.setData({
+                                        showProfileInput: true,
+                                        loginType: 'wechat'
+                                    });
+                                    wx.showToast({ title: '请完善信息', icon: 'none' });
+                                }
+                                else {
+                                    // Old user
+                                    _this.loginSuccess(data);
+                                }
+                            }
+                            else {
+                                wx.showToast({ title: apiRes.data.message || '登录失败', icon: 'none' });
+                            }
+                        },
+                        fail: function () {
+                            wx.hideLoading();
+                            wx.showToast({ title: '请求失败', icon: 'none' });
                         }
                     });
+                }
+                else {
+                    wx.hideLoading();
+                    wx.showToast({ title: '获取code失败', icon: 'none' });
                 }
             }
         });
     },
-    mockBackendWechatLogin: function (code) {
-        return new Promise(function (resolve) {
-            setTimeout(function () {
-                // Simulate a new user scenario to show layout
-                resolve({
-                    needProfile: true, // Force true to satisfy user requirement of showing the feature
-                    openid: 'mock_openid_' + code
-                });
-                // Use this for old user simulation:
-                // resolve({ needProfile: false, user: { ... } })
-            }, 800);
-        });
-    },
-    // Profile handling (from index page)
     onChooseAvatar: function (e) {
         var avatarUrl = e.detail.avatarUrl;
         this.setData({
@@ -98,22 +175,70 @@ Page({
     },
     handleSubmitProfile: function () {
         var _this = this;
-        var _a = this.data.userInfo, avatarUrl = _a.avatarUrl, nickName = _a.nickName;
+        var _a = this.data, phone = _a.phone, code = _a.code, loginType = _a.loginType;
+        var _b = this.data.userInfo, avatarUrl = _b.avatarUrl, nickName = _b.nickName;
         if (!nickName || avatarUrl === defaultAvatarUrl) {
             wx.showToast({ title: '请完善头像和昵称', icon: 'none' });
             return;
         }
-        wx.showLoading({ title: '注册中...' });
-        setTimeout(function () {
-            wx.hideLoading();
-            _this.loginSuccess({
-                id: 456,
-                role: 0,
-                token: 'mock_token_wechat_new',
-                avatar: avatarUrl,
-                nickname: nickName
+        if (loginType === 'wechat') {
+            // WeChat Register
+            wx.showLoading({ title: '注册中...' });
+            wx.login({
+                success: function (res) {
+                    if (res.code) {
+                        wx.request({
+                            url: API_BASE_URL + "/wechat-register",
+                            method: 'POST',
+                            data: {
+                                code: res.code,
+                                nickname: nickName,
+                                avatar: avatarUrl
+                            },
+                            success: function (apiRes) {
+                                wx.hideLoading();
+                                if (apiRes.statusCode === 200 && apiRes.data.code === 200) {
+                                    _this.loginSuccess(apiRes.data.data);
+                                }
+                                else {
+                                    wx.showToast({ title: apiRes.data.message || '注册失败', icon: 'none' });
+                                }
+                            },
+                            fail: function () {
+                                wx.hideLoading();
+                                wx.showToast({ title: '请求失败', icon: 'none' });
+                            }
+                        });
+                    }
+                }
             });
-        }, 1000);
+            return;
+        }
+        // SMS Register
+        wx.showLoading({ title: '注册中...' });
+        wx.request({
+            url: API_BASE_URL + "/sms-register",
+            method: 'POST',
+            data: {
+                phone: phone,
+                code: code,
+                nickname: nickName,
+                avatar: avatarUrl
+            },
+            success: function (res) {
+                wx.hideLoading();
+                if (res.statusCode === 200 && res.data.code === 200) {
+                    _this.loginSuccess(res.data.data);
+                }
+                else {
+                    wx.showToast({ title: res.data.message || '注册失败', icon: 'none' });
+                }
+            },
+            fail: function (err) {
+                wx.hideLoading();
+                wx.showToast({ title: '注册请求失败', icon: 'none' });
+            }
+        });
     },
     loginSuccess: function (user) {
         console.log('Login Success:', user);
