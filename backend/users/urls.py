@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import (
     LoginView, SendSMSCodeView, VerifyCodeView, SMSLoginView, SMSRegisterView, 
-    WeChatLoginView, WeChatRegisterView, UserProfileView, UserStatsView
+    WeChatLoginView, WeChatRegisterView, UserProfileView, UserStatsView, AvatarUploadView
 )
 
 urlpatterns = [
@@ -17,4 +17,7 @@ urlpatterns = [
     # 用户信息管理
     path('profile', UserProfileView.as_view(), name='user_profile'),
     path('stats', UserStatsView.as_view(), name='user_stats'),
+    
+    # 文件上传
+    path('upload/avatar', AvatarUploadView.as_view(), name='avatar_upload'),
 ]

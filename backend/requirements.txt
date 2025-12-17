@@ -7,3 +7,4 @@ mysqlclient
 drf-spectacular
 pytest pytest-django
 requests
+pillow

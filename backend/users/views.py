@@ -5,7 +5,8 @@ from rest_framework import status
 from django.contrib.auth import get_user_model
 from .serializers import (
     LoginSerializer, SendSMSCodeSerializer, VerifyCodeSerializer, 
-    SMSLoginSerializer, SMSRegisterSerializer, UserProfileSerializer, UserInfoSerializer
+    SMSLoginSerializer, SMSRegisterSerializer, UserProfileSerializer, 
+    UserInfoSerializer, AvatarUploadSerializer
 )
 from .sms_service import SMSService
 import logging
@@ -166,7 +167,7 @@ class SMSRegisterView(APIView):
             phone = serializer.validated_data['phone']
             code = serializer.validated_data['code']
             nickname = serializer.validated_data['nickname']
-            avatar = serializer.validated_data.get('avatar', '')
+            avatar_url = serializer.validated_data.get('avatar_url', '')
             
             # 验证验证码
             success, message = SMSService.verify_code(phone, code)
@@ -189,15 +190,27 @@ class SMSRegisterView(APIView):
                 username=phone,  # 使用手机号作为用户名
                 phone=phone,
                 nickname=nickname,
-                avatar=avatar,
                 register_type=1,  # 手机注册
                 is_active=True
             )
+            
+            # 如果有头像URL，保存到avatar字段
+            if avatar_url:
+                # 从URL中提取文件路径并设置到ImageField
+                from urllib.parse import urlparse
+                parsed_url = urlparse(avatar_url)
+                # 提取media路径部分
+                avatar_path = parsed_url.path.replace('/media/', '')
+                user.avatar = avatar_path
+                user.save()
             
             logger.info(f"新用户注册成功: {phone}, 昵称: {nickname}")
             
             # 生成Token (后续配置JWT)
             # token = RefreshToken.for_user(user)
+            
+            # 获取头像URL字符串
+            avatar_url = user.avatar.url if user.avatar else ''
             
             return Response({
                 "code": 200,
@@ -207,7 +220,7 @@ class SMSRegisterView(APIView):
                     "user_id": user.id,
                     "phone": user.phone,
                     "nickname": user.nickname,
-                    "avatar": user.avatar,
+                    "avatar": avatar_url,
                     "role": user.role,
                     "register_type": user.register_type
                 }
@@ -242,6 +255,9 @@ class WeChatLoginView(APIView):
                 user = User.objects.get(openid=openid)
                 # 老用户，直接返回登录态
                 # token = RefreshToken.for_user(user)
+                # 获取头像URL字符串
+                avatar_url = user.avatar.url if user.avatar else ''
+                
                 return Response({
                     "code": 200,
                     "message": "登录成功",
@@ -249,7 +265,7 @@ class WeChatLoginView(APIView):
                         "token": f"wechat_token_{user.id}_xyz789",
                         "user_id": user.id,
                         "role": user.role,
-                        "avatar": user.avatar,
+                        "avatar": avatar_url,
                         "nickname": user.nickname,
                         "display_name": user.display_name,
                         "register_type": user.register_type
@@ -277,7 +293,7 @@ class WeChatRegisterView(APIView):
         if serializer.is_valid():
             code = serializer.validated_data['code']
             nickname = serializer.validated_data['nickname']
-            avatar = serializer.validated_data.get('avatar', '')
+            avatar_url = serializer.validated_data.get('avatar_url', '')
             
             # 1. 再次换取 openid (为了安全应由后端缓存session_key，但简化流程再次调用)
             success, message, data = WeChatService.get_session_info(code)
@@ -296,12 +312,24 @@ class WeChatRegisterView(APIView):
                 username=f"wx_{openid[:8]}", # 随机用户名
                 openid=openid,
                 nickname=nickname,
-                avatar=avatar,
                 register_type=2,  # 微信注册
                 is_active=True
             )
             
+            # 如果有头像URL，保存到avatar字段
+            if avatar_url:
+                # 从URL中提取文件路径并设置到ImageField
+                from urllib.parse import urlparse
+                parsed_url = urlparse(avatar_url)
+                # 提取media路径部分
+                avatar_path = parsed_url.path.replace('/media/', '')
+                user.avatar = avatar_path
+                user.save()
+            
             logger.info(f"新用户微信注册成功: {openid[:8]}***, 昵称: {nickname}")
+            
+            # 获取头像URL字符串
+            avatar_url = user.avatar.url if user.avatar else ''
             
             return Response({
                 "code": 200,
@@ -310,7 +338,7 @@ class WeChatRegisterView(APIView):
                     "token": f"wechat_token_{user.id}_xyz789",
                     "user_id": user.id,
                     "role": user.role,
-                    "avatar": user.avatar,
+                    "avatar": avatar_url,
                     "nickname": user.nickname,
                     "register_type": user.register_type
                 }
@@ -373,7 +401,13 @@ class UserProfileView(APIView):
             # 更新用户信息
             validated_data = serializer.validated_data
             for field, value in validated_data.items():
-                if field != 'user_id' and hasattr(user, field):
+                if field == 'avatar_url' and value:
+                    # 处理头像URL，从URL中提取文件路径
+                    from urllib.parse import urlparse
+                    parsed_url = urlparse(value)
+                    avatar_path = parsed_url.path.replace('/media/', '')
+                    user.avatar = avatar_path
+                elif field != 'user_id' and field != 'avatar_url' and hasattr(user, field):
                     setattr(user, field, value)
             
             user.save()
@@ -418,3 +452,45 @@ class UserStatsView(APIView):
             "message": "获取成功",
             "data": stats
         })
+
+
+class AvatarUploadView(APIView):
+    permission_classes = []
+    
+    def post(self, request):
+        serializer = AvatarUploadSerializer(data=request.data)
+        if serializer.is_valid():
+            avatar_file = serializer.validated_data['avatar']
+            
+            # 生成唯一的文件名
+            import uuid
+            import os
+            from django.conf import settings
+            
+            # 获取文件扩展名
+            file_ext = os.path.splitext(avatar_file.name)[1].lower()
+            # 生成新文件名: uuid + 扩展名
+            new_filename = f"{uuid.uuid4().hex}{file_ext}"
+            
+            # 创建User实例来保存头像（临时方案，不关联具体用户）
+            temp_user = User()
+            temp_user.avatar.save(new_filename, avatar_file, save=False)
+            
+            # 构建完整的URL
+            avatar_url = request.build_absolute_uri(temp_user.avatar.url)
+            
+            logger.info(f"头像上传成功: {new_filename}, URL: {avatar_url}")
+            
+            return Response({
+                "code": 200,
+                "message": "头像上传成功",
+                "data": {
+                    "avatar_url": avatar_url,
+                    "filename": new_filename
+                }
+            })
+        
+        return Response({
+            "code": 400,
+            "message": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)

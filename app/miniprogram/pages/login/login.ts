@@ -1,5 +1,6 @@
 const defaultAvatarUrl = 'https://mmbiz.qpic.cn/mmbiz/icTdbqWNOwNRna42FI242Lcia07jQodd2FJGIYQfG0LAJGFxM4FbnQP6yfMxBgJ0F3YRqJCJ1aPAK2dQagdusBZg/0'
 const API_BASE_URL = 'http://127.0.0.1:8000/api/auth'
+const API_UPLOAD_URL = 'http://127.0.0.1:8000/api/upload'
 
 Page({
     data: {
@@ -16,6 +17,7 @@ Page({
         // Internal state
         isUserExists: true,
         loginType: 'phone', // 'phone' or 'wechat'
+        uploadedAvatarUrl: '', // 上传后的头像URL
     },
 
     onPhoneInput(e: WechatMiniprogram.Input) {
@@ -167,8 +169,65 @@ Page({
 
     onChooseAvatar(e: any) {
         const { avatarUrl } = e.detail
+        
+        // 先更新本地显示
         this.setData({
             "userInfo.avatarUrl": avatarUrl
+        })
+        
+        // 立即上传头像到服务器
+        this.uploadAvatar(avatarUrl)
+    },
+
+    uploadAvatar(tempFilePath: string) {
+        wx.showLoading({ title: '上传头像中...' })
+        
+        wx.uploadFile({
+            url: `${API_UPLOAD_URL}/avatar`,
+            filePath: tempFilePath,
+            name: 'avatar', // 必须是 'avatar'，对应后端字段名
+            header: {
+                'Content-Type': 'multipart/form-data'
+            },
+            success: (res) => {
+                wx.hideLoading()
+                try {
+                    const result = JSON.parse(res.data)
+                    if (result.code === 200) {
+                        // 保存上传后的头像URL
+                        this.setData({
+                            uploadedAvatarUrl: result.data.avatar_url
+                        })
+                        wx.showToast({ title: '头像上传成功', icon: 'success' })
+                        console.log('头像上传成功:', result.data.avatar_url)
+                    } else {
+                        wx.showToast({ title: result.message || '上传失败', icon: 'error' })
+                        // 恢复默认头像
+                        this.setData({
+                            "userInfo.avatarUrl": defaultAvatarUrl,
+                            uploadedAvatarUrl: ''
+                        })
+                    }
+                } catch (error) {
+                    console.error('解析上传结果失败:', error)
+                    wx.showToast({ title: '上传失败', icon: 'error' })
+                    // 恢复默认头像
+                    this.setData({
+                        "userInfo.avatarUrl": defaultAvatarUrl,
+                        uploadedAvatarUrl: ''
+                    })
+                }
+            },
+            fail: (error) => {
+                wx.hideLoading()
+                console.error('头像上传失败:', error)
+                wx.showToast({ title: '上传失败，请重试', icon: 'error' })
+                // 恢复默认头像
+                this.setData({
+                    "userInfo.avatarUrl": defaultAvatarUrl,
+                    uploadedAvatarUrl: ''
+                })
+            }
         })
     },
 
@@ -180,15 +239,27 @@ Page({
     },
 
     cancelProfileUpdate() {
-        this.setData({ showProfileInput: false })
+        this.setData({ 
+            showProfileInput: false,
+            uploadedAvatarUrl: '', // 重置上传的头像URL
+            "userInfo.avatarUrl": defaultAvatarUrl, // 重置头像显示
+            "userInfo.nickName": '' // 重置昵称
+        })
     },
 
     handleSubmitProfile() {
-        const { phone, code, loginType } = this.data
+        const { phone, code, loginType, uploadedAvatarUrl } = this.data
         const { avatarUrl, nickName } = this.data.userInfo
 
-        if (!nickName || avatarUrl === defaultAvatarUrl) {
-            wx.showToast({ title: '请完善头像和昵称', icon: 'none' })
+        // 检查昵称
+        if (!nickName || nickName.trim() === '') {
+            wx.showToast({ title: '请输入昵称', icon: 'none' })
+            return
+        }
+        
+        // 检查头像（如果选择了头像但没有上传成功）
+        if (avatarUrl !== defaultAvatarUrl && !uploadedAvatarUrl) {
+            wx.showToast({ title: '头像还在上传中，请稍后', icon: 'none' })
             return
         }
 
@@ -204,7 +275,7 @@ Page({
                             data: {
                                 code: res.code,
                                 nickname: nickName,
-                                avatar: avatarUrl
+                                avatar_url: this.data.uploadedAvatarUrl || ''
                             },
                             success: (apiRes: any) => {
                                 wx.hideLoading()
@@ -234,7 +305,7 @@ Page({
                 phone,
                 code,
                 nickname: nickName,
-                avatar: avatarUrl
+                avatar_url: this.data.uploadedAvatarUrl || ''
             },
             success: (res: any) => {
                 wx.hideLoading()

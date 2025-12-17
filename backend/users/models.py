@@ -8,7 +8,7 @@ class User(AbstractUser):
     phone = models.CharField(max_length=15, unique=True, null=True, blank=True, verbose_name="手机号")
     openid = models.CharField(max_length=64, unique=True, null=True, blank=True, verbose_name="微信OpenID")
     nickname = models.CharField(max_length=50, null=True, blank=True, verbose_name="昵称")
-    avatar = models.CharField(max_length=500, null=True, blank=True, verbose_name="头像")
+    avatar = models.ImageField(upload_to='avatars/', null=True, blank=True, verbose_name="头像")
     
     # 个人信息
     GENDER_CHOICES = [

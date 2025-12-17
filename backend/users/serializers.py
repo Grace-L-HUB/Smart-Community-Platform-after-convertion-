@@ -5,6 +5,24 @@ import re
 
 User = get_user_model()
 
+
+class AvatarUploadSerializer(serializers.Serializer):
+    """头像上传序列化器"""
+    avatar = serializers.ImageField(help_text="头像文件")
+    
+    def validate_avatar(self, value):
+        # 限制文件大小为5MB
+        if value.size > 5 * 1024 * 1024:
+            raise serializers.ValidationError("头像文件大小不能超过5MB")
+        
+        # 限制文件类型
+        allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
+        if value.content_type not in allowed_types:
+            raise serializers.ValidationError("头像文件格式不支持，请上传jpg、png、gif或webp格式的图片")
+        
+        return value
+
+
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
     password = serializers.CharField(write_only=True) # 密码只进不出
@@ -48,7 +66,7 @@ class SMSRegisterSerializer(serializers.Serializer):
     phone = serializers.CharField(max_length=11, help_text="手机号")
     code = serializers.CharField(max_length=6, min_length=6, help_text="验证码")
     nickname = serializers.CharField(max_length=50, help_text="昵称")
-    avatar = serializers.CharField(max_length=500, required=False, allow_blank=True, help_text="头像URL或路径")
+    avatar_url = serializers.URLField(max_length=500, required=False, allow_blank=True, help_text="头像URL（通过头像上传接口获取）")
     
     def validate_phone(self, value):
         if not re.match(r'^1[3-9]\d{9}$', value):
@@ -65,12 +83,12 @@ class WeChatLoginSerializer(serializers.Serializer):
 class WeChatRegisterSerializer(serializers.Serializer):
     code = serializers.CharField(required=True, help_text="微信临时登录凭证code")
     nickname = serializers.CharField(required=True, max_length=50)
-    avatar = serializers.CharField(max_length=500, required=False, allow_blank=True, help_text="头像URL或路径")
+    avatar_url = serializers.URLField(max_length=500, required=False, allow_blank=True, help_text="头像URL（通过头像上传接口获取）")
 
 
 class UserProfileSerializer(serializers.Serializer):
     nickname = serializers.CharField(max_length=50, required=False, help_text="昵称")
-    avatar = serializers.CharField(max_length=500, required=False, allow_blank=True, help_text="头像URL或路径")
+    avatar_url = serializers.URLField(max_length=500, required=False, allow_blank=True, help_text="头像URL（通过头像上传接口获取）")
     gender = serializers.ChoiceField(choices=[0, 1, 2], required=False, help_text="性别：0-未知，1-男，2-女")
     birthday = serializers.DateField(required=False, help_text="生日")
     real_name = serializers.CharField(max_length=20, required=False, help_text="真实姓名")
