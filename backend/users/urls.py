@@ -1,7 +1,11 @@
 from django.urls import path
-from .views import LoginView, SendSMSCodeView, VerifyCodeView, SMSLoginView, SMSRegisterView, WeChatLoginView, WeChatRegisterView
+from .views import (
+    LoginView, SendSMSCodeView, VerifyCodeView, SMSLoginView, SMSRegisterView, 
+    WeChatLoginView, WeChatRegisterView, UserProfileView, UserStatsView
+)
 
 urlpatterns = [
+    # 认证相关
     path('auth/login', LoginView.as_view(), name='login'),
     path('auth/send-sms-code', SendSMSCodeView.as_view(), name='send_sms_code'),
     path('auth/verify-code', VerifyCodeView.as_view(), name='verify_code'),
@@ -9,4 +13,8 @@ urlpatterns = [
     path('auth/sms-register', SMSRegisterView.as_view(), name='sms_register'),
     path('auth/wechat-login', WeChatLoginView.as_view(), name='wechat_login'),
     path('auth/wechat-register', WeChatRegisterView.as_view(), name='wechat_register'),
+    
+    # 用户信息管理
+    path('profile', UserProfileView.as_view(), name='user_profile'),
+    path('stats', UserStatsView.as_view(), name='user_stats'),
 ]

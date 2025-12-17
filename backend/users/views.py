@@ -3,7 +3,10 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import get_user_model
-from .serializers import LoginSerializer, SendSMSCodeSerializer, VerifyCodeSerializer, SMSLoginSerializer, SMSRegisterSerializer
+from .serializers import (
+    LoginSerializer, SendSMSCodeSerializer, VerifyCodeSerializer, 
+    SMSLoginSerializer, SMSRegisterSerializer, UserProfileSerializer, UserInfoSerializer
+)
 from .sms_service import SMSService
 import logging
 
@@ -185,15 +188,11 @@ class SMSRegisterView(APIView):
             user = User.objects.create_user(
                 username=phone,  # 使用手机号作为用户名
                 phone=phone,
+                nickname=nickname,
+                avatar=avatar,
+                register_type=1,  # 手机注册
                 is_active=True
             )
-            
-            # 更新用户信息
-            if nickname:
-                user.first_name = nickname
-            if avatar:
-                user.avatar = avatar
-            user.save()
             
             logger.info(f"新用户注册成功: {phone}, 昵称: {nickname}")
             
@@ -207,9 +206,10 @@ class SMSRegisterView(APIView):
                     "token": f"sms_token_{user.id}_abc123",  # 模拟token
                     "user_id": user.id,
                     "phone": user.phone,
-                    "nickname": user.first_name,
+                    "nickname": user.nickname,
                     "avatar": user.avatar,
-                    "role": user.role
+                    "role": user.role,
+                    "register_type": user.register_type
                 }
             })
         
@@ -250,7 +250,9 @@ class WeChatLoginView(APIView):
                         "user_id": user.id,
                         "role": user.role,
                         "avatar": user.avatar,
-                        "nickname": user.first_name
+                        "nickname": user.nickname,
+                        "display_name": user.display_name,
+                        "register_type": user.register_type
                     }
                 })
             except User.DoesNotExist:
@@ -282,7 +284,7 @@ class WeChatRegisterView(APIView):
             if not success:
                 # 如果code失效，前端可能需要重新wx.login，这里简化处理，假设code有效期足够或前端重新获取了code
                 # 生产环境建议前端传 code 或者 后端缓存 session
-                 return Response({"code": 400, "message": message}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"code": 400, "message": message}, status=status.HTTP_400_BAD_REQUEST)
             
             openid = data.get("openid")
             
@@ -293,12 +295,13 @@ class WeChatRegisterView(APIView):
             user = User.objects.create_user(
                 username=f"wx_{openid[:8]}", # 随机用户名
                 openid=openid,
+                nickname=nickname,
+                avatar=avatar,
+                register_type=2,  # 微信注册
                 is_active=True
             )
             
-            user.first_name = nickname
-            user.avatar = avatar
-            user.save()
+            logger.info(f"新用户微信注册成功: {openid[:8]}***, 昵称: {nickname}")
             
             return Response({
                 "code": 200,
@@ -308,8 +311,110 @@ class WeChatRegisterView(APIView):
                     "user_id": user.id,
                     "role": user.role,
                     "avatar": user.avatar,
-                    "nickname": user.first_name
+                    "nickname": user.nickname,
+                    "register_type": user.register_type
                 }
             })
 
         return Response({"code": 400, "message": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UserProfileView(APIView):
+    
+    def get(self, request):
+        # TODO: 后续添加JWT认证后，从token获取用户
+        # user = request.user
+        
+        # 临时处理：从请求参数获取用户ID
+        user_id = request.GET.get('user_id')
+        if not user_id:
+            return Response({
+                "code": 400,
+                "message": "缺少用户ID参数"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({
+                "code": 404,
+                "message": "用户不存在"
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = UserInfoSerializer(user)
+        return Response({
+            "code": 200,
+            "message": "获取成功",
+            "data": serializer.data
+        })
+    
+    def put(self, request):
+        # TODO: 后续添加JWT认证后，从token获取用户
+        # user = request.user
+        
+        # 临时处理：从请求参数获取用户ID
+        user_id = request.data.get('user_id')
+        if not user_id:
+            return Response({
+                "code": 400,
+                "message": "缺少用户ID参数"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({
+                "code": 404,
+                "message": "用户不存在"
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = UserProfileSerializer(data=request.data)
+        if serializer.is_valid():
+            # 更新用户信息
+            validated_data = serializer.validated_data
+            for field, value in validated_data.items():
+                if field != 'user_id' and hasattr(user, field):
+                    setattr(user, field, value)
+            
+            user.save()
+            logger.info(f"用户 {user.id} 更新个人信息")
+            
+            # 返回更新后的用户信息
+            user_serializer = UserInfoSerializer(user)
+            return Response({
+                "code": 200,
+                "message": "更新成功",
+                "data": user_serializer.data
+            })
+        
+        return Response({
+            "code": 400,
+            "message": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UserStatsView(APIView):
+    permission_classes = []
+    
+    def get(self, request):
+        from .models import User
+        
+        stats = {
+            "total_users": User.objects.count(),
+            "phone_users": User.objects.filter(register_type=1).count(),
+            "wechat_users": User.objects.filter(register_type=2).count(),
+            "verified_users": User.objects.filter(is_verified=True).count(),
+            "banned_users": User.objects.filter(is_banned=True).count(),
+            "role_stats": {
+                "residents": User.objects.filter(role=0).count(),
+                "property_staff": User.objects.filter(role=1).count(),
+                "merchants": User.objects.filter(role=2).count(),
+                "admins": User.objects.filter(role=3).count(),
+            }
+        }
+        
+        return Response({
+            "code": 200,
+            "message": "获取成功",
+            "data": stats
+        })
