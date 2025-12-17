@@ -330,7 +330,9 @@ Page({
         wx.showToast({ title: '登录成功', icon: 'success' })
 
         setTimeout(() => {
-            wx.reLaunch({ url: '/pages/index/index' })
+            // TODO: 跳转到主页面，目前 index 页面已删除，需要创建新的主页面
+            // wx.reLaunch({ url: '/pages/index/index' })
+            console.log('登录成功，需要配置跳转页面')
         }, 1500)
     }
 })
