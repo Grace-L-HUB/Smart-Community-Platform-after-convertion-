@@ -6,3 +6,4 @@ python-dotenv
 mysqlclient
 drf-spectacular
 pytest pytest-django
+requests
