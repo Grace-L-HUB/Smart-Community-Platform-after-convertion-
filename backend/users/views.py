@@ -217,3 +217,99 @@ class SMSRegisterView(APIView):
             "code": 400,
             "message": serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
+
+
+from .wechat_service import WeChatService
+from .serializers import WeChatLoginSerializer, WeChatRegisterSerializer
+
+class WeChatLoginView(APIView):
+    permission_classes = []
+
+    def post(self, request):
+        serializer = WeChatLoginSerializer(data=request.data)
+        if serializer.is_valid():
+            code = serializer.validated_data['code']
+            
+            # 1. 换取 openid
+            success, message, data = WeChatService.get_session_info(code)
+            if not success:
+                return Response({"code": 400, "message": message}, status=status.HTTP_400_BAD_REQUEST)
+            
+            openid = data.get("openid")
+            
+            # 2. 检查用户是否存在
+            try:
+                user = User.objects.get(openid=openid)
+                # 老用户，直接返回登录态
+                # token = RefreshToken.for_user(user)
+                return Response({
+                    "code": 200,
+                    "message": "登录成功",
+                    "data": {
+                        "token": f"wechat_token_{user.id}_xyz789",
+                        "user_id": user.id,
+                        "role": user.role,
+                        "avatar": user.avatar,
+                        "nickname": user.first_name
+                    }
+                })
+            except User.DoesNotExist:
+                # 新用户，返回标识通知前端跳转完善信息
+                return Response({
+                    "code": 200, 
+                    "message": "用户未注册",
+                    "data": {
+                        "need_profile": True,
+                        "openid": openid # 仅供调试或作为临时凭证(虽不安全但演示用)
+                    }
+                })
+        
+        return Response({"code": 400, "message": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class WeChatRegisterView(APIView):
+    permission_classes = []
+
+    def post(self, request):
+        serializer = WeChatRegisterSerializer(data=request.data)
+        if serializer.is_valid():
+            code = serializer.validated_data['code']
+            nickname = serializer.validated_data['nickname']
+            avatar = serializer.validated_data.get('avatar', '')
+            
+            # 1. 再次换取 openid (为了安全应由后端缓存session_key，但简化流程再次调用)
+            success, message, data = WeChatService.get_session_info(code)
+            if not success:
+                # 如果code失效，前端可能需要重新wx.login，这里简化处理，假设code有效期足够或前端重新获取了code
+                # 生产环境建议前端传 code 或者 后端缓存 session
+                 return Response({"code": 400, "message": message}, status=status.HTTP_400_BAD_REQUEST)
+            
+            openid = data.get("openid")
+            
+            # 2. 检查并创建
+            if User.objects.filter(openid=openid).exists():
+                return Response({"code": 400, "message": "该微信已注册"}, status=status.HTTP_400_BAD_REQUEST)
+            
+            user = User.objects.create_user(
+                username=f"wx_{openid[:8]}", # 随机用户名
+                openid=openid,
+                is_active=True
+            )
+            
+            user.first_name = nickname
+            user.avatar = avatar
+            user.save()
+            
+            return Response({
+                "code": 200,
+                "message": "注册成功",
+                "data": {
+                    "token": f"wechat_token_{user.id}_xyz789",
+                    "user_id": user.id,
+                    "role": user.role,
+                    "avatar": user.avatar,
+                    "nickname": user.first_name
+                }
+            })
+
+        return Response({"code": 400, "message": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)

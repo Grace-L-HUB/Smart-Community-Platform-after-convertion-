@@ -55,4 +55,11 @@ class SMSRegisterSerializer(serializers.Serializer):
     def validate_nickname(self, value):
         if not value or not value.strip():
             raise serializers.ValidationError("昵称不能为空")
-        return value.strip()
+
+class WeChatLoginSerializer(serializers.Serializer):
+    code = serializers.CharField(required=True, help_text="微信临时登录凭证code")
+
+class WeChatRegisterSerializer(serializers.Serializer):
+    code = serializers.CharField(required=True, help_text="微信临时登录凭证code")
+    nickname = serializers.CharField(required=True, max_length=50)
+    avatar = serializers.URLField(required=False, allow_blank=True)

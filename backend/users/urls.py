@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import LoginView, SendSMSCodeView, VerifyCodeView, SMSLoginView, SMSRegisterView
+from .views import LoginView, SendSMSCodeView, VerifyCodeView, SMSLoginView, SMSRegisterView, WeChatLoginView, WeChatRegisterView
 
 urlpatterns = [
     path('auth/login', LoginView.as_view(), name='login'),
@@ -7,4 +7,6 @@ urlpatterns = [
     path('auth/verify-code', VerifyCodeView.as_view(), name='verify_code'),
     path('auth/sms-login', SMSLoginView.as_view(), name='sms_login'),
     path('auth/sms-register', SMSRegisterView.as_view(), name='sms_register'),
+    path('auth/wechat-login', WeChatLoginView.as_view(), name='wechat_login'),
+    path('auth/wechat-register', WeChatRegisterView.as_view(), name='wechat_register'),
 ]
