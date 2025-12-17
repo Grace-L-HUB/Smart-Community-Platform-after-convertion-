@@ -1,0 +1,13 @@
+{
+    "navigationBarTitleText": "物业缴费",
+    "usingComponents": {
+        "van-icon": "@vant/weapp/icon/index",
+        "van-button": "@vant/weapp/button/index",
+        "van-cell": "@vant/weapp/cell/index",
+        "van-cell-group": "@vant/weapp/cell-group/index",
+        "van-submit-bar": "@vant/weapp/submit-bar/index",
+        "van-checkbox": "@vant/weapp/checkbox/index",
+        "van-checkbox-group": "@vant/weapp/checkbox-group/index",
+        "van-tag": "@vant/weapp/tag/index"
+    }
+}

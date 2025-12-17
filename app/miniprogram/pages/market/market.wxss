@@ -1,0 +1,20 @@
+/* pages/market/market.wxss */
+.container {
+  background-color: var(--bg-color);
+  min-height: 100vh;
+}
+
+.header-area {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: var(--shadow-sm);
+}
+
+.goods-list {
+  padding: 20rpx;
+}
+
+.spacer {
+  height: 20rpx;
+}

@@ -1,0 +1,36 @@
+<view class="container">
+  <view class="form-group">
+    <view class="section-title">报修类别</view>
+    <van-radio-group value="{{ type }}" bind:change="onTypeChange" direction="horizontal">
+      <van-radio name="1" checked-color="#07c160">公共区域</van-radio>
+      <van-radio name="2" checked-color="#07c160" custom-class="ml-20">入户维修</van-radio>
+    </van-radio-group>
+  </view>
+
+  <view class="form-group">
+    <view class="section-title">问题描述</view>
+    <van-field
+      value="{{ message }}"
+      type="textarea"
+      placeholder="请详细描述您遇到的问题，以便我们要好地为您服务"
+      autosize="{{ {minHeight: 100} }}"
+      border="{{ false }}"
+      custom-class="textarea-field"
+      bind:change="onMessageChange"
+    />
+  </view>
+
+  <view class="form-group">
+    <view class="section-title">上传照片/视频</view>
+    <van-uploader 
+      file-list="{{ fileList }}" 
+      bind:after-read="afterRead" 
+      bind:delete="deleteFile"
+      max-count="3" 
+    />
+  </view>
+
+  <view class="submit-bar">
+    <van-button type="primary" block round bind:tap="onSubmit">提交报修</van-button>
+  </view>
+</view>

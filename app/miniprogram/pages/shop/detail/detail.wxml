@@ -1,0 +1,80 @@
+<view class="container">
+  <!-- Shop Header -->
+  <view class="shop-header">
+    <image class="shop-bg" src="{{ shop.bgImage }}" mode="aspectFill"></image>
+    <view class="shop-info-card">
+      <view class="shop-main">
+        <image class="shop-logo" src="{{ shop.logo }}" mode="aspectFill"></image>
+        <view class="shop-text">
+          <text class="shop-name">{{ shop.name }}</text>
+          <view class="shop-rate">
+            <van-icon name="star" color="#ff976a" />
+            <text class="rate-score">{{ shop.score }}</text>
+            <text class="rate-sales">月售 {{ shop.monthlySales }}+</text>
+          </view>
+        </view>
+      </view>
+      <view class="shop-tags">
+        <van-tag plain type="danger" wx:for="{{ shop.tags }}" wx:key="*this">{{ item }}</van-tag>
+      </view>
+      <view class="shop-address">
+        <van-icon name="location-o" />
+        <text class="address-text">{{ shop.address }}</text>
+        <van-icon name="phone-circle-o" class="phone-icon" bindtap="callShop"/>
+      </view>
+    </view>
+  </view>
+
+  <!-- Coupons -->
+  <view class="section coupon-section" wx:if="{{ coupons.length > 0 }}">
+    <view class="section-title">优惠券</view>
+    <scroll-view scroll-x class="coupon-scroll">
+      <view class="coupon-item" wx:for="{{ coupons }}" wx:key="id">
+        <view class="coupon-left">
+          <text class="symbol">¥</text>
+          <text class="amount">{{ item.amount }}</text>
+        </view>
+        <view class="coupon-right">
+          <text class="condition">{{ item.condition }}</text>
+          <van-button size="mini" round color="#ff976a">领取</van-button>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- Products Tab -->
+  <view class="shop-tabs">
+    <van-tabs active="{{ active }}" sticky>
+      <van-tab title="全部商品">
+        <block wx:for="{{ products }}" wx:key="id">
+          <van-card
+            price="{{ item.price }}"
+            title="{{ item.name }}"
+            thumb="{{ item.image }}"
+          >
+            <view slot="footer">
+              <van-button size="mini" icon="cart-o" type="primary"></van-button>
+            </view>
+          </van-card>
+        </block>
+      </van-tab>
+      <van-tab title="商家评价">
+        <view class="empty-comment">暂无评价</view>
+      </van-tab>
+      <van-tab title="商家信息">
+        <van-cell-group>
+          <van-cell title="营业时间" value="09:00 - 22:00" />
+          <van-cell title="商家资质" is-link />
+        </van-cell-group>
+      </van-tab>
+    </van-tabs>
+  </view>
+
+  <!-- Bottom Action -->
+  <van-goods-action>
+    <van-goods-action-icon icon="chat-o" text="客服" />
+    <van-goods-action-icon icon="cart-o" text="购物车" info="0" />
+    <van-goods-action-button text="加入购物车" type="warning" />
+    <van-goods-action-button text="立即购买" />
+  </van-goods-action>
+</view>

@@ -1,0 +1,42 @@
+<view class="container">
+  <view class="header-card">
+    <text class="label">待缴总额</text>
+    <view class="amount-row">
+      <text class="symbol">¥</text>
+      <text class="total">{{ totalAmount / 100 }}</text>
+    </view>
+    <text class="unit-info">阳光花园 1栋 1单元 101室</text>
+  </view>
+
+  <view class="bill-list">
+    <view class="list-title">待缴账单</view>
+    <van-checkbox-group value="{{ selectedBills }}" bind:change="onBillChange">
+      <view class="bill-item" wx:for="{{ bills }}" wx:key="id">
+        <van-checkbox name="{{ item.id }}" checked-color="#07c160" label-class="bill-checkbox-label">
+          <view class="bill-content">
+            <view class="bill-header">
+              <text class="bill-name">{{ item.name }}</text>
+              <text class="bill-amount">¥ {{ item.amount / 100 }}</text>
+            </view>
+            <view class="bill-detail">
+              <text>{{ item.period }}</text>
+              <van-tag type="warning" wx:if="{{item.isOverdue}}">已逾期</van-tag>
+            </view>
+          </view>
+        </van-checkbox>
+      </view>
+    </van-checkbox-group>
+  </view>
+  
+  <van-submit-bar
+    price="{{ totalAmount }}"
+    button-text="立即缴费"
+    bind:submit="onSubmit"
+    tip="{{ true }}"
+  >
+    <van-tag type="primary">全选</van-tag>
+    <view slot="tip">
+      您有 <text style="color: #f44">1</text> 笔逾期账单，请尽快缴纳
+    </view>
+  </van-submit-bar>
+</view>

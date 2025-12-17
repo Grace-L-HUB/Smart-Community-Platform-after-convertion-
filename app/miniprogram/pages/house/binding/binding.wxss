@@ -1,0 +1,35 @@
+/* pages/house/binding/binding.wxss */
+.container {
+  padding: 30rpx;
+  background-color: var(--bg-color);
+}
+
+.header-tip {
+  margin-bottom: 40rpx;
+  padding: 0 10rpx;
+}
+
+.title {
+  font-size: 40rpx;
+  font-weight: bold;
+  color: #333;
+  display: block;
+  margin-bottom: 12rpx;
+}
+
+.desc {
+  font-size: 26rpx;
+  color: #999;
+}
+
+.form-card {
+  background: #fff;
+  border-radius: 24rpx;
+  padding: 20rpx 0;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.btn-area {
+  padding: 60rpx 40rpx 40rpx;
+}

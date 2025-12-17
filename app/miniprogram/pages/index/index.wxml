@@ -34,7 +34,7 @@
   <!-- Quick Actions -->
   <view class="section-title">快捷服务</view>
   <van-grid column-num="4" border="{{ false }}" gutter="10">
-    <van-grid-item icon="lock" text="一键开门" link-type="navigateTo" url="/pages/door/door" />
+    <van-grid-item icon="lock" text="一键开门" bind:click="onQuickAction" data-action="open" />
     <van-grid-item icon="friends" text="访客邀请" />
     <van-grid-item icon="logistics" text="快递代收" />
     <van-grid-item icon="phone" text="一键呼叫" />

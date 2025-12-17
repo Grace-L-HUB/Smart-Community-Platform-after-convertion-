@@ -4,6 +4,11 @@
     "pages/services/services",
     "pages/community/community",
     "pages/profile/profile",
+    "pages/house/binding/binding",
+    "pages/repair/repair",
+    "pages/payment/payment",
+    "pages/market/market",
+    "pages/shop/detail/detail",
     "pages/login/login"
   ],
   "window": {

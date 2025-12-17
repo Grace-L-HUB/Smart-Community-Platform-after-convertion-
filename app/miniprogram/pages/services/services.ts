@@ -21,4 +21,10 @@ Page({
             }
         ]
     },
+
+    onShopClick(event: any) {
+        wx.navigateTo({
+            url: '/pages/shop/detail/detail'
+        });
+    }
 });
