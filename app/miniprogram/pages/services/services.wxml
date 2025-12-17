@@ -1,0 +1,53 @@
+<view class="container">
+  <van-tabs active="{{ active }}" color="#07c160" sticky>
+    <!-- Tab 1: Property Services -->
+    <van-tab title="物业服务">
+      <view class="p-30">
+        <view class="section-card">
+          <view class="card-title">基础服务</view>
+          <van-grid column-num="3" border="{{ false }}">
+            <van-grid-item icon="volume-o" text="社区公告" />
+            <van-grid-item icon="wap-home-o" text="房屋管理" />
+            <van-grid-item icon="manager-o" text="访客管理" />
+            <van-grid-item icon="setting-o" text="报事报修" url="/pages/repair/repair" />
+            <van-grid-item icon="balance-list-o" text="物业缴费" />
+            <van-grid-item icon="column" text="装修申请" />
+          </van-grid>
+        </view>
+
+        <view class="section-card mt-20">
+          <view class="card-title">便民服务</view>
+          <van-grid column-num="4" border="{{ false }}">
+             <van-grid-item icon="flower-o" text="家政保洁" />
+             <van-grid-item icon="umbrella-circle" text="借雨伞" />
+             <van-grid-item icon="print" text="云打印" />
+             <van-grid-item icon="phone-circle-o" text="常用电话" />
+          </van-grid>
+        </view>
+      </view>
+    </van-tab>
+
+    <!-- Tab 2: Life Services -->
+    <van-tab title="街角好店">
+      <view class="p-30">
+        <block wx:for="{{ shops }}" wx:key="id">
+          <van-card
+            price="{{ item.price }}"
+            desc="{{ item.desc }}"
+            title="{{ item.name }}"
+            thumb="{{ item.image }}"
+            lazy-load
+          >
+            <view slot="tags">
+               <van-tag plain type="danger" wx:if="{{item.discount}}">{{item.discount}}</van-tag>
+            </view>
+            <view slot="footer">
+              <van-button size="mini" round type="primary">进店</van-button>
+            </view>
+          </van-card>
+          <view style="height: 20rpx;"></view>
+        </block>
+      </view>
+    </van-tab>
+  </van-tabs>
+</view>

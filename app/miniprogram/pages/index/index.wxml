@@ -1,0 +1,42 @@
+<view class="container">
+  <!-- Header Section -->
+  <view class="header-section">
+    <view class="user-greeting">
+      <text class="greeting-text">早安，业主</text>
+      <text class="weather-text">晴 26°C</text>
+    </view>
+    <view class="notification-icon">
+      <van-icon name="bell" size="24px" color="#fff" />
+    </view>
+  </view>
+
+  <!-- Identity Card Section -->
+  <view class="card identity-card">
+    <view class="qr-code-area" bindtap="showQRCode">
+      <van-icon name="qr" size="64px" color="#333" />
+      <text class="qr-text">点击出示身份码</text>
+    </view>
+    <view class="identity-info">
+      <text class="community-name">阳光花园社区</text>
+      <text class="user-role">已认证业主</text>
+    </view>
+  </view>
+
+  <!-- Notice Bar -->
+  <van-notice-bar
+    left-icon="volume-o"
+    text="关于小区正在进行绿化维护的通知：预计本周三上午9点至12点..."
+    custom-class="notice-bar"
+    background="#fff"
+    color="#f57c00"
+  />
+
+  <!-- Quick Actions -->
+  <view class="section-title">快捷服务</view>
+  <van-grid column-num="4" border="{{ false }}" gutter="10">
+    <van-grid-item icon="lock" text="一键开门" link-type="navigateTo" url="/pages/door/door" />
+    <van-grid-item icon="friends" text="访客邀请" />
+    <van-grid-item icon="logistics" text="快递代收" />
+    <van-grid-item icon="phone" text="一键呼叫" />
+  </van-grid>
+</view>

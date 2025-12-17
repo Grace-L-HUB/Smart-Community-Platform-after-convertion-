@@ -1,0 +1,24 @@
+/* pages/services/services.wxss */
+.p-30 {
+  padding: 30rpx;
+}
+
+.section-card {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.03);
+}
+
+.card-title {
+  font-size: 30rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 20rpx;
+  padding-left: 10rpx;
+  border-left: 8rpx solid var(--primary-color);
+}
+
+.mt-20 {
+  margin-top: 20rpx;
+}

@@ -1,0 +1,43 @@
+<view class="container">
+  <view class="profile-header">
+    <view class="user-info">
+      <view class="avatar-container">
+         <image class="avatar" src="https://img.yzcdn.cn/vant/cat.jpeg"></image>
+      </view>
+      <view class="info-text">
+        <text class="nickname">张三</text>
+        <text class="uid">ID: 10086</text>
+      </view>
+    </view>
+    <view class="vip-card">
+       <view class="flex-between">
+          <text class="vip-title">阳光卡 • 金卡</text>
+          <van-icon name="gem" color="#d4af37" size="20px" />
+       </view>
+       <text class="vip-desc">享受物业费9折优惠</text>
+    </view>
+  </view>
+
+  <!-- My Assets -->
+  <view class="section-card" style="margin-top: -80rpx; position: relative; margin-left: 30rpx; margin-right: 30rpx;">
+    <view class="card-title" style="padding: 20rpx 0 0 20rpx;">我的资产</view>
+    <van-grid column-num="3" border="{{ false }}">
+      <van-grid-item icon="wap-home-o" text="我的房屋" info="1" />
+      <van-grid-item icon="logistics" text="我的车位" info="1" />
+      <van-grid-item icon="points" text="积分" info="500" />
+    </van-grid>
+  </view>
+
+  <!-- Menu List -->
+  <view class="menu-list mt-20 p-30">
+    <van-cell-group inset>
+      <van-cell title="我的账单" icon="bill-o" is-link />
+      <van-cell title="报修记录" icon="records" is-link />
+      <van-cell title="我的发布" icon="edit" is-link />
+      <van-cell title="我的收藏" icon="star-o" is-link />
+      <van-cell title="联系客服" icon="service-o" is-link />
+      <van-cell title="关于我们" icon="info-o" is-link />
+      <van-cell title="设置" icon="setting-o" is-link url="/pages/login/login" link-type="reLaunch" />
+    </van-cell-group>
+  </view>
+</view>

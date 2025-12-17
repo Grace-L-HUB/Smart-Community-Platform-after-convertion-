@@ -1,17 +1,67 @@
 {
   "pages": [
+    "pages/index/index",
+    "pages/services/services",
+    "pages/community/community",
+    "pages/profile/profile",
     "pages/login/login"
   ],
   "window": {
     "navigationBarTextStyle": "black",
-    "navigationBarTitleText": "Weixin",
-    "navigationBarBackgroundColor": "#ffffff"
+    "navigationBarTitleText": "智慧社区",
+    "navigationBarBackgroundColor": "#ffffff",
+    "backgroundColor": "#f7f8fa"
+  },
+  "tabBar": {
+    "color": "#999999",
+    "selectedColor": "#07c160",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "image/tabBar/楼盘.png",
+        "selectedIconPath": "image/tabBar/楼盘.png"
+      },
+      {
+        "pagePath": "pages/services/services",
+        "text": "服务",
+        "iconPath": "image/tabBar/物业.png",
+        "selectedIconPath": "image/tabBar/物业.png"
+      },
+      {
+        "pagePath": "pages/community/community",
+        "text": "邻里",
+        "iconPath": "image/tabBar/动态.png",
+        "selectedIconPath": "image/tabBar/动态.png"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "我的",
+        "iconPath": "image/tabBar/客户档案.png",
+        "selectedIconPath": "image/tabBar/客户档案.png"
+      }
+    ]
   },
   "style": "v2",
   "usingComponents": {
     "van-button": "@vant/weapp/button/index",
     "van-field": "@vant/weapp/field/index",
-    "van-uploader": "@vant/weapp/uploader/index"
+    "van-uploader": "@vant/weapp/uploader/index",
+    "van-cell": "@vant/weapp/cell/index",
+    "van-cell-group": "@vant/weapp/cell-group/index",
+    "van-icon": "@vant/weapp/icon/index",
+    "van-image": "@vant/weapp/image/index",
+    "van-grid": "@vant/weapp/grid/index",
+    "van-grid-item": "@vant/weapp/grid-item/index",
+    "van-notice-bar": "@vant/weapp/notice-bar/index",
+    "van-search": "@vant/weapp/search/index",
+    "van-tag": "@vant/weapp/tag/index",
+    "van-divider": "@vant/weapp/divider/index",
+    "van-tab": "@vant/weapp/tab/index",
+    "van-tabs": "@vant/weapp/tabs/index",
+    "van-card": "@vant/weapp/card/index"
   },
   "componentFramework": "glass-easel",
   "lazyCodeLoading": "requiredComponents"
