@@ -23,4 +23,50 @@ Page({
             }
         ]
     },
+
+    onMarketItemClick(e: any) {
+        const id = e.currentTarget.dataset.id;
+        wx.navigateTo({
+            url: `/pages/community/market-detail/market-detail?id=${id}`
+        });
+    },
+
+    onChatClick(e: any) {
+        wx.showToast({
+            title: '打开聊天窗口',
+            icon: 'none'
+        });
+    },
+
+    onHelpClick(e: any) {
+        const id = e.currentTarget.dataset.id;
+        wx.navigateTo({
+            url: `/pages/community/help-detail/help-detail?id=${id}`
+        });
+    },
+
+    onHelpButtonClick(e: any) {
+        wx.navigateTo({
+            url: `/pages/community/help-detail/help-detail?id=1`
+        });
+    },
+
+    onEventClick(e: any) {
+        const id = e.currentTarget.dataset.id;
+        wx.navigateTo({
+            url: `/pages/community/event-detail/event-detail?id=${id}`
+        });
+    },
+
+    onEventEnrollClick(e: any) {
+        wx.navigateTo({
+            url: `/pages/community/event-detail/event-detail?id=1`
+        });
+    },
+
+    onPostClick() {
+        wx.navigateTo({
+            url: '/pages/community/post-item/post-item'
+        });
+    }
 });

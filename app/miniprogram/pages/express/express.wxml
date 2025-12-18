@@ -1,0 +1,28 @@
+<view class="container">
+  <van-tabs active="{{activeTab}}" color="#07c160" bind:change="onTabChange">
+    <van-tab title="待取快递"></van-tab>
+    <van-tab title="已取快递"></van-tab>
+  </van-tabs>
+
+  <view class="express-list">
+    <block wx:for="{{expressList}}" wx:key="id">
+      <view class="express-card">
+        <view class="express-header">
+          <image class="company-logo" src="{{item.companyLogo}}"></image>
+          <view class="express-info">
+            <text class="company-name">{{item.companyName}}</text>
+            <text class="express-number">{{item.number}}</text>
+          </view>
+        </view>
+        <van-cell-group border="{{false}}">
+          <van-cell title="存放位置" value="{{item.location}}" />
+          <van-cell title="到达时间" value="{{item.arriveTime}}" />
+          <van-cell title="取件码" value="{{item.pickupCode}}" wx:if="{{item.pickupCode}}" />
+        </van-cell-group>
+        <view class="express-actions" wx:if="{{activeTab === 0}}">
+          <van-button size="small" round color="#07c160" bind:tap="onPickup" data-id="{{item.id}}">确认取件</van-button>
+        </view>
+      </view>
+    </block>
+  </view>
+</view>

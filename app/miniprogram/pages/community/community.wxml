@@ -6,7 +6,7 @@
     <van-tab title="二手闲置">
       <view class="p-30">
         <block wx:for="{{ marketItems }}" wx:key="id">
-          <view class="community-card">
+          <view class="community-card" bind:tap="onMarketItemClick" data-id="{{item.id}}">
             <view class="user-row">
               <image class="avatar-small" src="{{item.avatar}}"></image>
               <text class="username">{{item.user}}</text>
@@ -20,7 +20,7 @@
               </view>
             </view>
             <view class="actions">
-               <van-button size="mini" icon="chat-o">私聊</van-button>
+               <van-button size="mini" icon="chat-o" catch:tap="onChatClick">私聊</van-button>
             </view>
           </view>
         </block>
@@ -30,7 +30,7 @@
     <!-- Tab 2: Neighborhood Help -->
     <van-tab title="邻居互助">
       <view class="p-30">
-        <view class="community-card">
+        <view class="community-card" bind:tap="onHelpClick" data-id="1">
             <view class="user-row">
               <view class="avatar-placeholder">L</view>
               <text class="username">李先生</text>
@@ -43,7 +43,7 @@
                <van-tag type="warning">急</van-tag>
             </view>
             <view class="actions">
-               <van-button size="mini" type="primary">我来帮</van-button>
+               <van-button size="mini" type="primary" catch:tap="onHelpButtonClick">我来帮</van-button>
             </view>
         </view>
       </view>
@@ -52,13 +52,13 @@
     <!-- Tab 3: Community Events -->
     <van-tab title="社区活动">
        <view class="p-30">
-         <view class="event-card">
+         <view class="event-card" bind:tap="onEventClick" data-id="1">
            <image class="event-banner" src="https://img.yzcdn.cn/vant/apple-1.jpg" mode="aspectFill"></image>
            <view class="event-info">
              <text class="event-title">周末亲子绘画比赛报名啦！</text>
              <text class="event-time">时间：本周六 下午2:00</text>
              <text class="event-loc">地点：社区活动中心2楼</text>
-             <van-button block color="#07c160" round size="small" custom-class="mt-20">立即报名</van-button>
+             <van-button block color="#07c160" round size="small" custom-class="mt-20" catch:tap="onEventEnrollClick">立即报名</van-button>
            </view>
          </view>
        </view>
@@ -66,7 +66,7 @@
   </van-tabs>
   
   <!-- Floating Action Button for Posting -->
-  <view class="fab-btn">
+  <view class="fab-btn" bind:tap="onPostClick">
     <van-icon name="plus" size="30px" color="#fff" />
   </view>
 </view>

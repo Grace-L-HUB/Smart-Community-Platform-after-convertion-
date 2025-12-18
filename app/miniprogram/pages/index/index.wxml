@@ -25,18 +25,19 @@
   <!-- Notice Bar -->
   <van-notice-bar
     left-icon="volume-o"
-    text="关于小区正在进行绿化维护的通知：预计本周三上午9点至12点..."
+    text="关于小区正在进行绿化维护的通知：预计本周三上午9点到12点..."
     custom-class="notice-bar"
     background="#fff"
     color="#f57c00"
+    bindtap="onNoticeClick"
   />
 
   <!-- Quick Actions -->
   <view class="section-title">快捷服务</view>
   <van-grid column-num="4" border="{{ false }}" gutter="10">
     <van-grid-item icon="lock" text="一键开门" bind:click="onQuickAction" data-action="open" />
-    <van-grid-item icon="friends" text="访客邀请" />
-    <van-grid-item icon="logistics" text="快递代收" />
-    <van-grid-item icon="phone" text="一键呼叫" />
+    <van-grid-item icon="friends" text="访客邀请" link-type="navigateTo" url="/pages/services/visitor/visitor" />
+    <van-grid-item icon="logistics" text="快递代收" link-type="navigateTo" url="/pages/express/express" />
+    <van-grid-item icon="phone" text="一键呼叫" bind:click="onQuickAction" data-action="call" />
   </van-grid>
 </view>

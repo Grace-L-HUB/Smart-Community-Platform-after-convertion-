@@ -1,0 +1,14 @@
+<view class="container">
+  <van-cell-group>
+    <van-cell title="账号安全" is-link />
+    <van-cell title="消息通知" is-link />
+    <van-cell title="隐私设置" is-link />
+    <van-cell title="清除缓存" is-link bind:click="onClearCache" />
+    <van-cell title="关于我们" is-link bind:click="onAbout" />
+    <van-cell title="版本号" value="1.0.0" />
+  </van-cell-group>
+
+  <view class="logout-section">
+    <van-button block round plain type="danger" bind:click="onLogout">退出登录</van-button>
+  </view>
+</view>

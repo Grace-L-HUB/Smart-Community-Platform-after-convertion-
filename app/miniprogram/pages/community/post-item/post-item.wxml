@@ -1,0 +1,127 @@
+<view class="container">
+  <view class="header-tip">
+    <van-icon name="info-o" size="16px" color="#07c160" />
+    <text class="tip-text">发布后将展示在邻里圈，请文明交易</text>
+  </view>
+
+  <view class="form-section">
+    <!-- Image Upload -->
+    <view class="upload-section">
+      <view class="section-label">商品图片</view>
+      <van-uploader 
+        file-list="{{ fileList }}" 
+        bind:after-read="afterRead"
+        bind:delete="deleteImage"
+        max-count="9"
+        multiple="{{true}}"
+      />
+    </view>
+
+    <!-- Title -->
+    <van-field
+      label="标题"
+      value="{{ title }}"
+      placeholder="请输入商品标题"
+      bind:change="onTitleChange"
+      required
+      maxlength="50"
+      show-word-limit
+    />
+
+    <!-- Price -->
+    <van-field
+      label="价格"
+      value="{{ price }}"
+      type="number"
+      placeholder="请输入价格"
+      bind:change="onPriceChange"
+      required
+    >
+      <text slot="button">元</text>
+    </van-field>
+
+    <!-- Category -->
+    <van-field
+      label="分类"
+      value="{{ categoryText }}"
+      placeholder="请选择分类"
+      is-link
+      readonly
+      bind:click="showCategoryPicker"
+      required
+    />
+
+    <!-- Condition -->
+    <van-field
+      label="成色"
+      value="{{ conditionText }}"
+      placeholder="请选择成色"
+      is-link
+      readonly
+      bind:click="showConditionPicker"
+      required
+    />
+
+    <!-- Trade Type -->
+    <van-field
+      label="交易方式"
+      value="{{ tradeTypeText }}"
+      placeholder="请选择交易方式"
+      is-link
+      readonly
+      bind:click="showTradeTypePicker"
+    />
+
+    <!-- Description -->
+    <van-field
+      label="描述"
+      value="{{ description }}"
+      type="textarea"
+      placeholder="请详细描述商品信息、使用情况等"
+      bind:change="onDescChange"
+      autosize
+      maxlength="500"
+      show-word-limit
+    />
+  </view>
+
+  <!-- Submit Button -->
+  <view class="submit-section">
+    <van-button 
+      block 
+      round 
+      color="#07c160" 
+      bind:click="onSubmit"
+      disabled="{{!canSubmit}}"
+    >
+      发布
+    </van-button>
+  </view>
+
+  <!-- Category Picker -->
+  <van-popup show="{{ showCategory }}" position="bottom" bind:close="closeCategoryPicker">
+    <van-picker
+      columns="{{ categories }}"
+      bind:confirm="onCategoryConfirm"
+      bind:cancel="closeCategoryPicker"
+    />
+  </van-popup>
+
+  <!-- Condition Picker -->
+  <van-popup show="{{ showCondition }}" position="bottom" bind:close="closeConditionPicker">
+    <van-picker
+      columns="{{ conditions }}"
+      bind:confirm="onConditionConfirm"
+      bind:cancel="closeConditionPicker"
+    />
+  </van-popup>
+
+  <!-- Trade Type Picker -->
+  <van-popup show="{{ showTradeType }}" position="bottom" bind:close="closeTradeTypePicker">
+    <van-picker
+      columns="{{ tradeTypes }}"
+      bind:confirm="onTradeTypeConfirm"
+      bind:cancel="closeTradeTypePicker"
+    />
+  </van-popup>
+</view>

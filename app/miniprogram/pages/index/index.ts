@@ -11,9 +11,28 @@ Page({
     },
 
     showQRCode() {
-        wx.showToast({
-            title: '生成身份码...',
-            icon: 'loading'
+        wx.navigateTo({
+            url: '/pages/qrcode/qrcode?type=identity'
         });
+    },
+
+    onNoticeClick() {
+        wx.navigateTo({
+            url: '/pages/services/announcements/announcements'
+        });
+    },
+
+    onQuickAction(e: any) {
+        const action = e.currentTarget.dataset.action;
+        if (action === 'open') {
+            wx.showToast({
+                title: '开门中...',
+                icon: 'loading'
+            });
+        } else if (action === 'call') {
+            wx.makePhoneCall({
+                phoneNumber: '400-123-4567'
+            });
+        }
     }
 });

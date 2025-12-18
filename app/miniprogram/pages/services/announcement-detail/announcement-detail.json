@@ -1,0 +1,7 @@
+{
+    "navigationBarTitleText": "公告详情",
+    "usingComponents": {
+        "van-tag": "@vant/weapp/tag/index",
+        "van-icon": "@vant/weapp/icon/index"
+    }
+}

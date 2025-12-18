@@ -1,0 +1,26 @@
+<view class="container">
+  <van-tabs active="{{activeTab}}" color="#07c160" bind:change="onTabChange">
+    <van-tab title="闲置物品"></van-tab>
+    <van-tab title="互助请求"></van-tab>
+  </van-tabs>
+
+  <view class="posts-list">
+    <block wx:for="{{posts}}" wx:key="id">
+      <view class="post-card">
+        <image class="post-image" src="{{item.image}}" mode="aspectFill" wx:if="{{item.image}}"></image>
+        <view class="post-info">
+          <text class="post-title">{{item.title}}</text>
+          <text class="post-time">{{item.time}}</text>
+          <view class="post-stats">
+            <text class="stat-item">浏览 {{item.views}}</text>
+            <text class="stat-item" wx:if="{{item.price}}">¥{{item.price}}</text>
+          </view>
+        </view>
+        <view class="post-actions">
+          <van-button size="small" round plain bind:tap="onEdit" data-id="{{item.id}}">编辑</van-button>
+          <van-button size="small" round plain type="danger" bind:tap="onDelete" data-id="{{item.id}}">删除</van-button>
+        </view>
+      </view>
+    </block>
+  </view>
+</view>

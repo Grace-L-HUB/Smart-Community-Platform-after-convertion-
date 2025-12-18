@@ -6,22 +6,22 @@
         <view class="section-card">
           <view class="card-title">基础服务</view>
           <van-grid column-num="3" border="{{ false }}">
-            <van-grid-item icon="volume-o" text="社区公告" />
+            <van-grid-item icon="volume-o" text="社区公告" link-type="navigateTo" url="/pages/services/announcements/announcements" />
             <van-grid-item icon="wap-home-o" text="房屋管理" link-type="navigateTo" url="/pages/house/binding/binding" />
-            <van-grid-item icon="manager-o" text="访客管理" />
+            <van-grid-item icon="manager-o" text="访客管理" link-type="navigateTo" url="/pages/services/visitor/visitor" />
             <van-grid-item icon="setting-o" text="报事报修" link-type="navigateTo" url="/pages/repair/repair" />
             <van-grid-item icon="balance-list-o" text="物业缴费" link-type="navigateTo" url="/pages/payment/payment" />
-            <van-grid-item icon="column" text="装修申请" />
+            <van-grid-item icon="column" text="装修申请" link-type="navigateTo" url="/pages/services/decoration/decoration" />
           </van-grid>
         </view>
 
         <view class="section-card mt-20">
           <view class="card-title">便民服务</view>
           <van-grid column-num="4" border="{{ false }}">
-             <van-grid-item icon="flower-o" text="家政保洁" />
+             <van-grid-item icon="flower-o" text="家政保洁" link-type="navigateTo" url="/pages/services/housekeeping/housekeeping" />
              <van-grid-item icon="umbrella-circle" text="借雨伞" />
              <van-grid-item icon="print" text="云打印" />
-             <van-grid-item icon="phone-circle-o" text="常用电话" />
+             <van-grid-item icon="phone-circle-o" text="常用电话" link-type="navigateTo" url="/pages/services/contacts/contacts" />
           </van-grid>
         </view>
       </view>

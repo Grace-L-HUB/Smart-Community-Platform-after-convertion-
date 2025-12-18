@@ -1,0 +1,3 @@
+.logout-section {
+  padding: 40rpx 24rpx;
+}

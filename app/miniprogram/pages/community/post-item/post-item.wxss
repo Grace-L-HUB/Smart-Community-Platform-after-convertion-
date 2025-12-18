@@ -1,0 +1,47 @@
+.container {
+  padding-bottom: 120rpx;
+}
+
+.header-tip {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 24rpx;
+  background: #f0f9ff;
+  margin: 24rpx;
+  border-radius: var(--radius-md);
+}
+
+.tip-text {
+  font-size: 24rpx;
+  color: #07c160;
+}
+
+.form-section {
+  background: var(--card-bg);
+  margin: 0 24rpx 24rpx;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.upload-section {
+  padding: 24rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.section-label {
+  font-size: 28rpx;
+  color: var(--text-main);
+  margin-bottom: 20rpx;
+  font-weight: 600;
+}
+
+.submit-section {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 20rpx 24rpx;
+  background: #fff;
+  box-shadow: 0 -4rpx 12rpx rgba(0, 0, 0, 0.05);
+}

@@ -1,0 +1,47 @@
+.tab-content {
+  padding: 24rpx;
+}
+
+.visitor-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.visitor-card {
+  background: var(--card-bg);
+  border-radius: var(--radius-md);
+  padding: 24rpx;
+  box-shadow: var(--shadow-sm);
+}
+
+.visitor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20rpx;
+}
+
+.visitor-name {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.visitor-actions {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 20rpx;
+  padding-top: 20rpx;
+  border-top: 1rpx solid #f0f0f0;
+}
+
+.invite-form {
+  background: var(--card-bg);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.submit-btn {
+  padding: 32rpx 24rpx;
+}

@@ -1,0 +1,65 @@
+<view class="container">
+  <van-tabs active="{{ activeTab }}" color="#07c160" bind:change="onTabChange">
+    <van-tab title="访客记录"></van-tab>
+    <van-tab title="邀请访客"></van-tab>
+  </van-tabs>
+
+  <!-- Visitor Records -->
+  <view class="tab-content" wx:if="{{activeTab === 0}}">
+    <view class="visitor-list">
+      <block wx:for="{{visitors}}" wx:key="id">
+        <view class="visitor-card">
+          <view class="visitor-header">
+            <text class="visitor-name">{{item.name}}</text>
+            <van-tag type="{{item.status === 'visited' ? 'success' : item.status === 'pending' ? 'primary' : 'default'}}">
+              {{item.statusText}}
+            </van-tag>
+          </view>
+          <van-cell-group border="{{false}}">
+            <van-cell title="手机号" value="{{item.phone}}" />
+            <van-cell title="访问时间" value="{{item.visitTime}}" />
+            <van-cell title="车牌号" value="{{item.carNumber || '无'}}" />
+          </van-cell-group>
+          <view class="visitor-actions" wx:if="{{item.status === 'pending'}}">
+            <van-button size="small" round bind:tap="onShowQR" data-id="{{item.id}}">查看二维码</van-button>
+            <van-button size="small" round plain type="danger" bind:tap="onCancel" data-id="{{item.id}}">取消</van-button>
+          </view>
+        </view>
+      </block>
+    </view>
+  </view>
+
+  <!-- Invite Visitor -->
+  <view class="tab-content" wx:else>
+    <view class="invite-form">
+      <van-field label="访客姓名" value="{{ visitorName }}" placeholder="请输入访客姓名" bind:change="onNameChange" required />
+      <van-field label="手机号" value="{{ visitorPhone }}" type="number" placeholder="请输入访客手机号" bind:change="onPhoneChange" required />
+      <van-field label="车牌号" value="{{ carNumber }}" placeholder="选填" bind:change="onCarChange" />
+      <van-field
+        label="访问时间"
+        value="{{ visitTime }}"
+        placeholder="请选择访问时间"
+        is-link
+        readonly
+        bind:click="showTimePicker"
+        required
+      />
+      <van-field label="备注" value="{{ remark }}" type="textarea" placeholder="选填" bind:change="onRemarkChange" autosize />
+      
+      <view class="submit-btn">
+        <van-button block round color="#07c160" bind:click="onInvite">发送邀请</van-button>
+      </view>
+    </view>
+  </view>
+
+  <!-- Time Picker -->
+  <van-popup show="{{ showPicker }}" position="bottom" bind:close="closeTimePicker">
+    <van-datetime-picker
+      type="datetime"
+      value="{{ currentDate }}"
+      min-date="{{ minDate }}"
+      bind:confirm="onTimeConfirm"
+      bind:cancel="closeTimePicker"
+    />
+  </van-popup>
+</view>

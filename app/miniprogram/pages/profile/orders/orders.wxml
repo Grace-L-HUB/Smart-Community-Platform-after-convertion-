@@ -1,0 +1,27 @@
+<view class="container">
+  <van-tabs active="{{activeTab}}" color="#07c160" bind:change="onTabChange">
+    <van-tab title="全部"></van-tab>
+    <van-tab title="待支付"></van-tab>
+    <van-tab title="已完成"></van-tab>
+  </van-tabs>
+
+  <view class="order-list">
+    <block wx:for="{{orders}}" wx:key="id">
+      <view class="order-card">
+        <view class="order-header">
+          <text class="order-type">{{item.type}}</text>
+          <van-tag type="{{item.status === 'paid' ? 'success' : 'warning'}}">{{item.statusText}}</van-tag>
+        </view>
+        <view class="order-content">
+          <text class="order-title">{{item.title}}</text>
+          <text class="order-time">{{item.time}}</text>
+        </view>
+        <view class="order-footer">
+          <text class="order-amount">¥{{item.amount}}</text>
+          <van-button size="small" round type="primary" wx:if="{{item.status === 'pending'}}" bind:tap="onPay" data-id="{{item.id}}">去支付</van-button>
+          <van-button size="small" round plain wx:else bind:tap="onDetail" data-id="{{item.id}}">查看详情</van-button>
+        </view>
+      </view>
+    </block>
+  </view>
+</view>

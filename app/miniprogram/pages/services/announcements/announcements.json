@@ -1,0 +1,11 @@
+{
+    "navigationBarTitleText": "社区公告",
+    "usingComponents": {
+        "van-search": "@vant/weapp/search/index",
+        "van-tabs": "@vant/weapp/tabs/index",
+        "van-tab": "@vant/weapp/tab/index",
+        "van-tag": "@vant/weapp/tag/index",
+        "van-icon": "@vant/weapp/icon/index",
+        "van-button": "@vant/weapp/button/index"
+    }
+}

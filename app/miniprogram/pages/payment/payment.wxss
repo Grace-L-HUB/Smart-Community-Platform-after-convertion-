@@ -1,0 +1,16 @@
+page {
+  background-color: var(--bg-color);
+}
+
+.header-area {
+  background: #fff;
+  padding: 20rpx 24rpx;
+}
+
+.goods-list {
+  padding: 24rpx;
+}
+
+.spacer {
+  height: 20rpx;
+}

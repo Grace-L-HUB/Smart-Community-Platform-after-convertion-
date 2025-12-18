@@ -1,0 +1,68 @@
+<view class="container">
+  <!-- Search Bar -->
+  <view class="search-section">
+    <van-search 
+      value="{{ searchValue }}" 
+      placeholder="搜索公告" 
+      shape="round"
+      bind:change="onSearchChange"
+      bind:search="onSearch"
+    />
+  </view>
+
+  <!-- Tabs -->
+  <van-tabs active="{{ activeTab }}" color="#07c160" bind:change="onTabChange">
+    <van-tab title="全部"></van-tab>
+    <van-tab title="物业通知"></van-tab>
+    <van-tab title="社区新闻"></van-tab>
+    <van-tab title="温馨提示"></van-tab>
+  </van-tabs>
+
+  <!-- Announcement List -->
+  <view class="announcement-list">
+    <block wx:for="{{announcements}}" wx:key="id">
+      <view 
+        class="announcement-card {{item.isTop ? 'is-top' : ''}}" 
+        bind:tap="onAnnouncementClick"
+        data-id="{{item.id}}"
+      >
+        <view class="card-header">
+          <view class="header-left">
+            <van-tag type="danger" wx:if="{{item.isTop}}">置顶</van-tag>
+            <van-tag type="primary" plain>{{item.category}}</van-tag>
+          </view>
+          <text class="publish-time">{{item.time}}</text>
+        </view>
+        
+        <text class="announcement-title">{{item.title}}</text>
+        <text class="announcement-summary">{{item.summary}}</text>
+        
+        <view class="card-footer">
+          <view class="footer-info">
+            <van-icon name="eye-o" size="14px" color="#999" />
+            <text class="info-text">{{item.views}}</text>
+          </view>
+          <van-icon name="arrow" size="14px" color="#999" />
+        </view>
+      </view>
+    </block>
+
+    <!-- Empty State -->
+    <view class="empty-state" wx:if="{{announcements.length === 0}}">
+      <van-icon name="notes-o" size="64px" color="#ddd" />
+      <text class="empty-text">暂无公告</text>
+    </view>
+  </view>
+
+  <!-- Load More -->
+  <view class="load-more" wx:if="{{hasMore}}">
+    <van-button 
+      plain 
+      size="small" 
+      bind:click="onLoadMore"
+      loading="{{loading}}"
+    >
+      {{loading ? '加载中...' : '加载更多'}}
+    </van-button>
+  </view>
+</view>

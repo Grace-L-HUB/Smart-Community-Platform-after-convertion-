@@ -1,0 +1,25 @@
+<view class="container">
+  <van-search value="{{searchValue}}" placeholder="搜索电话" bind:change="onSearchChange" />
+
+  <view class="contacts-list">
+    <block wx:for="{{categories}}" wx:key="category">
+      <view class="category-section">
+        <view class="category-title">{{item.category}}</view>
+        <view class="contact-items">
+          <block wx:for="{{item.contacts}}" wx:key="id" wx:for-item="contact">
+            <view class="contact-card">
+              <view class="contact-info">
+                <text class="contact-name">{{contact.name}}</text>
+                <text class="contact-desc">{{contact.desc}}</text>
+              </view>
+              <view class="contact-actions">
+                <van-icon name="star{{contact.isFavorite ? '' : '-o'}}" size="20px" color="{{contact.isFavorite ? '#ff9800' : '#999'}}" bind:tap="onFavorite" data-id="{{contact.id}}" />
+                <van-button size="small" round color="#07c160" icon="phone-o" bind:tap="onCall" data-phone="{{contact.phone}}">拨打</van-button>
+              </view>
+            </view>
+          </block>
+        </view>
+      </view>
+    </block>
+  </view>
+</view>

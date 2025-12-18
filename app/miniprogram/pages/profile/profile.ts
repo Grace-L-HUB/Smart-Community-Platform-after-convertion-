@@ -67,12 +67,12 @@ Page({
                         // 如果没有avatar_url，使用默认头像
                         userInfo.avatar_url = 'https://img.yzcdn.cn/vant/cat.jpeg'
                     }
-                    
+
                     this.setData({
                         userInfo: userInfo,
                         loading: false
                     })
-                    
+
                     // 更新本地存储的用户信息
                     const updatedStoredInfo = { ...storedUserInfo, ...userInfo }
                     wx.setStorageSync('userInfo', updatedStoredInfo)
@@ -90,7 +90,7 @@ Page({
                     error: '网络请求失败，请检查网络连接',
                     loading: false
                 })
-                
+
                 // 网络失败时，使用本地存储的基本信息作为备用
                 if (storedUserInfo) {
                     this.setData({
@@ -113,11 +113,18 @@ Page({
 
     // 跳转到个人信息编辑页面
     goToEditProfile() {
-        // TODO: 后续添加个人信息编辑页面
-        wx.showToast({
-            title: '功能开发中',
-            icon: 'none'
-        })
+        wx.navigateTo({
+            url: '/pages/profile/edit/edit'
+        });
+    },
+
+    // 关于我们
+    onAbout() {
+        wx.showModal({
+            title: '关于我们',
+            content: '智慧社区小程序 v1.0.0\n为社区居民提供便捷的物业服务',
+            showCancel: false
+        });
     },
 
     // 退出登录

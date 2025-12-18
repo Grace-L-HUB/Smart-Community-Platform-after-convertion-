@@ -1,0 +1,36 @@
+.tip-section {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 24rpx;
+  background: #f0f9ff;
+  margin: 24rpx;
+  border-radius: var(--radius-md);
+}
+
+.tip-text {
+  font-size: 24rpx;
+  color: #07c160;
+}
+
+.form-section {
+  background: var(--card-bg);
+  margin: 0 24rpx 24rpx;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.upload-section {
+  margin: 0 24rpx 24rpx;
+}
+
+.section-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 20rpx;
+}
+
+.submit-section {
+  padding: 0 24rpx 40rpx;
+}

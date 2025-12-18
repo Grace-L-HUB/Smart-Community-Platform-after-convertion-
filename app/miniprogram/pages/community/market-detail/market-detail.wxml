@@ -1,0 +1,62 @@
+<view class="container">
+  <!-- Image Swiper -->
+  <swiper class="goods-swiper" indicator-dots="{{true}}" autoplay="{{false}}">
+    <block wx:for="{{images}}" wx:key="index">
+      <swiper-item>
+        <image src="{{item}}" mode="aspectFill" class="swiper-image"></image>
+      </swiper-item>
+    </block>
+  </swiper>
+
+  <!-- Price Section -->
+  <view class="card price-section">
+    <view class="price-row">
+      <text class="price">¥ {{price}}</text>
+      <van-tag type="danger" plain wx:if="{{isNew}}">{{condition}}</van-tag>
+    </view>
+    <text class="title">{{title}}</text>
+  </view>
+
+  <!-- Seller Info -->
+  <view class="card seller-section">
+    <view class="seller-header">
+      <view class="seller-info">
+        <image class="avatar" src="{{seller.avatar || '/image/default-avatar.png'}}"></image>
+        <view class="seller-details">
+          <text class="seller-name">{{seller.name}}</text>
+          <text class="seller-location">{{seller.location}}</text>
+        </view>
+      </view>
+      <van-button size="small" round plain type="primary" bind:click="onChat">私聊</van-button>
+    </view>
+  </view>
+
+  <!-- Description -->
+  <view class="card desc-section">
+    <view class="section-title">商品描述</view>
+    <text class="desc-text">{{description}}</text>
+  </view>
+
+  <!-- Details -->
+  <view class="card details-section">
+    <view class="section-title">商品信息</view>
+    <van-cell-group border="{{false}}">
+      <van-cell title="分类" value="{{category}}" />
+      <van-cell title="成色" value="{{condition}}" />
+      <van-cell title="发布时间" value="{{publishTime}}" />
+      <van-cell title="交易方式" value="{{tradeType}}" />
+    </van-cell-group>
+  </view>
+
+  <!-- Bottom Action Bar -->
+  <view class="action-bar">
+    <view class="action-left">
+      <van-icon name="star-o" size="24px" bind:click="onFavorite" />
+      <text class="action-text">收藏</text>
+    </view>
+    <view class="action-buttons">
+      <van-button round plain type="primary" bind:click="onChat">联系卖家</van-button>
+      <van-button round color="#07c160" bind:click="onWant">我想要</van-button>
+    </view>
+  </view>
+</view>

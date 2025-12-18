@@ -1,0 +1,37 @@
+<view class="container">
+  <view class="tip-section">
+    <van-icon name="info-o" size="16px" color="#07c160" />
+    <text class="tip-text">装修前需提前申请，获得物业审批后方可施工</text>
+  </view>
+
+  <view class="form-section">
+    <van-field label="装修类型" value="{{ decorationType }}" placeholder="请选择" is-link readonly bind:click="showTypeP icker" required />
+    <van-field label="开始时间" value="{{ startDate }}" placeholder="请选择" is-link readonly bind:click="showStartPicker" required />
+    <van-field label="结束时间" value="{{ endDate }}" placeholder="请选择" is-link readonly bind:click="showEndPicker" required />
+    <van-field label="施工单位" value="{{ company }}" placeholder="请输入施工单位名称" bind:change="onCompanyChange" required />
+    <van-field label="负责人" value="{{ contact }}" placeholder="请输入负责人姓名" bind:change="onContactChange" required />
+    <van-field label="联系电话" value="{{ phone }}" type="number" placeholder="请输入联系电话" bind:change="onPhoneChange" required />
+    <van-field label="装修说明" value="{{ description }}" type="textarea" placeholder="请简要说明装修内容" bind:change="onDescChange" autosize maxlength="200" show-word-limit />
+  </view>
+
+  <view class="upload-section card">
+    <view class="section-title">装修方案 (选填)</view>
+    <van-uploader file-list="{{ fileList }}" bind:after-read="afterRead" bind:delete="deleteFile" max-count="5" />
+  </view>
+
+  <view class="submit-section">
+    <van-button block round color="#07c160" bind:click="onSubmit">提交申请</van-button>
+  </view>
+
+  <van-popup show="{{ showType }}" position="bottom" bind:close="closeTypePicker">
+    <van-picker columns="{{ types }}" bind:confirm="onTypeConfirm" bind:cancel="closeTypePicker" />
+  </van-popup>
+
+  <van-popup show="{{ showStart }}" position="bottom" bind:close="closeStartPicker">
+    <van-datetime-picker type="date" value="{{ currentDate }}" min-date="{{ minDate }}" bind:confirm="onStartConfirm" bind:cancel="closeStartPicker" />
+  </van-popup>
+
+  <van-popup show="{{ showEnd }}" position="bottom" bind:close="closeEndPicker">
+    <van-datetime-picker type="date" value="{{ currentDate }}" min-date="{{ minDate }}" bind:confirm="onEndConfirm" bind:cancel="closeEndPicker" />
+  </van-popup>
+</view>

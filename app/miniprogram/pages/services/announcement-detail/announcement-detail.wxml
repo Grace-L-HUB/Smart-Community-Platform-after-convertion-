@@ -1,0 +1,38 @@
+<view class="container">
+  <!-- Header -->
+  <view class="announcement-header">
+    <view class="header-tags">
+      <van-tag type="primary">{{category}}</van-tag>
+      <van-tag type="danger" wx:if="{{isTop}}">置顶</van-tag>
+    </view>
+    <text class="announcement-title">{{title}}</text>
+    <view class="meta-info">
+      <text class="meta-text">发布时间: {{publishTime}}</text>
+      <view class="meta-row">
+        <van-icon name="eye-o" size="14px" color="#999" />
+        <text class="meta-text">{{views}} 次浏览</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- Content -->
+  <view class="announcement-content">
+    <rich-text nodes="{{content}}"></rich-text>
+  </view>
+
+  <!-- Attachments -->
+  <view class="attachments-section" wx:if="{{attachments.length > 0}}">
+    <view class="section-title">附件</view>
+    <view class="attachment-item" wx:for="{{attachments}}" wx:key="id" bind:tap="onDownload" data-url="{{item.url}}">
+      <van-icon name="description" size="20px" color="#07c160" />
+      <text class="attachment-name">{{item.name}}</text>
+      <van-icon name="down" size="16px" color="#999" />
+    </view>
+  </view>
+
+  <!-- Publisher -->
+  <view class="publisher-section">
+    <text class="publisher-label">发布单位:</text>
+    <text class="publisher-name">{{publisher}}</text>
+  </view>
+</view>

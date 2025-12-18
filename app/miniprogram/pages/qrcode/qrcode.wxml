@@ -1,0 +1,21 @@
+<view class="container">
+  <view class="qrcode-section">
+    <view class="qrcode-wrapper">
+      <image class="qrcode-image" src="{{qrcodeUrl}}"></image>
+    </view>
+    <text class="qrcode-title">{{title}}</text>
+    <text class="qrcode-desc">{{description}}</text>
+  </view>
+
+  <view class="info-section card">
+    <van-cell-group border="{{false}}">
+      <van-cell title="姓名" value="{{userInfo.name}}" />
+      <van-cell title="房号" value="{{userInfo.room}}" />
+      <van-cell title="有效期" value="{{validTime}}" wx:if="{{validTime}}" />
+    </van-cell-group>
+  </view>
+
+  <view class="actions-section">
+    <van-button block round plain bind:click="onRefresh">刷新二维码</van-button>
+  </view>
+</view>

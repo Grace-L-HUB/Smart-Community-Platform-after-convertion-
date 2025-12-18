@@ -1,0 +1,115 @@
+<view class="container">
+  <!-- Event Banner -->
+  <image class="event-banner" src="{{banner}}" mode="aspectFill"></image>
+
+  <!-- Event Info -->
+  <view class="card event-info">
+    <text class="event-title">{{title}}</text>
+    
+    <view class="info-row">
+      <van-icon name="clock-o" size="18px" color="#07c160" />
+      <text class="info-text">{{time}}</text>
+    </view>
+    
+    <view class="info-row">
+      <van-icon name="location-o" size="18px" color="#07c160" />
+      <text class="info-text">{{location}}</text>
+    </view>
+    
+    <view class="info-row">
+      <van-icon name="friends-o" size="18px" color="#07c160" />
+      <text class="info-text">已报名 {{enrolledCount}}/{{maxCount}} 人</text>
+    </view>
+
+    <view class="tags-row">
+      <van-tag type="success" wx:if="{{isFree}}">免费</van-tag>
+      <van-tag type="primary" wx:if="{{isHot}}">热门</van-tag>
+      <van-tag type="warning" wx:if="{{deadline}}">报名截止: {{deadline}}</van-tag>
+    </view>
+  </view>
+
+  <!-- Event Description -->
+  <view class="card desc-section">
+    <view class="section-title">活动详情</view>
+    <text class="desc-text">{{description}}</text>
+  </view>
+
+  <!-- Event Schedule -->
+  <view class="card schedule-section" wx:if="{{schedule.length > 0}}">
+    <view class="section-title">活动流程</view>
+    <view class="schedule-item" wx:for="{{schedule}}" wx:key="index">
+      <view class="schedule-time">{{item.time}}</view>
+      <view class="schedule-content">{{item.content}}</view>
+    </view>
+  </view>
+
+  <!-- Requirements -->
+  <view class="card requirements-section" wx:if="{{requirements}}">
+    <view class="section-title">参与须知</view>
+    <text class="requirements-text">{{requirements}}</text>
+  </view>
+
+  <!-- Enrolled Users -->
+  <view class="card enrolled-section">
+    <view class="section-header">
+      <text class="section-title">已报名用户</text>
+      <text class="count-text">{{enrolledCount}}人</text>
+    </view>
+    
+    <view class="enrolled-list" wx:if="{{enrolledUsers.length > 0}}">
+      <image 
+        class="enrolled-avatar" 
+        wx:for="{{enrolledUsers}}" 
+        wx:key="id"
+        src="{{item.avatar || '/image/default-avatar.png'}}"
+      ></image>
+      <view class="more-users" wx:if="{{enrolledCount > 10}}">
+        <text>+{{enrolledCount - 10}}</text>
+      </view>
+    </view>
+
+    <view class="empty-enrolled" wx:else>
+      <text class="empty-text">暂无报名</text>
+    </view>
+  </view>
+
+  <!-- Organizer Info -->
+  <view class="card organizer-section">
+    <view class="section-title">主办方</view>
+    <view class="organizer-info">
+      <image class="organizer-logo" src="{{organizer.logo}}"></image>
+      <view class="organizer-details">
+        <text class="organizer-name">{{organizer.name}}</text>
+        <text class="organizer-desc">{{organizer.description}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- Action Button -->
+  <view class="action-bar">
+    <view class="action-left">
+      <van-icon 
+        name="{{isFavorite ? 'star' : 'star-o'}}" 
+        size="24px" 
+        color="{{isFavorite ? '#ff9800' : '#999'}}"
+        bind:click="onFavorite" 
+      />
+      <text class="action-text">收藏</text>
+    </view>
+    
+    <view class="action-buttons">
+      <van-button round plain bind:click="onShare">
+        <van-icon name="share-o" size="16px" />
+        分享
+      </van-button>
+      <van-button 
+        round 
+        color="#07c160" 
+        bind:click="onEnroll"
+        disabled="{{isEnrolled || isFull}}"
+      >
+        {{isEnrolled ? '已报名' : isFull ? '名额已满' : '立即报名'}}
+      </van-button>
+    </view>
+  </view>
+</view>
