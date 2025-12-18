@@ -369,7 +369,7 @@ class UserProfileView(APIView):
                 "message": "用户不存在"
             }, status=status.HTTP_404_NOT_FOUND)
         
-        serializer = UserInfoSerializer(user)
+        serializer = UserInfoSerializer(user, context={'request': request})
         return Response({
             "code": 200,
             "message": "获取成功",

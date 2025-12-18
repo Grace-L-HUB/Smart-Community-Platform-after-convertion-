@@ -39,12 +39,14 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 
+    'corsheaders',  # 添加CORS支持
     'rest_framework',
     'drf_spectacular',
     'users',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',  # CORS中间件，必须放在最前面
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -154,3 +156,47 @@ WECHAT_APP_SECRET = os.getenv('WECHAT_APP_SECRET', 'e8d2cd917739c6c4d20116fbd5c7
 
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
+
+# CORS settings for miniprogram
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://servicewechat.com",  # 微信小程序
+]
+
+# 允许所有来源（开发环境）
+CORS_ALLOW_ALL_ORIGINS = True
+
+# 允许的请求头
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+# 允许的请求方法
+CORS_ALLOWED_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+# 对于API接口，禁用CSRF保护
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://servicewechat.com",
+]
+
+# 部分API不需要CSRF token
+CSRF_COOKIE_SECURE = False
+CSRF_COOKIE_SAMESITE = None

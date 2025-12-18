@@ -7,6 +7,7 @@ Page({
         room: '',
         name: '',
         phone: '',
+        idCard: '', // 身份证号
 
         showPicker: false,
         pickerType: '', // 'building', 'unit', 'room'
@@ -70,8 +71,38 @@ Page({
         this.setData({ phone: event.detail });
     },
 
+    // 身份证号输入
+    onIdCardChange(event: any) {
+        this.setData({ idCard: event.detail });
+    },
+
     onSubmit() {
-        // Validate and submit
+        const { building, unit, room, name, phone, idCard } = this.data;
+
+        if (!building || !unit || !room) {
+            wx.showToast({ title: '请先选择完整房屋信息', icon: 'none' });
+            return;
+        }
+        if (!name) {
+            wx.showToast({ title: '请输入业主姓名', icon: 'none' });
+            return;
+        }
+        if (!phone || phone.length !== 11) {
+            wx.showToast({ title: '请输入正确的手机号', icon: 'none' });
+            return;
+        }
+        if (!idCard) {
+            wx.showToast({ title: '请输入身份证号', icon: 'none' });
+            return;
+        }
+        // 简单校验：18位或15位，末位可以是X/x
+        const idReg = /(^\d{15}$)|(^\d{17}(\d|X|x)$)/;
+        if (!idReg.test(idCard)) {
+            wx.showToast({ title: '身份证号格式不正确', icon: 'none' });
+            return;
+        }
+
+        // TODO: 这里后续可以接入后端接口，提交绑定申请
         wx.showLoading({ title: '提交中...' });
         setTimeout(() => {
             wx.hideLoading();

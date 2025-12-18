@@ -54,6 +54,15 @@
         maxlength="11"
         bind:change="onPhoneChange"
       />
+
+      <!-- 身份证号 -->
+      <van-field
+        value="{{ idCard }}"
+        label="身份证号"
+        placeholder="请输入身份证号码"
+        maxlength="18"
+        bind:change="onIdCardChange"
+      />
     </van-cell-group>
 
     <view class="btn-area">

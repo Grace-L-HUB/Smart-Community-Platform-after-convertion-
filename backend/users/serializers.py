@@ -113,11 +113,12 @@ class UserInfoSerializer(serializers.ModelSerializer):
     display_name = serializers.CharField(read_only=True)
     age = serializers.IntegerField(read_only=True)
     full_address = serializers.SerializerMethodField()
+    avatar_url = serializers.SerializerMethodField()
     
     class Meta:
         model = User
         fields = [
-            'id', 'username', 'nickname', 'display_name', 'avatar', 'phone', 'email',
+            'id', 'username', 'nickname', 'display_name', 'avatar', 'avatar_url', 'phone', 'email',
             'gender', 'birthday', 'age', 'real_name', 'province', 'city', 'district', 
             'address', 'full_address', 'role', 'register_type', 'is_verified', 
             'created_at', 'updated_at', 'last_login'
@@ -126,3 +127,14 @@ class UserInfoSerializer(serializers.ModelSerializer):
     
     def get_full_address(self, obj):
         return obj.get_full_address()
+    
+    def get_avatar_url(self, obj):
+        """获取头像的完整URL"""
+        if obj.avatar and hasattr(obj.avatar, 'url'):
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.avatar.url)
+            else:
+                # 如果没有request上下文，返回相对URL
+                return obj.avatar.url
+        return None
