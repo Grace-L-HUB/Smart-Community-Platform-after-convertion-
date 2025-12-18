@@ -92,6 +92,7 @@ class UserProfileSerializer(serializers.Serializer):
     gender = serializers.ChoiceField(choices=[0, 1, 2], required=False, help_text="性别：0-未知，1-男，2-女")
     birthday = serializers.DateField(required=False, help_text="生日")
     real_name = serializers.CharField(max_length=20, required=False, help_text="真实姓名")
+    email = serializers.EmailField(required=False, allow_blank=True, help_text="邮箱地址")
     province = serializers.CharField(max_length=50, required=False, help_text="省份")
     city = serializers.CharField(max_length=50, required=False, help_text="城市")
     district = serializers.CharField(max_length=50, required=False, help_text="区县")
