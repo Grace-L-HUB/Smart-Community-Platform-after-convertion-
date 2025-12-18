@@ -136,3 +136,17 @@
 .van-cell__value {
   color: #666 !important;
 }
+
+/* 访客倒计时样式 */
+.visitor-countdown {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.visitor-countdown-text {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #07c160;
+}

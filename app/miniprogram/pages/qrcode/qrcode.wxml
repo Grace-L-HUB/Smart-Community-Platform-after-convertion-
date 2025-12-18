@@ -21,7 +21,9 @@
     <!-- 倒计时显示 -->
     <view class="countdown-section">
       <view class="countdown-wrapper" wx:if="{{countdown > 0}}">
+        <!-- 身份码显示圆形进度条 -->
         <van-circle 
+          wx:if="{{type !== 'visitor'}}"
           value="{{(countdown / 60) * 100}}" 
           speed="100" 
           size="60" 
@@ -29,21 +31,38 @@
           stroke-width="4">
           <text class="countdown-text">{{countdown}}s</text>
         </van-circle>
+        
+        <!-- 访客码显示简洁时间文本 -->
+        <view wx:else class="visitor-countdown">
+          <van-icon name="clock-o" color="#07c160" size="24px" />
+          <text class="visitor-countdown-text">{{validTime}}</text>
+        </view>
+        
         <text class="countdown-desc">剩余有效时间</text>
       </view>
       <view class="expired-tip" wx:else>
         <van-icon name="info-o" color="#ff976a" size="20px" />
-        <text class="expired-text">已过期，正在重新生成...</text>
+        <text class="expired-text">{{type === 'visitor' ? '已过期' : '已过期，正在重新生成...'}}</text>
       </view>
     </view>
   </view>
 
-  <!-- 用户信息卡片 -->
-  <view class="info-section card">
+  <!-- 用户信息卡片 - 身份码 -->
+  <view class="info-section card" wx:if="{{type !== 'visitor'}}">
     <van-cell-group border="{{false}}">
       <van-cell title="姓名" value="{{userInfo.name}}" />
       <van-cell title="房号" value="{{userInfo.room}}" />
       <van-cell title="手机号" value="{{userInfo.phone}}" wx:if="{{userInfo.phone}}" />
+      <van-cell title="有效期" value="{{validTime}}" />
+    </van-cell-group>
+  </view>
+
+  <!-- 访客信息卡片 - 访客码 -->
+  <view class="info-section card" wx:if="{{type === 'visitor'}}">
+    <van-cell-group border="{{false}}">
+      <van-cell title="访客姓名" value="{{visitorInfo.name}}" />
+      <van-cell title="手机号" value="{{visitorInfo.phone}}" />
+      <van-cell title="访问时间" value="{{visitorInfo.visitTime}}" />
       <van-cell title="有效期" value="{{validTime}}" />
     </van-cell-group>
   </view>

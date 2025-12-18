@@ -14,9 +14,16 @@ Page({
             room: '',
             phone: ''
         },
+        // 访客相关
+        visitorId: '',
+        visitorInfo: {
+            name: '',
+            phone: '',
+            visitTime: ''
+        },
         // 倒计时相关
         countdown: 60,
-        validTime: '60秒',
+        validTime: '',
         countdownTimer: null as any,
         loading: false,
         canvasId: 'qrcode-canvas'
@@ -25,15 +32,33 @@ Page({
     onLoad(options: any) {
         if (options.type) {
             this.setData({ type: options.type });
+            
+            if (options.type === 'visitor') {
+                // 访客二维码
+                this.setData({ 
+                    visitorId: options.id || '',
+                    title: '访客通行码',
+                    description: '请向门岗出示此码通行'
+                });
+                this.initVisitorInfo();
+            } else {
+                // 身份码
+                this.initUserInfo();
+            }
+        } else {
+            this.initUserInfo();
         }
-        this.initUserInfo();
     },
 
     onReady() {
         // 页面渲染完成后再生成二维码
-        setTimeout(() => {
-            this.generateNewQRCode();
-        }, 300); // 稍微延迟确保Canvas元素完全准备好
+        // 但对于访客二维码，需要等待获取访客信息后再生成
+        if (this.data.type !== 'visitor') {
+            setTimeout(() => {
+                this.generateNewQRCode();
+            }, 300); // 稍微延迟确保Canvas元素完全准备好
+        }
+        // 访客二维码会在 initVisitorInfo 完成后生成
     },
 
     onUnload() {
@@ -69,8 +94,85 @@ Page({
         });
     },
 
+    // 初始化访客信息
+    initVisitorInfo() {
+        const userInfo = wx.getStorageSync('userInfo');
+        if (!userInfo || !userInfo.user_id) {
+            wx.showModal({
+                title: '提示',
+                content: '请先登录',
+                showCancel: false,
+                success: () => {
+                    wx.reLaunch({
+                        url: '/pages/login/login'
+                    });
+                }
+            });
+            return;
+        }
+
+        // 获取访客详情
+        this.getVisitorDetail();
+    },
+
+    // 获取访客详情
+    getVisitorDetail() {
+        const userInfo = wx.getStorageSync('userInfo');
+        
+        wx.request({
+            url: `${API_BASE_URL}/property/visitor/${this.data.visitorId}`,
+            method: 'GET',
+            data: {
+                user_id: userInfo.user_id
+            },
+            header: {
+                'Authorization': `Bearer ${wx.getStorageSync('token') || ''}`,
+                'content-type': 'application/json'
+            },
+            success: (res: any) => {
+                console.log('获取访客详情响应:', res.data);
+                if (res.statusCode === 200 && res.data.code === 200) {
+                    const visitor = res.data.data;
+                    this.setData({
+                        visitorInfo: {
+                            name: visitor.name,
+                            phone: visitor.phone,
+                            visitTime: visitor.visit_time
+                        }
+                    });
+                    
+                    // 获取访客信息成功后，生成二维码
+                    setTimeout(() => {
+                        this.generateNewQRCode();
+                    }, 500);
+                } else {
+                    wx.showToast({ 
+                        title: res.data.message || '获取访客信息失败', 
+                        icon: 'none' 
+                    });
+                }
+            },
+            fail: (err) => {
+                console.error('获取访客详情失败:', err);
+                wx.showToast({ 
+                    title: '网络请求失败', 
+                    icon: 'none' 
+                });
+            }
+        });
+    },
+
     // 生成新的二维码
     generateNewQRCode() {
+        if (this.data.type === 'visitor') {
+            this.generateVisitorQRCode();
+        } else {
+            this.generateIdentityQRCode();
+        }
+    },
+
+    // 生成身份码二维码
+    generateIdentityQRCode() {
         this.setData({ loading: true });
         
         const userInfo = wx.getStorageSync('userInfo');
@@ -125,6 +227,76 @@ Page({
         });
     },
 
+    // 生成访客二维码
+    generateVisitorQRCode() {
+        this.setData({ loading: true });
+        
+        const userInfo = wx.getStorageSync('userInfo');
+        if (!userInfo || !userInfo.user_id) {
+            wx.showToast({ title: '用户信息获取失败', icon: 'none' });
+            return;
+        }
+
+        // 调用后端API获取访客二维码
+        wx.request({
+            url: `${API_BASE_URL}/property/visitor/${this.data.visitorId}/qrcode`,
+            method: 'GET',
+            data: {
+                user_id: userInfo.user_id
+            },
+            header: {
+                'Authorization': `Bearer ${wx.getStorageSync('token') || ''}`,
+                'content-type': 'application/json'
+            },
+            success: (res: any) => {
+                console.log('获取访客二维码响应:', res.data);
+                if (res.statusCode === 200 && res.data.code === 200) {
+                    const { qr_code_text, expires_at, visitor_info } = res.data.data;
+                    
+                    // 计算剩余有效时间（秒）
+                    const expiresTime = new Date(expires_at).getTime();
+                    const currentTime = new Date().getTime();
+                    const remainingSeconds = Math.max(0, Math.floor((expiresTime - currentTime) / 1000));
+                    
+                    this.setData({
+                        identityToken: qr_code_text,
+                        countdown: remainingSeconds,
+                        loading: false,
+                        visitorInfo: {
+                            name: visitor_info.name,
+                            phone: visitor_info.phone,
+                            visitTime: visitor_info.visit_time
+                        }
+                    });
+                    
+                    // 绘制二维码
+                    this.drawQRCode(qr_code_text);
+                    
+                    // 启动倒计时
+                    if (remainingSeconds > 0) {
+                        this.startCountdown();
+                    } else {
+                        this.setData({ validTime: '已过期' });
+                    }
+                } else {
+                    wx.showToast({ 
+                        title: res.data.message || '获取访客二维码失败', 
+                        icon: 'none' 
+                    });
+                    this.setData({ loading: false });
+                }
+            },
+            fail: (err) => {
+                console.error('获取访客二维码失败:', err);
+                wx.showToast({ 
+                    title: '网络请求失败', 
+                    icon: 'none' 
+                });
+                this.setData({ loading: false });
+            }
+        });
+    },
+
     // 绘制二维码
     drawQRCode(text: string) {
         const canvasId = this.data.canvasId;
@@ -169,6 +341,30 @@ Page({
             });
     },
 
+    // 格式化倒计时显示
+    formatCountdown(seconds: number): string {
+        if (this.data.type === 'visitor') {
+            // 访客二维码显示更友好的时间单位
+            if (seconds > 86400) { // 超过1天
+                const days = Math.floor(seconds / 86400);
+                const hours = Math.floor((seconds % 86400) / 3600);
+                return `${days}天${hours > 0 ? hours + '小时' : ''}`;
+            } else if (seconds > 3600) { // 超过1小时
+                const hours = Math.floor(seconds / 3600);
+                const minutes = Math.floor((seconds % 3600) / 60);
+                return `${hours}小时${minutes > 0 ? minutes + '分钟' : ''}`;
+            } else if (seconds > 60) { // 超过1分钟
+                const minutes = Math.floor(seconds / 60);
+                return `${minutes}分钟`;
+            } else {
+                return `${seconds}秒`;
+            }
+        } else {
+            // 身份码保持原来的秒显示
+            return `${seconds}秒`;
+        }
+    },
+
     // 启动倒计时
     startCountdown() {
         // 清除之前的定时器
@@ -176,25 +372,32 @@ Page({
             clearInterval(this.data.countdownTimer);
         }
 
+        // 初始显示
+        this.setData({ 
+            validTime: this.formatCountdown(this.data.countdown)
+        });
+
         const timer = setInterval(() => {
             const countdown = this.data.countdown - 1;
             
             if (countdown <= 0) {
-                // 倒计时结束，自动重新生成
+                // 倒计时结束
                 clearInterval(this.data.countdownTimer);
                 this.setData({ 
                     countdownTimer: null,
-                    validTime: '已过期，正在重新生成...'
+                    validTime: this.data.type === 'visitor' ? '已过期' : '已过期，正在重新生成...'
                 });
                 
-                // 自动重新生成二维码
-                setTimeout(() => {
-                    this.generateNewQRCode();
-                }, 1000);
+                // 身份码自动重新生成，访客码不重新生成
+                if (this.data.type !== 'visitor') {
+                    setTimeout(() => {
+                        this.generateNewQRCode();
+                    }, 1000);
+                }
             } else {
                 this.setData({ 
                     countdown: countdown,
-                    validTime: `${countdown}秒`
+                    validTime: this.formatCountdown(countdown)
                 });
             }
         }, 1000);
