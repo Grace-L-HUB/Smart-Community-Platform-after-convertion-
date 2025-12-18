@@ -27,7 +27,13 @@ Page({
             this.setData({ type: options.type });
         }
         this.initUserInfo();
-        this.generateNewQRCode();
+    },
+
+    onReady() {
+        // 页面渲染完成后再生成二维码
+        setTimeout(() => {
+            this.generateNewQRCode();
+        }, 300); // 稍微延迟确保Canvas元素完全准备好
     },
 
     onUnload() {
