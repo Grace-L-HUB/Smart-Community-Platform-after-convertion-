@@ -102,12 +102,69 @@ Page({
             return;
         }
 
-        // TODO: 这里后续可以接入后端接口，提交绑定申请
+        // 获取用户信息
+        const userInfo = wx.getStorageSync('userInfo');
+        if (!userInfo || !userInfo.user_id) {
+            wx.showModal({
+                title: '提示',
+                content: '请先登录',
+                showCancel: false,
+                success: () => {
+                    wx.reLaunch({
+                        url: '/pages/login/login'
+                    });
+                }
+            });
+            return;
+        }
+
         wx.showLoading({ title: '提交中...' });
-        setTimeout(() => {
-            wx.hideLoading();
-            wx.showToast({ title: '提交成功' });
-            setTimeout(() => wx.navigateBack(), 1500);
-        }, 1000);
+
+        // 提交房屋绑定申请到后端
+        wx.request({
+            url: 'http://127.0.0.1:8000/api/house/binding/apply',
+            method: 'POST',
+            data: {
+                user_id: userInfo.user_id,
+                applicant_name: name,
+                applicant_phone: phone,
+                id_card_number: idCard,
+                community_name: this.data.communityName,
+                building_name: building,
+                unit_name: unit,
+                room_number: room,
+                identity: 1  // 默认申请业主身份
+            },
+            header: {
+                'content-type': 'application/json',
+                'Authorization': `Bearer ${wx.getStorageSync('token') || ''}`
+            },
+            success: (res: any) => {
+                wx.hideLoading();
+                console.log('房屋绑定申请响应:', res.data);
+                
+                if (res.statusCode === 200 && res.data.code === 200) {
+                    wx.showToast({ 
+                        title: '申请提交成功，请等待审核', 
+                        icon: 'success',
+                        duration: 2000
+                    });
+                    setTimeout(() => wx.navigateBack(), 2000);
+                } else {
+                    wx.showToast({ 
+                        title: res.data.message || '提交失败', 
+                        icon: 'none' 
+                    });
+                }
+            },
+            fail: (err) => {
+                wx.hideLoading();
+                console.error('房屋绑定申请失败:', err);
+                wx.showToast({ 
+                    title: '网络请求失败，请重试', 
+                    icon: 'none' 
+                });
+            }
+        });
     }
 });
