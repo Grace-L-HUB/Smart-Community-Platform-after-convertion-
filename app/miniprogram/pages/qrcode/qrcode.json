@@ -1,8 +1,11 @@
 {
-    "navigationBarTitleText": "二维码",
+    "navigationBarTitleText": "身份码",
     "usingComponents": {
         "van-cell": "@vant/weapp/cell/index",
         "van-cell-group": "@vant/weapp/cell-group/index",
-        "van-button": "@vant/weapp/button/index"
+        "van-button": "@vant/weapp/button/index",
+        "van-loading": "@vant/weapp/loading/index",
+        "van-circle": "@vant/weapp/circle/index",
+        "van-icon": "@vant/weapp/icon/index"
     }
 }

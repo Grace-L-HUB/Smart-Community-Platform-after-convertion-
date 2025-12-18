@@ -1,46 +1,138 @@
+/* pages/qrcode/qrcode.wxss */
 .container {
-  padding: 40rpx 24rpx;
-  text-align: center;
+  background: #f5f5f5;
+  min-height: 100vh;
+  padding-bottom: 60rpx;
 }
 
 .qrcode-section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-bottom: 40rpx;
+  padding: 60rpx 30rpx 40rpx;
+  text-align: center;
+  background: #fff;
+  margin-bottom: 20rpx;
 }
 
 .qrcode-wrapper {
-  width: 500rpx;
-  height: 500rpx;
+  width: 320rpx;
+  height: 320rpx;
+  margin: 0 auto 30rpx;
   background: #fff;
-  border-radius: var(--radius-lg);
-  padding: 40rpx;
-  box-shadow: var(--shadow-md);
-  margin-bottom: 32rpx;
+  border-radius: 24rpx;
+  padding: 30rpx;
+  box-shadow: 0 8rpx 20rpx rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
 }
 
-.qrcode-image {
-  width: 100%;
-  height: 100%;
+.qrcode-canvas {
+  width: 260rpx;
+  height: 260rpx;
+  border-radius: 16rpx;
+}
+
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 24rpx;
+}
+
+.loading-text {
+  margin-top: 20rpx;
+  font-size: 24rpx;
+  color: #666;
 }
 
 .qrcode-title {
-  font-size: 32rpx;
-  font-weight: 700;
-  color: var(--text-main);
+  display: block;
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #333;
   margin-bottom: 12rpx;
 }
 
 .qrcode-desc {
-  font-size: 26rpx;
-  color: var(--text-gray);
+  display: block;
+  font-size: 28rpx;
+  color: #666;
+  margin-bottom: 20rpx;
 }
 
+/* 倒计时区域 */
+.countdown-section {
+  padding: 20rpx 0;
+}
+
+.countdown-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.countdown-text {
+  font-size: 24rpx;
+  font-weight: bold;
+  color: #07c160;
+}
+
+.countdown-desc {
+  font-size: 24rpx;
+  color: #999;
+  margin-top: 12rpx;
+}
+
+.expired-tip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20rpx;
+  background: #fff7e6;
+  border-radius: 16rpx;
+  margin: 0 40rpx;
+}
+
+.expired-text {
+  font-size: 24rpx;
+  color: #ff976a;
+  margin-left: 12rpx;
+}
+
+/* 信息卡片 */
 .info-section {
-  margin-bottom: 32rpx;
+  margin: 0 30rpx 20rpx;
+  border-radius: 16rpx;
+  overflow: hidden;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
 }
 
+.card {
+  background: #fff;
+}
+
+/* 操作按钮 */
 .actions-section {
-  padding: 0 24rpx;
+  padding: 20rpx 30rpx;
+}
+
+/* 自定义van-cell样式 */
+.van-cell {
+  padding: 24rpx 20rpx !important;
+}
+
+.van-cell__title {
+  color: #333 !important;
+  font-weight: 500 !important;
+}
+
+.van-cell__value {
+  color: #666 !important;
 }

@@ -1,21 +1,63 @@
 <view class="container">
+  <!-- 二维码区域 -->
   <view class="qrcode-section">
+    <!-- 二维码画布容器 -->
     <view class="qrcode-wrapper">
-      <image class="qrcode-image" src="{{qrcodeUrl}}"></image>
+      <view wx:if="{{loading}}" class="loading-overlay">
+        <van-loading type="spinner" color="#1989fa" />
+        <text class="loading-text">生成中...</text>
+      </view>
+      <canvas 
+        canvas-id="{{canvasId}}" 
+        id="{{canvasId}}"
+        class="qrcode-canvas"
+        type="2d"></canvas>
     </view>
+    
+    <!-- 标题和描述 -->
     <text class="qrcode-title">{{title}}</text>
     <text class="qrcode-desc">{{description}}</text>
+    
+    <!-- 倒计时显示 -->
+    <view class="countdown-section">
+      <view class="countdown-wrapper" wx:if="{{countdown > 0}}">
+        <van-circle 
+          value="{{(countdown / 60) * 100}}" 
+          speed="100" 
+          size="60" 
+          color="#07c160"
+          stroke-width="4">
+          <text class="countdown-text">{{countdown}}s</text>
+        </van-circle>
+        <text class="countdown-desc">剩余有效时间</text>
+      </view>
+      <view class="expired-tip" wx:else>
+        <van-icon name="info-o" color="#ff976a" size="20px" />
+        <text class="expired-text">已过期，正在重新生成...</text>
+      </view>
+    </view>
   </view>
 
+  <!-- 用户信息卡片 -->
   <view class="info-section card">
     <van-cell-group border="{{false}}">
       <van-cell title="姓名" value="{{userInfo.name}}" />
       <van-cell title="房号" value="{{userInfo.room}}" />
-      <van-cell title="有效期" value="{{validTime}}" wx:if="{{validTime}}" />
+      <van-cell title="手机号" value="{{userInfo.phone}}" wx:if="{{userInfo.phone}}" />
+      <van-cell title="有效期" value="{{validTime}}" />
     </van-cell-group>
   </view>
 
+  <!-- 操作按钮 -->
   <view class="actions-section">
-    <van-button block round plain bind:click="onRefresh">刷新二维码</van-button>
+    <van-button 
+      block 
+      round 
+      plain 
+      loading="{{loading}}"
+      disabled="{{loading}}"
+      bind:click="onRefresh">
+      {{loading ? '生成中...' : '重新生成'}}
+    </van-button>
   </view>
 </view>

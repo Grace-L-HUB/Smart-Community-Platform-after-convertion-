@@ -6,7 +6,7 @@ from django.contrib.auth import get_user_model
 from .serializers import (
     LoginSerializer, SendSMSCodeSerializer, VerifyCodeSerializer, 
     SMSLoginSerializer, SMSRegisterSerializer, UserProfileSerializer, 
-    UserInfoSerializer, AvatarUploadSerializer
+    UserInfoSerializer, AvatarUploadSerializer, WeChatLoginSerializer, WeChatRegisterSerializer
 )
 from .sms_service import SMSService
 import logging
@@ -233,7 +233,6 @@ class SMSRegisterView(APIView):
 
 
 from .wechat_service import WeChatService
-from .serializers import WeChatLoginSerializer, WeChatRegisterSerializer
 
 class WeChatLoginView(APIView):
     permission_classes = []
@@ -494,3 +493,61 @@ class AvatarUploadView(APIView):
             "code": 400,
             "message": serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
+
+
+import jwt
+import time
+from django.conf import settings
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+
+class IdentityCodeView(APIView):
+    permission_classes = []  # 临时禁用权限，使用user_id参数
+
+    def get(self, request):
+        # TODO: 后续添加JWT认证后，从token获取用户
+        # user = request.user
+        
+        # 临时处理：从请求参数获取用户ID
+        user_id = request.GET.get('user_id')
+        if not user_id:
+            return Response({
+                "code": 400,
+                "message": "缺少用户ID参数"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({
+                "code": 404,
+                "message": "用户不存在"
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # 1. 检查用户是否绑定了房屋且审核通过（可选，看需求严格程度）
+        # has_house = user.house_bindings.filter(status=1).exists()
+        # if not has_house:
+        #     return Response({"code": 403, "message": "未绑定房屋，无法生成通行码"}, status=403)
+
+        # 2. 生成简短的身份令牌
+        # 使用格式: 用户ID_过期时间戳_签名 (更短，适合二维码)
+        expire_time = int(time.time()) + 60
+        
+        # 生成简短的数据字符串
+        token_data = f"{user.id}_{expire_time}"
+        
+        # 使用简短的密钥生成签名
+        import hashlib
+        signature = hashlib.md5(f"{token_data}_access_control_{settings.SECRET_KEY[:16]}".encode()).hexdigest()[:8]
+        
+        # 最终令牌格式: 用户ID_过期时间_签名 
+        identity_token = f"{token_data}_{signature}"
+
+        return Response({
+            "code": 200,
+            "data": {
+                "token": identity_token,
+                "valid_seconds": 60 # 告诉前端多少秒倒计时
+            }
+        })
