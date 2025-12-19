@@ -85,11 +85,61 @@ Page({
             return;
         }
 
+        // 先设置基本用户信息
         this.setData({
             userInfo: {
                 name: userInfo.display_name || userInfo.nickname || '用户',
                 phone: userInfo.phone || '',
-                room: userInfo.full_address || '暂未绑定房屋'
+                room: '正在获取...'
+            }
+        });
+
+        // 从后端获取房屋绑定信息
+        this.loadHouseInfo(userInfo);
+    },
+
+    // 获取用户房屋绑定信息
+    loadHouseInfo(userInfo: any) {
+        wx.request({
+            url: `${API_BASE_URL}/property/house/my-houses?user_id=${userInfo.user_id}`,
+            method: 'GET',
+            header: {
+                'Authorization': `Bearer ${wx.getStorageSync('token') || ''}`
+            },
+            success: (res: any) => {
+                console.log('房屋信息响应:', res.data);
+                
+                if (res.statusCode === 200 && res.data.code === 200) {
+                    const houses = res.data.data;
+                    if (houses && houses.length > 0) {
+                        // 取第一个绑定的房屋
+                        const house = houses[0];
+                        const building = house.house_info?.building_name || house.building_name || '';
+                        const unit = house.house_info?.unit_name || house.unit_name || '';
+                        const room = house.house_info?.room_number || house.room_number || '';
+                        
+                        this.setData({
+                            'userInfo.room': `${building}${unit}${room}`
+                        });
+                    } else {
+                        // 没有绑定房屋
+                        this.setData({
+                            'userInfo.room': '暂未绑定房屋'
+                        });
+                    }
+                } else {
+                    // API错误，使用默认文本
+                    this.setData({
+                        'userInfo.room': '暂未绑定房屋'
+                    });
+                }
+            },
+            fail: (err) => {
+                console.error('获取房屋信息失败:', err);
+                // 网络错误，使用默认文本
+                this.setData({
+                    'userInfo.room': '暂未绑定房屋'
+                });
             }
         });
     },
