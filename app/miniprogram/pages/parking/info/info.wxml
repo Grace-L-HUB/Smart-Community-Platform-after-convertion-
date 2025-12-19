@@ -1,0 +1,94 @@
+<view class="container">
+  <!-- 车位信息卡片 -->
+  <view class="info-card" wx:if="{{parkingInfo && !loading}}">
+    <view class="card-header">
+      <view class="parking-icon">
+        <van-icon name="logistics" size="24px" color="#fff" />
+      </view>
+      <view class="parking-title">
+        <view class="title">我的车位</view>
+        <view class="subtitle">{{ parkingInfo.area }} {{ parkingInfo.parkingNo }}</view>
+      </view>
+      <view class="type-tag">
+        <van-tag 
+          type="primary" 
+          size="medium" 
+          color="{{ parkingInfo.parkingType === '自有车位' ? '#1989fa' : '#07c160' }}"
+        >
+          {{ parkingInfo.parkingType }}
+        </van-tag>
+      </view>
+    </view>
+  </view>
+
+  <!-- 车位详细信息 -->
+  <view class="detail-card" wx:if="{{parkingInfo && !loading}}">
+    <view class="card-title">车位信息</view>
+    <van-cell-group border="{{ false }}">
+      <van-cell title="停车区域" value="{{ parkingInfo.area }}" />
+      <van-cell title="车位号" value="{{ parkingInfo.parkingNo }}" />
+      <van-cell title="车位类型" value="{{ parkingInfo.parkingType }}" />
+      <van-cell title="绑定身份" value="{{ parkingInfo.identity }}" />
+    </van-cell-group>
+  </view>
+
+  <!-- 车辆信息 -->
+  <view class="detail-card" wx:if="{{parkingInfo && !loading && parkingInfo.carNo !== '-'}}">
+    <view class="card-title">车辆信息</view>
+    <van-cell-group border="{{ false }}">
+      <van-cell title="车牌号" value="{{ parkingInfo.carNo }}" />
+      <van-cell title="车辆品牌" value="{{ parkingInfo.carBrand }}" wx:if="{{ parkingInfo.carBrand !== '-' }}" />
+      <van-cell title="车辆颜色" value="{{ parkingInfo.carColor }}" wx:if="{{ parkingInfo.carColor !== '-' }}" />
+    </van-cell-group>
+  </view>
+
+  <!-- 车主信息 -->
+  <view class="detail-card" wx:if="{{parkingInfo && !loading}}">
+    <view class="card-title">车主信息</view>
+    <van-cell-group border="{{ false }}">
+      <van-cell title="姓名" value="{{ parkingInfo.ownerName }}" />
+      <van-cell title="手机号" value="{{ parkingInfo.ownerPhone }}" />
+      <van-cell title="绑定时间" value="{{ parkingInfo.bindingTime }}" />
+    </van-cell-group>
+  </view>
+
+  <!-- 操作按钮 -->
+  <view class="action-buttons" wx:if="{{parkingInfo && !loading}}">
+    <van-button 
+      type="primary" 
+      block 
+      round 
+      class="action-btn"
+      bind:tap="onRebind"
+    >
+      重新绑定
+    </van-button>
+    <van-button 
+      type="danger" 
+      plain 
+      block 
+      round 
+      class="action-btn"
+      bind:tap="onUnbind"
+    >
+      解除绑定
+    </van-button>
+  </view>
+
+  <!-- 加载状态 -->
+  <view class="loading-container" wx:if="{{loading}}">
+    <view class="loading-text">加载中...</view>
+  </view>
+
+  <!-- 解绑确认对话框 -->
+  <van-dialog
+    show="{{ showUnbindDialog }}"
+    title="确认解绑"
+    message="确定要解除车位绑定吗？解绑后您将失去相关权限。"
+    show-cancel-button
+    bind:confirm="onConfirmUnbind"
+    bind:cancel="onCancelUnbind"
+  />
+
+  <van-toast id="van-toast" />
+</view>

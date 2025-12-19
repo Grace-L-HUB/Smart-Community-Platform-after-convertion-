@@ -1,0 +1,6 @@
+<view class="container">
+  <view class="loading-container">
+    <van-loading type="spinner" size="30px" />
+    <view class="loading-text">正在检查车位信息...</view>
+  </view>
+</view>

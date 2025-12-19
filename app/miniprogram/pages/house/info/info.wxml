@@ -1,0 +1,78 @@
+<view class="container">
+  <!-- 房屋信息卡片 -->
+  <view class="info-card" wx:if="{{houseInfo && !loading}}">
+    <view class="card-header">
+      <view class="house-icon">
+        <van-icon name="home-o" size="24px" color="#1989fa" />
+      </view>
+      <view class="house-title">
+        <view class="title">我的房屋</view>
+        <view class="subtitle">{{ houseInfo.building }}{{ houseInfo.unit }}{{ houseInfo.room }}</view>
+      </view>
+      <view class="status-tag">
+        <text class="status-text">{{ houseInfo.status }}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 详细信息 -->
+  <view class="detail-card" wx:if="{{houseInfo && !loading}}">
+    <van-cell-group border="{{ false }}">
+      <van-cell title="所属楼栋" value="{{ houseInfo.building }}" />
+      <van-cell title="单元号" value="{{ houseInfo.unit }}" />
+      <van-cell title="房间号" value="{{ houseInfo.room }}" />
+      <van-cell title="房屋面积" value="{{ houseInfo.area }}㎡" wx:if="{{ houseInfo.area !== '-' }}" />
+      <van-cell title="绑定身份" value="{{ houseInfo.identity }}" />
+    </van-cell-group>
+  </view>
+
+  <!-- 绑定人信息 -->
+  <view class="detail-card" wx:if="{{houseInfo && !loading}}">
+    <view class="card-title">绑定人信息</view>
+    <van-cell-group border="{{ false }}">
+      <van-cell title="姓名" value="{{ houseInfo.applicantName }}" />
+      <van-cell title="手机号" value="{{ houseInfo.applicantPhone }}" />
+      <van-cell title="绑定时间" value="{{ houseInfo.bindingTime }}" />
+    </van-cell-group>
+  </view>
+
+  <!-- 操作按钮 -->
+  <view class="action-buttons" wx:if="{{houseInfo && !loading}}">
+    <van-button 
+      type="primary" 
+      block 
+      round 
+      class="action-btn"
+      bind:tap="onRebind"
+    >
+      重新绑定
+    </van-button>
+    <van-button 
+      type="danger" 
+      plain 
+      block 
+      round 
+      class="action-btn"
+      bind:tap="onUnbind"
+    >
+      解除绑定
+    </van-button>
+  </view>
+
+  <!-- 加载状态 -->
+  <view class="loading-container" wx:if="{{loading}}">
+    <view class="loading-text">加载中...</view>
+  </view>
+
+  <!-- 解绑确认对话框 -->
+  <van-dialog
+    show="{{ showUnbindDialog }}"
+    title="确认解绑"
+    message="确定要解除房屋绑定吗？解绑后您将失去相关权限。"
+    show-cancel-button
+    bind:confirm="onConfirmUnbind"
+    bind:cancel="onCancelUnbind"
+  />
+
+  <van-toast id="van-toast" />
+</view>

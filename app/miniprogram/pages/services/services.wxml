@@ -7,7 +7,7 @@
           <view class="card-title">基础服务</view>
           <van-grid column-num="3" border="{{ false }}">
             <van-grid-item icon="volume-o" text="社区公告" link-type="navigateTo" url="/pages/services/announcements/announcements" />
-            <van-grid-item icon="wap-home-o" text="房屋管理" link-type="navigateTo" url="/pages/house/binding/binding" />
+            <van-grid-item icon="wap-home-o" text="房屋管理" link-type="navigateTo" url="/pages/house/index/index" />
             <van-grid-item icon="manager-o" text="访客管理" link-type="navigateTo" url="/pages/services/visitor/visitor" />
             <van-grid-item icon="setting-o" text="报事报修" link-type="navigateTo" url="/pages/repair/repair" />
             <van-grid-item icon="balance-list-o" text="物业缴费" link-type="navigateTo" url="/pages/payment/payment" />
