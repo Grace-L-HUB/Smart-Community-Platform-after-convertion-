@@ -77,11 +77,34 @@
   font-weight: bold;
 }
 
+.tags {
+  margin-bottom: 16rpx;
+}
+
+.tags .van-tag {
+  margin-right: 12rpx;
+  margin-bottom: 8rpx;
+}
+
+.meta-info {
+  margin-bottom: 16rpx;
+}
+
+.meta-text {
+  font-size: 24rpx;
+  color: #999;
+}
+
 .actions {
   display: flex;
   justify-content: flex-end;
   border-top: 1rpx solid #f5f5f5;
   padding-top: 16rpx;
+}
+
+.empty-state {
+  padding: 80rpx 0;
+  text-align: center;
 }
 
 .event-card {

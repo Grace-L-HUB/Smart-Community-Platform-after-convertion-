@@ -47,7 +47,7 @@
       placeholder="请选择分类"
       is-link
       readonly
-      bind:click="showCategoryPicker"
+      bind:click-input="showCategoryPicker"
       required
     />
 
@@ -58,19 +58,10 @@
       placeholder="请选择成色"
       is-link
       readonly
-      bind:click="showConditionPicker"
+      bind:click-input="showConditionPicker"
       required
     />
 
-    <!-- Trade Type -->
-    <van-field
-      label="交易方式"
-      value="{{ tradeTypeText }}"
-      placeholder="请选择交易方式"
-      is-link
-      readonly
-      bind:click="showTradeTypePicker"
-    />
 
     <!-- Description -->
     <van-field
@@ -101,6 +92,7 @@
   <!-- Category Picker -->
   <van-popup show="{{ showCategory }}" position="bottom" bind:close="closeCategoryPicker">
     <van-picker
+      show-toolbar
       columns="{{ categories }}"
       bind:confirm="onCategoryConfirm"
       bind:cancel="closeCategoryPicker"
@@ -110,18 +102,11 @@
   <!-- Condition Picker -->
   <van-popup show="{{ showCondition }}" position="bottom" bind:close="closeConditionPicker">
     <van-picker
+      show-toolbar
       columns="{{ conditions }}"
       bind:confirm="onConditionConfirm"
       bind:cancel="closeConditionPicker"
     />
   </van-popup>
 
-  <!-- Trade Type Picker -->
-  <van-popup show="{{ showTradeType }}" position="bottom" bind:close="closeTradeTypePicker">
-    <van-picker
-      columns="{{ tradeTypes }}"
-      bind:confirm="onTradeTypeConfirm"
-      bind:cancel="closeTradeTypePicker"
-    />
-  </van-popup>
 </view>

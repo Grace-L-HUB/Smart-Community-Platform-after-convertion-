@@ -67,14 +67,14 @@ Page({
             this.setData({
               parkingInfo: {
                 id: parking.id,
-                area: parking.parking_info?.parking_area || parking.parking_area || '-',
-                parkingNo: parking.parking_info?.parking_no || parking.parking_no || '-',
-                parkingType: this.getParkingTypeText(parking.parking_info?.parking_type || parking.parking_type),
-                carNo: parking.parking_info?.car_no || parking.car_no || '-',
-                carBrand: parking.parking_info?.car_brand || parking.car_brand || '-',
-                carColor: parking.parking_info?.car_color || parking.car_color || '-',
-                ownerName: parking.parking_info?.owner_name || parking.owner_name || '-',
-                ownerPhone: parking.parking_info?.owner_phone || parking.owner_phone || '-',
+                area: (parking.parking_info && parking.parking_info.parking_area) || parking.parking_area || '-',
+                parkingNo: (parking.parking_info && parking.parking_info.parking_no) || parking.parking_no || '-',
+                parkingType: this.getParkingTypeText((parking.parking_info && parking.parking_info.parking_type) || parking.parking_type),
+                carNo: (parking.parking_info && parking.parking_info.car_no) || parking.car_no || '-',
+                carBrand: (parking.parking_info && parking.parking_info.car_brand) || parking.car_brand || '-',
+                carColor: (parking.parking_info && parking.parking_info.car_color) || parking.car_color || '-',
+                ownerName: (parking.parking_info && parking.parking_info.owner_name) || parking.owner_name || '-',
+                ownerPhone: (parking.parking_info && parking.parking_info.owner_phone) || parking.owner_phone || '-',
                 identity: this.getIdentityText(parking.identity_display || parking.identity),
                 status: this.getStatusText(parking.status_display || parking.status),
                 bindingTime: this.formatTime(parking.created_at)

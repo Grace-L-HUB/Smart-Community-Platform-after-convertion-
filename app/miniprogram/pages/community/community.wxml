@@ -30,22 +30,40 @@
     <!-- Tab 2: Neighborhood Help -->
     <van-tab title="邻居互助">
       <view class="p-30">
-        <view class="community-card" bind:tap="onHelpClick" data-id="1">
+        <block wx:for="{{ helpPosts }}" wx:key="id">
+          <view class="community-card" bind:tap="onHelpClick" data-id="{{item.id}}">
             <view class="user-row">
-              <view class="avatar-placeholder">L</view>
-              <text class="username">李先生</text>
-              <text class="time">10分钟前</text>
+              <image wx:if="{{item.publisher.avatar}}" class="avatar-small" src="{{item.publisher.avatar}}"></image>
+              <view wx:else class="avatar-placeholder">{{item.publisher.display_name.charAt(0) || item.publisher.nickname.charAt(0)}}</view>
+              <text class="username">{{item.publisher.display_name || item.publisher.nickname}}</text>
+              <text class="time">{{item.time_ago}}</text>
             </view>
             <view class="content">
-              <text class="title">【求助】谁家有五号电池借两节？急用！</text>
+              <text class="title">{{item.title || item.content}}</text>
             </view>
-            <view class="tags">
-               <van-tag type="warning">急</van-tag>
+            <view class="tags" wx:if="{{item.tag}}">
+              <van-tag type="{{item.tag === '急' ? 'danger' : 'primary'}}">{{item.tag}}</van-tag>
+              <van-tag wx:if="{{item.is_urgent}}" type="warning">紧急</van-tag>
+              <van-tag wx:if="{{item.is_resolved}}" type="success">已解决</van-tag>
+            </view>
+            <view class="meta-info">
+              <text class="meta-text">浏览 {{item.view_count}} · 回复 {{item.response_count}}</text>
             </view>
             <view class="actions">
-               <van-button size="mini" type="primary" catch:tap="onHelpButtonClick">我来帮</van-button>
+              <van-button size="mini" type="primary" catch:tap="onHelpButtonClick" data-id="{{item.id}}" disabled="{{item.is_resolved}}">
+                {{item.is_resolved ? '已解决' : '我来帮'}}
+              </van-button>
             </view>
+          </view>
+        </block>
+        
+        <!-- 空状态 -->
+        <view wx:if="{{helpPosts.length === 0 && !loading}}" class="empty-state">
+          <van-empty description="暂无求助信息" />
         </view>
+        
+        <!-- 加载状态 -->
+        <van-loading wx:if="{{loading}}" type="spinner" color="#07c160">加载中...</van-loading>
       </view>
     </van-tab>
 

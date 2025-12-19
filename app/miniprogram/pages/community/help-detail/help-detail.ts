@@ -1,50 +1,110 @@
 // pages/community/help-detail/help-detail.ts
+const API_BASE_URL = 'http://127.0.0.1:8000/api/community'
+
 Page({
     data: {
         id: 0,
         isOwner: false,
-        isUrgent: true,
-        userInfo: {
-            name: '李先生',
+        isUrgent: false,
+        isResolved: false,
+        publisher: {
+            id: 0,
+            name: '',
             avatar: ''
         },
-        publishTime: '10分钟前',
-        title: '【求助】谁家有五号电池借两节？急用！',
-        content: '孩子的玩具遥控器没电了，家里没有备用电池。哪位邻居方便的话能借两节五号电池吗？明天就去买，一定还！\n\n位置：3栋2单元',
+        publishTime: '',
+        title: '',
+        content: '',
+        tag: '',
+        phone: '',
+        location: '',
         images: [],
-        location: '阳光花园 3栋2单元',
-        reward: '',
-        responses: [
-            {
-                id: 1,
-                name: '王女士',
-                avatar: '',
-                time: '5分钟前',
-                message: '我家有，你来拿吧，1栋3单元501'
-            },
-            {
-                id: 2,
-                name: '张先生',
-                avatar: '',
-                time: '8分钟前',
-                message: '我这也有，需要的话联系我'
-            }
-        ]
+        responses: [],
+        viewCount: 0,
+        responseCount: 0,
+        loading: true
     },
 
     onLoad(options: any) {
         if (options.id) {
-            this.setData({ id: options.id });
+            this.setData({ id: parseInt(options.id) });
             this.loadHelpDetail(options.id);
         }
+    },
 
-        // TODO: 判断是否是发布者
-        // this.setData({ isOwner: true/false });
+    // 获取用户token
+    getUserToken() {
+        const userInfo = wx.getStorageSync('userInfo');
+        return userInfo ? userInfo.token : null;
     },
 
     loadHelpDetail(id: string) {
-        // TODO: 加载互助详情
-        console.log('Loading help detail:', id);
+        const token = this.getUserToken();
+        if (!token) {
+            wx.showToast({ title: '请先登录', icon: 'none' });
+            return;
+        }
+
+        wx.showLoading({ title: '加载中...' });
+
+        wx.request({
+            url: `${API_BASE_URL}/help-posts/${id}/`,
+            method: 'GET',
+            header: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            success: (res: any) => {
+                if (res.statusCode === 200) {
+                    const data = res.data;
+                    console.log('Help detail data:', data);
+                    console.log('Publisher info:', data.publisher);
+                    this.setData({
+                        title: data.title,
+                        content: data.content,
+                        tag: data.tag,
+                        phone: data.phone,
+                        location: data.location,
+                        isUrgent: data.is_urgent,
+                        isResolved: data.is_resolved,
+                        publishTime: data.time_ago,
+                        viewCount: data.view_count,
+                        responseCount: data.response_count,
+                        isOwner: data.is_owner,
+                        images: data.images.map((img: any) => img.image),
+                        responses: data.responses.map((resp: any) => ({
+                            id: resp.id,
+                            name: resp.responder.display_name || resp.responder.nickname || '匿名用户',
+                            avatar: resp.responder.avatar ? 
+                                (resp.responder.avatar.startsWith('http') ? 
+                                    resp.responder.avatar : 
+                                    `http://127.0.0.1:8000${resp.responder.avatar}`) : 
+                                '',
+                            time: resp.time_ago,
+                            message: resp.message
+                        })),
+                        publisher: {
+                            id: data.publisher.id,
+                            name: data.publisher.display_name || data.publisher.nickname || '匿名用户',
+                            avatar: data.publisher.avatar ? 
+                                (data.publisher.avatar.startsWith('http') ? 
+                                    data.publisher.avatar : 
+                                    `http://127.0.0.1:8000${data.publisher.avatar}`) : 
+                                ''
+                        }
+                    });
+                } else {
+                    wx.showToast({ title: '加载失败', icon: 'none' });
+                }
+            },
+            fail: () => {
+                wx.showToast({ title: '网络错误', icon: 'none' });
+            },
+            complete: () => {
+                this.setData({ loading: false });
+                wx.hideLoading();
+            }
+        });
     },
 
     previewImage(event: any) {
@@ -62,20 +122,49 @@ Page({
             placeholderText: '请输入你的回复...',
             success: (res) => {
                 if (res.confirm && res.content) {
-                    wx.showLoading({ title: '提交中...' });
-
-                    // TODO: 提交响应
-                    setTimeout(() => {
-                        wx.hideLoading();
-                        wx.showToast({
-                            title: '响应成功',
-                            icon: 'success'
-                        });
-
-                        // 刷新响应列表
-                        this.loadHelpDetail(this.data.id.toString());
-                    }, 1000);
+                    this.submitResponse(res.content);
                 }
+            }
+        });
+    },
+
+    submitResponse(message: string) {
+        const token = this.getUserToken();
+        if (!token) {
+            wx.showToast({ title: '请先登录', icon: 'none' });
+            return;
+        }
+
+        wx.showLoading({ title: '提交中...' });
+
+        wx.request({
+            url: `${API_BASE_URL}/help-posts/${this.data.id}/responses/`,
+            method: 'POST',
+            header: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            data: {
+                message: message
+            },
+            success: (res: any) => {
+                wx.hideLoading();
+                
+                if (res.statusCode === 201) {
+                    wx.showToast({
+                        title: '响应成功',
+                        icon: 'success'
+                    });
+
+                    // 刷新响应列表
+                    this.loadHelpDetail(this.data.id.toString());
+                } else {
+                    wx.showToast({ title: '提交失败', icon: 'none' });
+                }
+            },
+            fail: () => {
+                wx.hideLoading();
+                wx.showToast({ title: '网络错误', icon: 'none' });
             }
         });
     },
@@ -99,51 +188,110 @@ Page({
     },
 
     onDelete() {
+        if (!this.data.isOwner) {
+            wx.showToast({ title: '只有发布者可以删除', icon: 'none' });
+            return;
+        }
+
         wx.showModal({
             title: '确认删除',
             content: '确定要删除这条求助吗？',
             success: (res) => {
                 if (res.confirm) {
-                    wx.showLoading({ title: '删除中...' });
-
-                    // TODO: 删除求助
-                    setTimeout(() => {
-                        wx.hideLoading();
-                        wx.showToast({
-                            title: '删除成功',
-                            icon: 'success'
-                        });
-
-                        setTimeout(() => {
-                            wx.navigateBack();
-                        }, 1500);
-                    }, 1000);
+                    this.deleteHelpPost();
                 }
             }
         });
     },
 
+    deleteHelpPost() {
+        const token = this.getUserToken();
+        if (!token) {
+            wx.showToast({ title: '请先登录', icon: 'none' });
+            return;
+        }
+
+        wx.showLoading({ title: '删除中...' });
+
+        wx.request({
+            url: `${API_BASE_URL}/help-posts/${this.data.id}/`,
+            method: 'DELETE',
+            header: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            success: (res) => {
+                wx.hideLoading();
+                
+                if (res.statusCode === 204) {
+                    wx.showToast({
+                        title: '删除成功',
+                        icon: 'success'
+                    });
+
+                    setTimeout(() => {
+                        wx.navigateBack();
+                    }, 1500);
+                } else {
+                    wx.showToast({ title: '删除失败', icon: 'none' });
+                }
+            },
+            fail: () => {
+                wx.hideLoading();
+                wx.showToast({ title: '网络错误', icon: 'none' });
+            }
+        });
+    },
+
     onResolve() {
+        if (!this.data.isOwner) {
+            wx.showToast({ title: '只有发布者可以标记为已解决', icon: 'none' });
+            return;
+        }
+
         wx.showModal({
             title: '标记为已解决',
             content: '确认问题已经解决了吗？',
             success: (res) => {
                 if (res.confirm) {
-                    wx.showLoading({ title: '处理中...' });
-
-                    // TODO: 标记为已解决
-                    setTimeout(() => {
-                        wx.hideLoading();
-                        wx.showToast({
-                            title: '已标记为解决',
-                            icon: 'success'
-                        });
-
-                        setTimeout(() => {
-                            wx.navigateBack();
-                        }, 1500);
-                    }, 1000);
+                    this.resolveHelpPost();
                 }
+            }
+        });
+    },
+
+    resolveHelpPost() {
+        const token = this.getUserToken();
+        if (!token) {
+            wx.showToast({ title: '请先登录', icon: 'none' });
+            return;
+        }
+
+        wx.showLoading({ title: '处理中...' });
+
+        wx.request({
+            url: `${API_BASE_URL}/help-posts/${this.data.id}/resolve/`,
+            method: 'PUT',
+            header: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            success: (res: any) => {
+                wx.hideLoading();
+                
+                if (res.statusCode === 200) {
+                    this.setData({ isResolved: true });
+                    wx.showToast({
+                        title: '已标记为解决',
+                        icon: 'success'
+                    });
+                } else {
+                    wx.showToast({ title: '操作失败', icon: 'none' });
+                }
+            },
+            fail: () => {
+                wx.hideLoading();
+                wx.showToast({ title: '网络错误', icon: 'none' });
             }
         });
     }

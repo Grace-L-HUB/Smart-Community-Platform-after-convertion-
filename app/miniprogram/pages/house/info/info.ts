@@ -65,14 +65,14 @@ Page({
             this.setData({
               houseInfo: {
                 id: house.id,
-                building: house.house_info?.building_name || house.building_name || '-',
-                unit: house.house_info?.unit_name || house.unit_name || '-', 
-                room: house.house_info?.room_number || house.room_number || '-',
-                area: house.house_info?.area || '-',
+                building: (house.house_info && house.house_info.building_name) || house.building_name || '-',
+                unit: (house.house_info && house.house_info.unit_name) || house.unit_name || '-', 
+                room: (house.house_info && house.house_info.room_number) || house.room_number || '-',
+                area: (house.house_info && house.house_info.area) || '-',
                 status: this.getStatusText(house.status_display || house.status),
                 identity: this.getIdentityText(house.identity_display || house.identity),
-                applicantName: house.applicant_info?.name || house.applicant_name || '-',
-                applicantPhone: house.applicant_info?.phone || house.applicant_phone || '-',
+                applicantName: (house.applicant_info && house.applicant_info.name) || house.applicant_name || '-',
+                applicantPhone: (house.applicant_info && house.applicant_info.phone) || house.applicant_phone || '-',
                 bindingTime: this.formatTime(house.created_at)
               },
               loading: false

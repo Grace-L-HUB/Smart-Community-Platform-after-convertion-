@@ -32,6 +32,15 @@
     />
   </view>
 
+  <view class="form-group">
+    <van-field
+      label="具体位置"
+      placeholder="选填，如：3栋2单元501"
+      border="{{ false }}"
+      bind:change="onLocationInput"
+    />
+  </view>
+
   <view class="submit-btn-container">
     <van-button round block type="primary" bind:click="onSubmit">发布求助</van-button>
   </view>

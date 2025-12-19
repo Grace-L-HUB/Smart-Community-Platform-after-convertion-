@@ -44,7 +44,6 @@
       <van-cell title="分类" value="{{category}}" />
       <van-cell title="成色" value="{{condition}}" />
       <van-cell title="发布时间" value="{{publishTime}}" />
-      <van-cell title="交易方式" value="{{tradeType}}" />
     </van-cell-group>
   </view>
 

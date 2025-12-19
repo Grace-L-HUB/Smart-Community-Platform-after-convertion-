@@ -114,9 +114,9 @@ Page({
                     if (houses && houses.length > 0) {
                         // 取第一个绑定的房屋
                         const house = houses[0];
-                        const building = house.house_info?.building_name || house.building_name || '';
-                        const unit = house.house_info?.unit_name || house.unit_name || '';
-                        const room = house.house_info?.room_number || house.room_number || '';
+                        const building = (house.house_info && house.house_info.building_name) || house.building_name || '';
+                        const unit = (house.house_info && house.house_info.unit_name) || house.unit_name || '';
+                        const room = (house.house_info && house.house_info.room_number) || house.room_number || '';
                         
                         this.setData({
                             'userInfo.room': `${building}${unit}${room}`

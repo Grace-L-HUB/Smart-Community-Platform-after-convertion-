@@ -2,9 +2,9 @@
   <!-- Header -->
   <view class="card header-section">
     <view class="user-row">
-      <image class="avatar" src="{{userInfo.avatar || '/image/default-avatar.png'}}"></image>
+      <image class="avatar" src="{{publisher.avatar || '/image/default-avatar.png'}}"></image>
       <view class="user-details">
-        <text class="username">{{userInfo.name}}</text>
+        <text class="username">{{publisher.name}}</text>
         <text class="time">{{publishTime}}</text>
       </view>
       <van-tag type="warning" wx:if="{{isUrgent}}">急</van-tag>
@@ -32,9 +32,13 @@
 
   <!-- Help Info -->
   <view class="card info-section">
-    <view class="info-row">
+    <view class="info-row" wx:if="{{location}}">
       <van-icon name="location-o" size="18px" color="#999" />
       <text class="info-text">{{location}}</text>
+    </view>
+    <view class="info-row" wx:if="{{location == '' || !location}}">
+      <van-icon name="location-o" size="18px" color="#999" />
+      <text class="info-text" style="color: #ccc;">地点未设置</text>
     </view>
     <view class="info-row" wx:if="{{reward}}">
       <van-icon name="gold-coin-o" size="18px" color="#ff9800" />
