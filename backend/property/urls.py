@@ -4,7 +4,7 @@ from .views import (
     VisitorInviteView, VisitorDetailView, VisitorStatusView, VisitorQRCodeView,
     ParkingBindingApplicationView, MyParkingListView, ParkingBindingStatsView,
     HouseBindingAuditView, ParkingBindingAuditView, HouseBindingUnbindView, ParkingBindingUnbindView,
-    HouseListView, ParkingSpaceListView
+    HouseListView, ParkingSpaceListView, DashboardStatsView, EmployeeListView
 )
 
 urlpatterns = [
@@ -52,4 +52,10 @@ urlpatterns = [
     # 基础数据列表
     path('property/house/list', HouseListView.as_view(), name='house_list'),
     path('parking/space/list', ParkingSpaceListView.as_view(), name='parking_space_list'),
+    
+    # 工作台统计
+    path('property/dashboard/stats', DashboardStatsView.as_view(), name='dashboard_stats'),
+    
+    # 员工管理
+    path('property/employees', EmployeeListView.as_view(), name='employee_list'),
 ]

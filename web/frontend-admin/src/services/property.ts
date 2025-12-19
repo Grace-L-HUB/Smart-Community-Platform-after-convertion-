@@ -207,6 +207,31 @@ class PropertyAPI {
   async getParkingSpaceList(): Promise<ApiResponse<any[]>> {
     return apiClient.get('/parking/space/list')
   }
+
+  // === 工作台统计 ===
+
+  /**
+   * 获取工作台统计数据
+   */
+  async getDashboardStats(): Promise<ApiResponse<any>> {
+    return apiClient.get('/property/dashboard/stats')
+  }
+
+  // === 员工管理 ===
+
+  /**
+   * 获取员工列表
+   */
+  async getEmployeeList(): Promise<ApiResponse<any[]>> {
+    return apiClient.get('/property/employees')
+  }
+
+  /**
+   * 添加员工
+   */
+  async addEmployee(data: { name: string; phone: string; role: string }): Promise<ApiResponse<any>> {
+    return apiClient.post('/property/employees', data)
+  }
 }
 
 // 创建并导出 API 实例

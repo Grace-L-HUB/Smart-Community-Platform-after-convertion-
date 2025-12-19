@@ -201,24 +201,28 @@ function openEditor(employee: Employee | null) {
   editorDialog.value = true
 }
 
-function saveEmployee() {
-  if (editingEmployee.value) {
-    propertyStore.updateEmployee(editingEmployee.value.id, {
-      name: form.name,
-      phone: form.phone,
-      role: form.role,
-    })
-    showSnackbar('success', '员工信息已更新')
-  } else {
-    propertyStore.addEmployee({
-      name: form.name,
-      phone: form.phone,
-      role: form.role,
-      status: 'active',
-    })
-    showSnackbar('success', '员工已添加')
+async function saveEmployee() {
+  try {
+    if (editingEmployee.value) {
+      propertyStore.updateEmployee(editingEmployee.value.id, {
+        name: form.name,
+        phone: form.phone,
+        role: form.role,
+      })
+      showSnackbar('success', '员工信息已更新')
+    } else {
+      await propertyStore.addEmployee({
+        name: form.name,
+        phone: form.phone,
+        role: form.role,
+      })
+      showSnackbar('success', '员工已添加')
+    }
+    editorDialog.value = false
+  } catch (error) {
+    console.error('保存员工失败:', error)
+    showSnackbar('error', '操作失败，请重试')
   }
-  editorDialog.value = false
 }
 
 function toggleStatus(employee: Employee) {

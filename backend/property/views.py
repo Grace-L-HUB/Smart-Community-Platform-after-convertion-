@@ -915,3 +915,177 @@ class ParkingSpaceListView(APIView):
                 "code": 500,
                 "message": f"获取车位列表失败: {str(e)}"
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class DashboardStatsView(APIView):
+    """工作台统计数据接口"""
+    permission_classes = []  # 暂时不需要权限认证
+
+    def get(self, request):
+        """获取工作台统计数据"""
+        try:
+            from .models import House, ParkingSpace
+            from users.models import User
+            from datetime import date, timedelta
+            from django.utils import timezone
+            
+            # 计算统计数据
+            total_houses = House.objects.count()
+            occupied_houses = HouseUserBinding.objects.filter(status=1).count()
+            total_residents = occupied_houses  # 简化：每个绑定房屋算一户
+            
+            total_parking_spaces = ParkingSpace.objects.count()
+            occupied_parking_spaces = ParkingUserBinding.objects.filter(status=1).count()
+            
+            # 模拟工单数据（实际项目中应该有WorkOrder模型）
+            pending_work_orders = 5
+            today_repairs = 3
+            
+            # 模拟费收缴率
+            fee_collection_rate = round((occupied_houses / total_houses if total_houses > 0 else 0) * 0.85, 3)
+            
+            # 近7天数据（模拟）
+            today = date.today()
+            work_order_trend = []
+            for i in range(6, -1, -1):
+                target_date = today - timedelta(days=i)
+                work_order_trend.append({
+                    'date': target_date.strftime('%m-%d'),
+                    'count': (i * 2 + 3) % 8 + 1  # 模拟数据
+                })
+            
+            # 报修类型分布（模拟）
+            repair_type_distribution = [
+                {'type': '水电', 'value': 35},
+                {'type': '门窗', 'value': 20},
+                {'type': '公区', 'value': 25},
+                {'type': '其他', 'value': 20},
+            ]
+            
+            stats = {
+                'pendingWorkOrders': pending_work_orders,
+                'todayRepairs': today_repairs,
+                'totalResidents': total_residents,
+                'feeCollectionRate': fee_collection_rate,
+                'totalHouses': total_houses,
+                'occupiedHouses': occupied_houses,
+                'totalParkingSpaces': total_parking_spaces,
+                'occupiedParkingSpaces': occupied_parking_spaces,
+                'workOrderTrend': work_order_trend,
+                'repairTypeDistribution': repair_type_distribution
+            }
+            
+            return Response({
+                "code": 200,
+                "message": "获取成功",
+                "data": stats
+            })
+            
+        except Exception as e:
+            logger.error(f"获取统计数据失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"获取统计数据失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class EmployeeListView(APIView):
+    """员工管理接口"""
+    permission_classes = []  # 暂时不需要权限认证
+    
+    def get(self, request):
+        """获取员工列表"""
+        try:
+            # 获取所有物业人员和管理员
+            employees = User.objects.filter(
+                role__in=[1, 3]  # 1=物业人员, 3=管理员
+            ).values(
+                'id', 'real_name', 'phone', 'role', 'is_active', 'created_at'
+            )
+            
+            # 角色映射
+            role_map = {
+                1: 'service',  # 物业人员 -> 客服
+                3: 'admin'     # 管理员
+            }
+            
+            employee_list = []
+            for emp in employees:
+                employee_list.append({
+                    'id': emp['id'],
+                    'name': emp['real_name'] or f"用户{emp['id']}",
+                    'phone': emp['phone'] or '',
+                    'role': role_map.get(emp['role'], 'service'),
+                    'status': 'active' if emp['is_active'] else 'inactive',
+                    'createdAt': emp['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+                })
+            
+            return Response({
+                "code": 200,
+                "message": "获取成功",
+                "data": employee_list
+            })
+            
+        except Exception as e:
+            logger.error(f"获取员工列表失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"获取员工列表失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    def post(self, request):
+        """添加员工"""
+        try:
+            from users.models import User
+            
+            data = request.data
+            name = data.get('name')
+            phone = data.get('phone')
+            role = data.get('role', 'service')
+            
+            if not name or not phone:
+                return Response({
+                    "code": 400,
+                    "message": "姓名和手机号不能为空"
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # 角色映射
+            role_map = {
+                'admin': 3,
+                'service': 1,
+                'repair': 1,
+                'security': 1
+            }
+            
+            user_role = role_map.get(role, 1)
+            
+            # 创建用户
+            user = User.objects.create_user(
+                username=phone,  # 使用手机号作为用户名
+                phone=phone,
+                real_name=name,
+                nickname=name,
+                role=user_role,
+                is_verified=True,
+                password='123456'  # 默认密码
+            )
+            
+            return Response({
+                "code": 200,
+                "message": "添加成功",
+                "data": {
+                    'id': user.id,
+                    'name': user.real_name,
+                    'phone': user.phone,
+                    'role': role,
+                    'status': 'active',
+                    'createdAt': user.created_at.strftime('%Y-%m-%d %H:%M:%S')
+                }
+            })
+            
+        except Exception as e:
+            logger.error(f"添加员工失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"添加员工失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

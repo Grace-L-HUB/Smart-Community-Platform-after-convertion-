@@ -228,14 +228,18 @@ export const usePropertyStore = defineStore('property', {
                     approvedHousesResponse,
                     approvedParkingsResponse,
                     houseListResponse,
-                    parkingSpaceListResponse
+                    parkingSpaceListResponse,
+                    statsResponse,
+                    employeesResponse
                 ] = await Promise.all([
                     propertyAPI.getHouseBindingAuditList(),
                     propertyAPI.getParkingBindingAuditList(),
                     propertyAPI.getApprovedResidents(),
                     propertyAPI.getApprovedParkings(),
                     propertyAPI.getHouseList(),
-                    propertyAPI.getParkingSpaceList()
+                    propertyAPI.getParkingSpaceList(),
+                    propertyAPI.getDashboardStats(),
+                    propertyAPI.getEmployeeList()
                 ])
 
                 // 存储原始API数据
@@ -248,14 +252,16 @@ export const usePropertyStore = defineStore('property', {
                 this.houses = houseListResponse.data || []
                 this.parkings = parkingSpaceListResponse.data || []
 
+                // 存储统计数据和员工数据
+                this.stats = statsResponse.data || mockPropertyStats
+                this.employees = employeesResponse.data || []
+
                 // 保持mock数据用于其他功能
                 this.workOrders = [...mockWorkOrders]
                 this.bills = [...mockBills]
                 this.announcements = [...mockAnnouncements]
                 this.activities = [...mockActivities]
                 this.accessLogs = [...mockAccessLogs]
-                this.employees = [...mockEmployees]
-                this.stats = { ...mockPropertyStats }
 
             } catch (error) {
                 console.error('加载数据失败:', error)
@@ -266,6 +272,8 @@ export const usePropertyStore = defineStore('property', {
                 this.approvedParkingBindings = []
                 this.houses = [...mockHouses] // fallback to mock data
                 this.parkings = [] // 车位数据没有mock，置空
+                this.stats = { ...mockPropertyStats } // fallback to mock stats
+                this.employees = [...mockEmployees] // fallback to mock employees
             }
 
             this.loading = false
@@ -453,14 +461,19 @@ export const usePropertyStore = defineStore('property', {
         },
 
         // 员工操作
-        addEmployee(employee: Omit<Employee, 'id' | 'createdAt'>) {
-            const newEmployee: Employee = {
-                ...employee,
-                id: this.employees.length + 1,
-                createdAt: new Date().toISOString().replace('T', ' ').slice(0, 19),
+        async addEmployee(employee: { name: string; phone: string; role: string }) {
+            try {
+                const response = await propertyAPI.addEmployee(employee)
+                if (response.code === 200) {
+                    // 重新加载员工数据
+                    const employeesResponse = await propertyAPI.getEmployeeList()
+                    this.employees = employeesResponse.data || []
+                }
+                return response
+            } catch (error) {
+                console.error('添加员工失败:', error)
+                throw error
             }
-            this.employees.push(newEmployee)
-            return newEmployee
         },
 
         updateEmployee(id: number, data: Partial<Employee>) {
