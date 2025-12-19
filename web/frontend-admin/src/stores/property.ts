@@ -50,6 +50,7 @@ export interface ParkingApply {
     ownerName: string
     ownerPhone: string
     idCard: string
+    identity: 'owner' | 'tenant' // 车位只支持业主或租客身份
     status: 0 | 1 | 2 // 0-待审核, 1-已通过, 2-已拒绝
     applyTime: string
     rejectReason?: string
@@ -64,6 +65,7 @@ export interface Parking {
     carColor: string
     ownerName: string
     ownerPhone: string
+    identity: 'owner' | 'tenant'
     type: 'owned' | 'rented'
     status: 'active' | 'expired' | 'empty'
 }
@@ -123,6 +125,12 @@ function convertHouseBindingToResident(binding: HouseUserBinding): Resident {
  * 将车位绑定申请转换为车位申请格式
  */
 function convertParkingApplicationToParkingApply(app: ParkingBindingApplication): ParkingApply {
+    // 身份映射: 1-业主, 3-租客
+    const identityMap: Record<number, 'owner' | 'tenant'> = {
+        1: 'owner',
+        3: 'tenant'
+    }
+
     return {
         id: app.id,
         communityName: app.community_name,
@@ -135,9 +143,35 @@ function convertParkingApplicationToParkingApply(app: ParkingBindingApplication)
         ownerName: app.owner_name,
         ownerPhone: app.owner_phone,
         idCard: app.id_card,
+        identity: identityMap[app.identity] || 'owner',
         status: app.status as 0 | 1 | 2,
         applyTime: app.created_at,
         rejectReason: app.reject_reason
+    }
+}
+
+/**
+ * 将车位绑定关系转换为车位格式
+ */
+function convertParkingBindingToParking(binding: ParkingUserBinding): Parking {
+    // 身份映射
+    const identityMap: Record<string, 'owner' | 'tenant'> = {
+        '业主': 'owner',
+        '租客': 'tenant'
+    }
+
+    return {
+        id: binding.id,
+        area: binding.parking_info.parking_area,
+        parkingNo: binding.parking_info.parking_no,
+        carNo: binding.parking_info.car_no,
+        carBrand: binding.parking_info.car_brand,
+        carColor: binding.parking_info.car_color,
+        ownerName: binding.parking_info.owner_name,
+        ownerPhone: '', // 假设后端会提供这个信息
+        identity: identityMap[binding.identity_display] || 'owner',
+        type: binding.parking_info.parking_type as 'owned' | 'rented',
+        status: binding.status === 1 ? 'active' : 'expired' // 根据绑定状态判断
     }
 }
 
@@ -199,6 +233,11 @@ export const usePropertyStore = defineStore('property', {
             return state.parkingBindingApplications
                 .filter(app => app.status === 0)
                 .map(app => convertParkingApplicationToParkingApply(app))
+        },
+        
+        // 已绑定车位 - 使用转换后的数据
+        approvedParkings: (state) => {
+            return state.approvedParkingBindings.map(binding => convertParkingBindingToParking(binding))
         },
 
         // 工单管理

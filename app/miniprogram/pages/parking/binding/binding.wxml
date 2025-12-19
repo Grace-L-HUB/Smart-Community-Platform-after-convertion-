@@ -41,6 +41,15 @@
         bind:tap="showParkingNoPicker"
       />
 
+      <van-field
+        value="{{ identity }}"
+        label="申请身份"
+        placeholder="请选择申请身份"
+        readonly
+        is-link
+        bind:tap="showIdentityPicker"
+      />
+
       <van-divider contentPosition="left" customStyle="color: #999; border-color: #f5f5f5; font-size: 24rpx; margin: 40rpx 32rpx 20rpx;">车辆信息</van-divider>
 
       <van-field

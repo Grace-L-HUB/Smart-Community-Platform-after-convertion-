@@ -189,8 +189,10 @@ class Command(BaseCommand):
             for floor in range(1, floors + 1):
                 for unit in range(1, units + 1):
                     for room in range(1, rooms_per_floor + 1):
-                        # 房间号格式：楼层+房间号 (如：101, 102, 201, 202)
-                        room_number = f'{floor:02d}{room:02d}'
+                        # 房间号格式：楼层+单元内房间号 (如：1单元的101, 102; 2单元的103, 104)
+                        # 每个单元在每层占用连续的房间号
+                        room_in_unit = (unit - 1) * rooms_per_floor + room
+                        room_number = f'{floor:02d}{room_in_unit:02d}'
                         
                         house = House.objects.create(
                             building=building,

@@ -628,14 +628,38 @@ class HouseBindingAuditView(APIView):
             application.audit_remark = request.data.get('remark', '')
             application.save()
             
-            # 创建正式绑定关系
-            HouseUserBinding.objects.create(
-                user=application.user,
-                application=application,
-                identity=application.identity
-            )
-            
-            logger.info(f"房屋绑定申请 {application_id} 已通过审核")
+            # 查找对应的House记录
+            try:
+                from .models import Building, House
+                building = Building.objects.get(name=application.building_name)
+                house = House.objects.get(
+                    building=building,
+                    unit=application.unit_name,
+                    room_number=application.room_number
+                )
+                
+                # 更新房屋状态为已绑定（1=自住, 2=出租）
+                house.status = 1 if application.identity == 1 else 2  # 业主=自住，其他=出租
+                house.save()
+                
+                # 创建正式绑定关系，关联House记录
+                HouseUserBinding.objects.create(
+                    user=application.user,
+                    house=house,
+                    application=application,
+                    identity=application.identity
+                )
+                
+                logger.info(f"房屋绑定申请 {application_id} 已通过审核，房屋 {house} 状态已更新")
+                
+            except (Building.DoesNotExist, House.DoesNotExist):
+                # 如果找不到对应的House记录，仍然创建绑定关系但不关联house
+                HouseUserBinding.objects.create(
+                    user=application.user,
+                    application=application,
+                    identity=application.identity
+                )
+                logger.warning(f"房屋绑定申请 {application_id} 已通过审核，但找不到对应的House记录：{application.building_name}{application.unit_name}{application.room_number}")
             
             return Response({
                 "code": 200,
@@ -706,11 +730,36 @@ class ParkingBindingAuditView(APIView):
             application.audit_remark = request.data.get('remark', '')
             application.save()
             
-            # 创建正式绑定关系
-            ParkingUserBinding.objects.create(
-                user=application.user,
-                application=application
-            )
+            # 查找对应的ParkingSpace记录
+            try:
+                from .models import ParkingSpace
+                parking_space = ParkingSpace.objects.get(
+                    area_name=application.parking_area,
+                    space_number=application.parking_no
+                )
+                
+                # 更新车位状态为已占用
+                parking_space.status = 1  # 已占用
+                parking_space.save()
+                
+                # 创建正式绑定关系，关联ParkingSpace记录
+                ParkingUserBinding.objects.create(
+                    user=application.user,
+                    parking_space=parking_space,
+                    application=application,
+                    identity=application.identity
+                )
+                
+                logger.info(f"车位绑定申请 {application_id} 已通过审核，车位 {parking_space} 状态已更新")
+                
+            except ParkingSpace.DoesNotExist:
+                # 如果找不到对应的ParkingSpace记录，仍然创建绑定关系但不关联parking_space
+                ParkingUserBinding.objects.create(
+                    user=application.user,
+                    application=application,
+                    identity=application.identity
+                )
+                logger.warning(f"车位绑定申请 {application_id} 已通过审核，但找不到对应的ParkingSpace记录：{application.parking_area}-{application.parking_no}")
             
             logger.info(f"车位绑定申请 {application_id} 已通过审核")
             
@@ -765,7 +814,13 @@ class HouseBindingUnbindView(APIView):
         binding.status = 2  # 已解绑
         binding.save()
         
-        logger.info(f"房屋绑定关系 {binding_id} 已解绑")
+        # 更新对应房屋状态为空置
+        if binding.house:
+            binding.house.status = 3  # 空置状态
+            binding.house.save()
+            logger.info(f"房屋绑定关系 {binding_id} 已解绑，房屋 {binding.house} 状态已重置为空置")
+        else:
+            logger.info(f"房屋绑定关系 {binding_id} 已解绑")
         
         return Response({
             "code": 200,
@@ -791,7 +846,13 @@ class ParkingBindingUnbindView(APIView):
         binding.status = 2  # 已解绑
         binding.save()
         
-        logger.info(f"车位绑定关系 {binding_id} 已解绑")
+        # 更新对应车位状态为空闲
+        if binding.parking_space:
+            binding.parking_space.status = 3  # 空闲状态
+            binding.parking_space.save()
+            logger.info(f"车位绑定关系 {binding_id} 已解绑，车位 {binding.parking_space} 状态已重置为空闲")
+        else:
+            logger.info(f"车位绑定关系 {binding_id} 已解绑")
         
         return Response({
             "code": 200,
@@ -1088,4 +1149,278 @@ class EmployeeListView(APIView):
             return Response({
                 "code": 500,
                 "message": f"添加员工失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class HouseBuildingOptionsView(APIView):
+    """房屋绑定选项数据API - 获取楼栋列表"""
+    permission_classes = []
+    
+    def get(self, request):
+        """获取所有楼栋列表"""
+        try:
+            from .models import Building
+            buildings = Building.objects.all().order_by('id')
+            building_list = [building.name for building in buildings]
+            
+            return Response({
+                "code": 200,
+                "message": "获取成功",
+                "data": building_list
+            })
+        except Exception as e:
+            logger.error(f"获取楼栋列表失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"获取楼栋列表失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class HouseUnitOptionsView(APIView):
+    """房屋绑定选项数据API - 获取单元列表"""
+    permission_classes = []
+    
+    def get(self, request):
+        """根据楼栋获取单元列表"""
+        building_name = request.GET.get('building')
+        if not building_name:
+            return Response({
+                "code": 400,
+                "message": "请提供楼栋参数"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            from .models import House, Building
+            building = Building.objects.get(name=building_name)
+            
+            # 获取该楼栋下的所有单元（去重）
+            units = House.objects.filter(building=building).values_list('unit', flat=True).distinct().order_by('unit')
+            unit_list = list(units)
+            
+            return Response({
+                "code": 200,
+                "message": "获取成功",
+                "data": unit_list
+            })
+        except Building.DoesNotExist:
+            return Response({
+                "code": 404,
+                "message": "楼栋不存在"
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"获取单元列表失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"获取单元列表失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class HouseRoomOptionsView(APIView):
+    """房屋绑定选项数据API - 获取房号列表"""
+    permission_classes = []
+    
+    def get(self, request):
+        """根据楼栋和单元获取房号列表"""
+        building_name = request.GET.get('building')
+        unit_name = request.GET.get('unit')
+        
+        if not building_name or not unit_name:
+            return Response({
+                "code": 400,
+                "message": "请提供楼栋和单元参数"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            from .models import House, Building
+            building = Building.objects.get(name=building_name)
+            
+            # 获取该楼栋该单元下的所有房号（去重，并且只返回未绑定的房号）
+            rooms = House.objects.filter(
+                building=building, 
+                unit=unit_name
+            ).exclude(
+                user_bindings__status=1  # 排除已绑定的房屋
+            ).values_list('room_number', flat=True).order_by('room_number')
+            room_list = list(rooms)
+            
+            return Response({
+                "code": 200,
+                "message": "获取成功",
+                "data": room_list
+            })
+        except Building.DoesNotExist:
+            return Response({
+                "code": 404,
+                "message": "楼栋不存在"
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"获取房号列表失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"获取房号列表失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ParkingAreaOptionsView(APIView):
+    """车位绑定选项数据API - 获取停车区域列表"""
+    permission_classes = []
+    
+    def get(self, request):
+        """获取所有停车区域列表"""
+        try:
+            from .models import ParkingSpace
+            areas = ParkingSpace.objects.values_list('area_name', flat=True).distinct().order_by('area_name')
+            area_list = list(areas)
+            
+            return Response({
+                "code": 200,
+                "message": "获取成功",
+                "data": area_list
+            })
+        except Exception as e:
+            logger.error(f"获取停车区域列表失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"获取停车区域列表失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ParkingSpaceOptionsView(APIView):
+    """车位绑定选项数据API - 获取车位号列表"""
+    permission_classes = []
+    
+    def get(self, request):
+        """根据停车区域获取车位号列表"""
+        area_name = request.GET.get('area')
+        if not area_name:
+            return Response({
+                "code": 400,
+                "message": "请提供停车区域参数"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            from .models import ParkingSpace
+            
+            # 获取该区域下的所有车位号（只返回未绑定的车位）
+            spaces = ParkingSpace.objects.filter(
+                area_name=area_name
+            ).exclude(
+                user_bindings__status=1  # 排除已绑定的车位
+            ).values_list('space_number', flat=True).order_by('space_number')
+            space_list = list(spaces)
+            
+            return Response({
+                "code": 200,
+                "message": "获取成功",
+                "data": space_list
+            })
+        except Exception as e:
+            logger.error(f"获取车位号列表失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"获取车位号列表失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class HouseIdentityOptionsView(APIView):
+    """房屋绑定身份选项API - 获取可选身份列表"""
+    permission_classes = []
+    
+    def get(self, request):
+        """根据房屋信息获取可选身份列表"""
+        building_name = request.GET.get('building')
+        unit_name = request.GET.get('unit')
+        room_number = request.GET.get('room')
+        
+        if not all([building_name, unit_name, room_number]):
+            return Response({
+                "code": 400,
+                "message": "请提供完整的房屋信息参数"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            from .models import House, Building, HouseUserBinding
+            
+            # 查找对应房屋
+            building = Building.objects.get(name=building_name)
+            house = House.objects.get(
+                building=building,
+                unit=unit_name,
+                room_number=room_number
+            )
+            
+            # 检查该房屋是否已有业主绑定
+            has_owner = HouseUserBinding.objects.filter(
+                house=house,
+                identity=1,  # 业主身份
+                status=1     # 已绑定状态
+            ).exists()
+            
+            # 根据是否已有业主来决定可选身份
+            if has_owner:
+                # 已有业主，只能选择家属或租客
+                identity_options = [
+                    {"value": 2, "label": "家属"},
+                    {"value": 3, "label": "租客"}
+                ]
+            else:
+                # 没有业主，可选择所有身份
+                identity_options = [
+                    {"value": 1, "label": "业主"},
+                    {"value": 2, "label": "家属"},
+                    {"value": 3, "label": "租客"}
+                ]
+            
+            return Response({
+                "code": 200,
+                "message": "获取成功",
+                "data": {
+                    "identities": identity_options,
+                    "has_owner": has_owner
+                }
+            })
+            
+        except Building.DoesNotExist:
+            return Response({
+                "code": 404,
+                "message": "楼栋不存在"
+            }, status=status.HTTP_404_NOT_FOUND)
+        except House.DoesNotExist:
+            return Response({
+                "code": 404,
+                "message": "房屋不存在"
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"获取房屋身份选项失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"获取房屋身份选项失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ParkingIdentityOptionsView(APIView):
+    """车位绑定身份选项API - 获取可选身份列表"""
+    permission_classes = []
+    
+    def get(self, request):
+        """获取车位绑定可选身份列表"""
+        try:
+            # 车位只能选择业主或租客
+            identity_options = [
+                {"value": 1, "label": "业主"},
+                {"value": 3, "label": "租客"}
+            ]
+            
+            return Response({
+                "code": 200,
+                "message": "获取成功", 
+                "data": {
+                    "identities": identity_options
+                }
+            })
+        except Exception as e:
+            logger.error(f"获取车位身份选项失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"获取车位身份选项失败: {str(e)}"
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

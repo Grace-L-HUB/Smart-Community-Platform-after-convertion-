@@ -11,20 +11,127 @@ Page({
         ownerName: '',
         ownerPhone: '',
         idCard: '', // 身份证号
+        identity: '', // 身份
+        identityValue: 0, // 身份值
 
         showPicker: false,
-        pickerType: '', // 'area', 'parkingNo'
+        pickerType: '', // 'area', 'parkingNo', 'identity'
         pickerTitle: '',
         currentColumns: [] as string[],
 
-        // Mock Data
-        areaList: ['A区地下停车场', 'B区地下停车场', 'C区地面停车场', 'D区地面停车场'],
-        parkingNoList: {
-            'A区地下停车场': ['A-001', 'A-002', 'A-003', 'A-101', 'A-102', 'A-103'],
-            'B区地下停车场': ['B-001', 'B-002', 'B-003', 'B-101', 'B-102', 'B-103'],
-            'C区地面停车场': ['C-001', 'C-002', 'C-003', 'C-004', 'C-005'],
-            'D区地面停车场': ['D-001', 'D-002', 'D-003', 'D-004', 'D-005']
-        } as Record<string, string[]>
+        // 从后端获取的数据
+        areaList: [] as string[],
+        parkingNoList: [] as string[],
+        identityList: [] as any[] // 身份选项列表
+    },
+
+    onLoad() {
+        // 页面加载时获取停车区域列表和身份选项
+        this.loadAreaList();
+        this.loadIdentityList();
+    },
+
+    // 从后端获取停车区域列表
+    loadAreaList() {
+        wx.request({
+            url: 'http://127.0.0.1:8000/api/parking/options/areas',
+            method: 'GET',
+            success: (res: any) => {
+                if (res.statusCode === 200 && res.data.code === 200) {
+                    this.setData({
+                        areaList: res.data.data
+                    });
+                } else {
+                    console.error('获取停车区域列表失败:', res.data);
+                    // 使用备用数据
+                    this.setData({
+                        areaList: ['A区地下停车场', 'B区地下停车场', 'C区地面停车场', 'D区地面停车场']
+                    });
+                }
+            },
+            fail: (err) => {
+                console.error('获取停车区域列表网络请求失败:', err);
+                // 使用备用数据
+                this.setData({
+                    areaList: ['A区地下停车场', 'B区地下停车场', 'C区地面停车场', 'D区地面停车场']
+                });
+            }
+        });
+    },
+
+    // 根据停车区域获取车位号列表
+    loadParkingSpaceList(area: string) {
+        wx.request({
+            url: `http://127.0.0.1:8000/api/parking/options/spaces?area=${encodeURIComponent(area)}`,
+            method: 'GET',
+            success: (res: any) => {
+                if (res.statusCode === 200 && res.data.code === 200) {
+                    this.setData({
+                        parkingNoList: res.data.data,
+                        // 重置车位号选择
+                        parkingNo: ''
+                    });
+                    
+                    if (res.data.data.length === 0) {
+                        wx.showToast({
+                            title: '该区域暂无可绑定车位',
+                            icon: 'none'
+                        });
+                    }
+                } else {
+                    console.error('获取车位号列表失败:', res.data);
+                    // 使用备用数据
+                    const mockData = ['A-001', 'A-002', 'A-003'];
+                    this.setData({
+                        parkingNoList: mockData,
+                        parkingNo: ''
+                    });
+                }
+            },
+            fail: (err) => {
+                console.error('获取车位号列表网络请求失败:', err);
+                // 使用备用数据
+                const mockData = ['A-001', 'A-002', 'A-003'];
+                this.setData({
+                    parkingNoList: mockData,
+                    parkingNo: ''
+                });
+            }
+        });
+    },
+
+    // 获取车位身份选项列表
+    loadIdentityList() {
+        wx.request({
+            url: 'http://127.0.0.1:8000/api/parking/options/identities',
+            method: 'GET',
+            success: (res: any) => {
+                if (res.statusCode === 200 && res.data.code === 200) {
+                    this.setData({
+                        identityList: res.data.data.identities
+                    });
+                } else {
+                    console.error('获取身份选项失败:', res.data);
+                    // 使用备用数据
+                    this.setData({
+                        identityList: [
+                            {"value": 1, "label": "业主"},
+                            {"value": 3, "label": "租客"}
+                        ]
+                    });
+                }
+            },
+            fail: (err) => {
+                console.error('获取身份选项网络请求失败:', err);
+                // 使用备用数据
+                this.setData({
+                    identityList: [
+                        {"value": 1, "label": "业主"},
+                        {"value": 3, "label": "租客"}
+                    ]
+                });
+            }
+        });
     },
 
     onTypeChange(event: any) {
@@ -45,12 +152,32 @@ Page({
             wx.showToast({ title: '请先选择停车区域', icon: 'none' });
             return;
         }
-        const noList = this.data.parkingNoList[this.data.parkingArea] || [];
+        
+        if (this.data.parkingNoList.length === 0) {
+            wx.showToast({ title: '正在加载车位列表，请稍候', icon: 'none' });
+            return;
+        }
+        
         this.setData({
             showPicker: true,
             pickerType: 'parkingNo',
             pickerTitle: '选择车位号',
-            currentColumns: noList
+            currentColumns: this.data.parkingNoList
+        });
+    },
+
+    showIdentityPicker() {
+        if (this.data.identityList.length === 0) {
+            wx.showToast({ title: '正在加载身份选项，请稍候', icon: 'none' });
+            return;
+        }
+        
+        const identityLabels = this.data.identityList.map((item: any) => item.label);
+        this.setData({
+            showPicker: true,
+            pickerType: 'identity',
+            pickerTitle: '选择身份',
+            currentColumns: identityLabels
         });
     },
 
@@ -62,11 +189,12 @@ Page({
         const { value } = event.detail;
         const type = this.data.pickerType;
 
-        // 如果切换了停车区域，需要清空车位号
-        if (type === 'parkingArea' && value !== this.data.parkingArea) {
+        if (type === 'identity') {
+            // 身份选择需要特殊处理，获取对应的值
+            const selectedIdentity = this.data.identityList.find((item: any) => item.label === value);
             this.setData({
-                [type]: value,
-                parkingNo: '',
+                identity: value,
+                identityValue: selectedIdentity ? selectedIdentity.value : 0,
                 showPicker: false
             });
         } else {
@@ -74,6 +202,12 @@ Page({
                 [type]: value,
                 showPicker: false
             });
+        }
+
+        // 级联加载数据
+        if (type === 'parkingArea') {
+            // 选择停车区域后，加载车位号列表
+            this.loadParkingSpaceList(value);
         }
     },
 
@@ -102,7 +236,7 @@ Page({
     },
 
     onSubmit() {
-        const { parkingType, parkingArea, parkingNo, carNo, carBrand, carColor, ownerName, ownerPhone, idCard } = this.data;
+        const { parkingType, parkingArea, parkingNo, carNo, carBrand, carColor, ownerName, ownerPhone, idCard, identity, identityValue } = this.data;
 
         // 表单验证
         if (!parkingArea) {
@@ -111,6 +245,10 @@ Page({
         }
         if (!parkingNo) {
             wx.showToast({ title: '请选择车位号', icon: 'none' });
+            return;
+        }
+        if (!identity || identityValue === 0) {
+            wx.showToast({ title: '请选择申请身份', icon: 'none' });
             return;
         }
         if (!carNo) {
@@ -175,7 +313,8 @@ Page({
                 car_color: carColor || '',
                 owner_name: ownerName,
                 owner_phone: ownerPhone,
-                id_card: idCard
+                id_card: idCard,
+                identity: identityValue  // 使用用户选择的身份
             },
             header: {
                 'content-type': 'application/json',

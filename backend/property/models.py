@@ -242,6 +242,7 @@ class ParkingBindingApplication(models.Model):
     car_color = models.CharField(max_length=20, blank=True, verbose_name="车辆颜色")
     
     # 申请相关
+    identity = models.SmallIntegerField(choices=[(1, '业主'), (3, '租客')], default=1, verbose_name="申请身份")
     status = models.SmallIntegerField(choices=STATUS_CHOICES, default=0, verbose_name="审核状态")
     
     # 时间戳
@@ -280,6 +281,7 @@ class ParkingUserBinding(models.Model):
     parking_space = models.ForeignKey(ParkingSpace, on_delete=models.CASCADE, related_name='user_bindings', null=True, blank=True)
     application = models.OneToOneField(ParkingBindingApplication, on_delete=models.CASCADE, verbose_name="关联申请")
     
+    identity = models.SmallIntegerField(choices=[(1, '业主'), (3, '租客')], default=1, verbose_name="绑定身份")
     status = models.SmallIntegerField(choices=STATUS_CHOICES, default=1, verbose_name="绑定状态")
     
     # 时间戳

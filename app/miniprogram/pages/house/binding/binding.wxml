@@ -40,9 +40,18 @@
       />
 
       <van-field
+        value="{{ identity }}"
+        label="申请身份"
+        placeholder="请选择申请身份"
+        readonly
+        is-link
+        bind:tap="showIdentityPicker"
+      />
+
+      <van-field
         value="{{ name }}"
-        label="姓名"
-        placeholder="请输入业主姓名"
+        label="申请人姓名"
+        placeholder="请输入申请人姓名"
         bind:change="onNameChange"
       />
       

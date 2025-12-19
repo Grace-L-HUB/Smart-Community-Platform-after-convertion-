@@ -38,6 +38,7 @@ export interface ParkingBindingApplication {
   car_no: string
   car_brand: string
   car_color: string
+  identity: number  // 申请身份：1-业主, 3-租客
   status: number
   created_at: string
   audit_remark?: string
@@ -74,6 +75,8 @@ export interface HouseUserBinding {
 // 车位绑定关系
 export interface ParkingUserBinding {
   id: number
+  identity: number  // 绑定身份：1-业主, 3-租客
+  identity_display: string
   status: number
   status_display: string
   created_at: string

@@ -36,6 +36,16 @@
           <div class="text-caption text-grey">{{ item.ownerPhone }}</div>
         </template>
 
+        <template #item.identity="{ item }">
+          <v-chip
+            :color="getIdentityColor(item.identity)"
+            size="small"
+            variant="tonal"
+          >
+            {{ getIdentityText(item.identity) }}
+          </v-chip>
+        </template>
+
         <template #item.idCard="{ item }">
           <div class="d-flex align-center">
             <span :class="{ 'text-monospace': true }">
@@ -132,6 +142,7 @@ const headers = [
   { title: '车辆信息', key: 'carInfo' },
   { title: '类型', key: 'applyType' },
   { title: '申请人', key: 'applicant' },
+  { title: '申请身份', key: 'identity' },
   { title: '身份证号', key: 'idCard' },
   { title: '申请时间', key: 'applyTime' },
   { title: '操作', key: 'actions', sortable: false, align: 'center' as const },
@@ -139,6 +150,23 @@ const headers = [
 
 function formatTime(time: string) {
   return dayjs(time).format('MM-DD HH:mm')
+}
+
+// 身份标签
+function getIdentityColor(identity: string) {
+  const colors: Record<string, string> = {
+    owner: 'primary',
+    tenant: 'secondary',
+  }
+  return colors[identity] || 'grey'
+}
+
+function getIdentityText(identity: string) {
+  const texts: Record<string, string> = {
+    owner: '业主',
+    tenant: '租客',
+  }
+  return texts[identity] || identity
 }
 
 async function approve(apply: ParkingApply) {

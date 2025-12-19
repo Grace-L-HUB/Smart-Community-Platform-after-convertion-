@@ -96,6 +96,21 @@
           <span v-else class="text-grey">-</span>
         </template>
 
+        <template #item.ownerInfo="{ item }">
+          <div v-if="item.ownerName">
+            <div class="font-weight-medium">{{ item.ownerName }}</div>
+            <v-chip
+              :color="getIdentityColor(item.identity)"
+              size="x-small"
+              variant="tonal"
+              class="mt-1"
+            >
+              {{ getIdentityText(item.identity) }}
+            </v-chip>
+          </div>
+          <span v-else class="text-grey">-</span>
+        </template>
+
         <template #item.actions="{ item }">
           <v-btn icon size="small" variant="text" @click="viewDetail(item)">
             <v-icon icon="mdi-eye" />
@@ -167,10 +182,22 @@
             </v-col>
             <v-divider class="mx-3 my-2" />
             <v-col cols="6">
-              <div class="text-caption text-grey">车主姓名</div>
+              <div class="text-caption text-grey">绑定人姓名</div>
               <div class="text-body-1">{{ selectedParking.ownerName || '-' }}</div>
             </v-col>
             <v-col cols="6">
+              <div class="text-caption text-grey">绑定身份</div>
+              <v-chip
+                v-if="selectedParking.ownerName"
+                :color="getIdentityColor(selectedParking.identity)"
+                size="small"
+                variant="tonal"
+              >
+                {{ getIdentityText(selectedParking.identity) }}
+              </v-chip>
+              <span v-else class="text-body-1">-</span>
+            </v-col>
+            <v-col cols="12">
               <div class="text-caption text-grey">联系电话</div>
               <div class="text-body-1">{{ selectedParking.ownerPhone || '-' }}</div>
             </v-col>
@@ -215,13 +242,18 @@ const headers = [
   { title: '类型', key: 'type', sortable: false },
   { title: '状态', key: 'status', sortable: false },
   { title: '车辆信息', key: 'carInfo', sortable: false },
-  { title: '业主/租客', key: 'ownerName', sortable: false },
+  { title: '绑定人', key: 'ownerInfo', sortable: false },
   { title: '联系电话', key: 'ownerPhone', sortable: false },
   { title: '操作', key: 'actions', sortable: false, align: 'center' as const },
 ] as const
 
 const filteredParkings = computed(() => {
-  return propertyStore.parkings.filter(p => {
+  // 使用已绑定的车位数据，包含身份信息
+  const parkings = propertyStore.approvedParkings.length > 0 
+    ? propertyStore.approvedParkings 
+    : propertyStore.parkings
+  
+  return parkings.filter(p => {
     if (filters.area && p.area !== filters.area) return false
     if (filters.type && p.type !== filters.type) return false
     if (filters.status && p.status !== filters.status) return false
@@ -245,6 +277,23 @@ function getStatusText(status: string) {
     empty: '空闲',
   }
   return texts[status] || status
+}
+
+// 身份标签
+function getIdentityColor(identity: string) {
+  const colors: Record<string, string> = {
+    owner: 'primary',
+    tenant: 'secondary',
+  }
+  return colors[identity] || 'grey'
+}
+
+function getIdentityText(identity: string) {
+  const texts: Record<string, string> = {
+    owner: '业主',
+    tenant: '租客',
+  }
+  return texts[identity] || identity
 }
 
 function handleSearch() {}

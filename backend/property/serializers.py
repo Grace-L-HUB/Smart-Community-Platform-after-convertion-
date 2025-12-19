@@ -249,7 +249,7 @@ class ParkingBindingApplicationSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'owner_name', 'owner_phone', 'id_card',
             'community_name', 'parking_type', 'parking_area', 'parking_no',
-            'car_no', 'car_brand', 'car_color',
+            'car_no', 'car_brand', 'car_color', 'identity',
             'status', 'created_at', 'audit_remark', 'reject_reason'
         ]
         read_only_fields = ['id', 'status', 'created_at', 'audit_remark', 'reject_reason']
@@ -282,6 +282,7 @@ class ParkingBindingApplicationListSerializer(serializers.ModelSerializer):
     user_info = serializers.SerializerMethodField()
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     parking_type_display = serializers.CharField(source='get_parking_type_display', read_only=True)
+    identity_display = serializers.CharField(source='get_identity_display', read_only=True)
     
     class Meta:
         model = ParkingBindingApplication
@@ -289,8 +290,8 @@ class ParkingBindingApplicationListSerializer(serializers.ModelSerializer):
             'id', 'owner_name', 'owner_phone', 'id_card',
             'community_name', 'parking_type', 'parking_type_display', 
             'parking_area', 'parking_no', 'car_no', 'car_brand', 'car_color',
-            'status', 'status_display', 'created_at', 'updated_at', 
-            'audit_time', 'audit_remark', 'reject_reason', 'user_info'
+            'identity', 'identity_display', 'status', 'status_display', 
+            'created_at', 'updated_at', 'audit_time', 'audit_remark', 'reject_reason', 'user_info'
         ]
     
     def get_user_info(self, obj):
@@ -306,11 +307,12 @@ class ParkingUserBindingSerializer(serializers.ModelSerializer):
     """用户车位绑定关系序列化器"""
     parking_info = serializers.SerializerMethodField()
     status_display = serializers.CharField(source='get_status_display', read_only=True)
+    identity_display = serializers.CharField(source='get_identity_display', read_only=True)
     
     class Meta:
         model = ParkingUserBinding
         fields = [
-            'id', 'status', 'status_display', 'created_at', 'parking_info'
+            'id', 'identity', 'identity_display', 'status', 'status_display', 'created_at', 'parking_info'
         ]
     
     def get_parking_info(self, obj):

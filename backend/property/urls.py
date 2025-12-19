@@ -4,7 +4,10 @@ from .views import (
     VisitorInviteView, VisitorDetailView, VisitorStatusView, VisitorQRCodeView,
     ParkingBindingApplicationView, MyParkingListView, ParkingBindingStatsView,
     HouseBindingAuditView, ParkingBindingAuditView, HouseBindingUnbindView, ParkingBindingUnbindView,
-    HouseListView, ParkingSpaceListView, DashboardStatsView, EmployeeListView
+    HouseListView, ParkingSpaceListView, DashboardStatsView, EmployeeListView,
+    HouseBuildingOptionsView, HouseUnitOptionsView, HouseRoomOptionsView,
+    ParkingAreaOptionsView, ParkingSpaceOptionsView,
+    HouseIdentityOptionsView, ParkingIdentityOptionsView
 )
 
 urlpatterns = [
@@ -58,4 +61,17 @@ urlpatterns = [
     
     # 员工管理
     path('property/employees', EmployeeListView.as_view(), name='employee_list'),
+    
+    # 房屋绑定选项数据
+    path('property/house/options/buildings', HouseBuildingOptionsView.as_view(), name='house_buildings'),
+    path('property/house/options/units', HouseUnitOptionsView.as_view(), name='house_units'), 
+    path('property/house/options/rooms', HouseRoomOptionsView.as_view(), name='house_rooms'),
+    
+    # 车位绑定选项数据
+    path('parking/options/areas', ParkingAreaOptionsView.as_view(), name='parking_areas'),
+    path('parking/options/spaces', ParkingSpaceOptionsView.as_view(), name='parking_spaces'),
+    
+    # 身份选项数据
+    path('property/house/options/identities', HouseIdentityOptionsView.as_view(), name='house_identities'),
+    path('parking/options/identities', ParkingIdentityOptionsView.as_view(), name='parking_identities'),
 ]
