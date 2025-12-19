@@ -9,7 +9,12 @@ from .views import (
     
     # 私聊相关
     ConversationListView, ConversationMessagesView,
-    send_message, start_conversation, poll_messages
+    send_message, start_conversation, poll_messages,
+    
+    # 社区活动相关
+    ActivityListCreateView, ActivityDetailView, register_activity,
+    cancel_registration, activity_participants, approve_registration,
+    my_activities
 )
 
 urlpatterns = [
@@ -60,4 +65,29 @@ urlpatterns = [
     
     # 轮询新消息
     path('conversations/<int:conversation_id>/poll/', poll_messages, name='poll_messages'),
+    
+    # =============================================================================
+    # 社区活动相关路由
+    # =============================================================================
+    
+    # 活动列表和创建
+    path('activities/', ActivityListCreateView.as_view(), name='activities'),
+    
+    # 活动详情、编辑、删除
+    path('activities/<int:pk>/', ActivityDetailView.as_view(), name='activity_detail'),
+    
+    # 报名活动
+    path('activities/<int:pk>/register/', register_activity, name='register_activity'),
+    
+    # 取消报名
+    path('activities/<int:pk>/cancel/', cancel_registration, name='cancel_registration'),
+    
+    # 获取活动报名名单
+    path('activities/<int:pk>/participants/', activity_participants, name='activity_participants'),
+    
+    # 审核报名申请
+    path('activities/<int:pk>/registrations/<int:registration_id>/approve/', approve_registration, name='approve_registration'),
+    
+    # 用户参与的活动
+    path('my-activities/', my_activities, name='my_activities'),
 ]

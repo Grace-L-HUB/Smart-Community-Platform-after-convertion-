@@ -17,8 +17,8 @@ import {
     type AccessLog,
     type Employee,
 } from '@/mocks/property'
-import { 
-    propertyAPI, 
+import {
+    propertyAPI,
     type HouseBindingApplication,
     type ParkingBindingApplication,
     type HouseUserBinding,
@@ -81,7 +81,7 @@ function convertHouseApplicationToResident(app: HouseBindingApplication): Reside
     // 身份映射: 1-业主, 2-家庭成员, 3-租客
     const identityMap: Record<number, 'owner' | 'tenant' | 'family'> = {
         1: 'owner',
-        2: 'family', 
+        2: 'family',
         3: 'tenant'
     }
 
@@ -234,7 +234,7 @@ export const usePropertyStore = defineStore('property', {
                 .filter(app => app.status === 0)
                 .map(app => convertParkingApplicationToParkingApply(app))
         },
-        
+
         // 已绑定车位 - 使用转换后的数据
         approvedParkings: (state) => {
             return state.approvedParkingBindings.map(binding => convertParkingBindingToParking(binding))
@@ -258,7 +258,7 @@ export const usePropertyStore = defineStore('property', {
         // 加载所有数据
         async loadAll() {
             this.loading = true
-            
+
             try {
                 // 并行加载数据
                 const [
@@ -497,6 +497,20 @@ export const usePropertyStore = defineStore('property', {
             }
             this.activities.unshift(newActivity)
             return newActivity
+        },
+
+        updateActivity(id: number, data: Partial<Omit<Activity, 'id' | 'createdAt' | 'currentParticipants'>>) {
+            const activity = this.activities.find(a => a.id === id)
+            if (activity) {
+                Object.assign(activity, data)
+            }
+        },
+
+        deleteActivity(id: number) {
+            const index = this.activities.findIndex(a => a.id === id)
+            if (index > -1) {
+                this.activities.splice(index, 1)
+            }
         },
 
         // 员工操作

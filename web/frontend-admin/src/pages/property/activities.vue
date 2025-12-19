@@ -41,15 +41,15 @@
             </div>
             <div class="d-flex align-center text-body-2 mb-1">
               <v-icon icon="mdi-clock-outline" size="16" class="mr-1" />
-              {{ formatTime(activity.startTime) }}
+              {{ formatTime(activity.start_time) }}
             </div>
             <div class="d-flex align-center text-body-2">
               <v-icon icon="mdi-account-group" size="16" class="mr-1" />
-              {{ activity.currentParticipants }} / {{ activity.maxParticipants }} 人
+              {{ activity.current_participants }} / {{ activity.max_participants }} 人
             </div>
 
             <v-progress-linear
-              :model-value="(activity.currentParticipants / activity.maxParticipants) * 100"
+              :model-value="activity.registration_progress"
               color="primary"
               rounded
               class="mt-2"
@@ -62,10 +62,10 @@
               报名名单
             </v-btn>
             <v-spacer />
-            <v-btn icon size="small" variant="text">
+            <v-btn icon size="small" variant="text" @click="openEditor(activity)">
               <v-icon icon="mdi-pencil" />
             </v-btn>
-            <v-btn icon size="small" variant="text" color="error">
+            <v-btn icon size="small" variant="text" color="error" @click="deleteActivity(activity)">
               <v-icon icon="mdi-delete" />
             </v-btn>
           </v-card-actions>
@@ -76,7 +76,7 @@
     <!-- 发布活动弹窗 -->
     <v-dialog v-model="editorDialog" max-width="600">
       <v-card>
-        <v-card-title>发布活动</v-card-title>
+        <v-card-title>{{ isEditing ? '编辑活动' : '发布活动' }}</v-card-title>
         <v-card-text>
           <v-text-field
             v-model="form.title"
@@ -99,20 +99,22 @@
           />
           <v-row>
             <v-col cols="6">
-              <v-text-field
-                v-model="form.startTime"
-                label="开始时间"
-                type="datetime-local"
-                variant="outlined"
-              />
+          <v-text-field
+            v-model="form.startTime"
+            label="开始时间"
+            type="datetime-local"
+            variant="outlined"
+            required
+          />
             </v-col>
             <v-col cols="6">
-              <v-text-field
-                v-model="form.endTime"
-                label="结束时间"
-                type="datetime-local"
-                variant="outlined"
-              />
+          <v-text-field
+            v-model="form.endTime"
+            label="结束时间"
+            type="datetime-local"
+            variant="outlined"
+            required
+          />
             </v-col>
           </v-row>
           <v-text-field
@@ -120,55 +122,176 @@
             label="最大人数"
             type="number"
             variant="outlined"
+            class="mb-4"
+          />
+          <v-checkbox
+            v-model="form.requireApproval"
+            label="需要审核报名"
+            color="primary"
           />
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn variant="text" @click="editorDialog = false">取消</v-btn>
-          <v-btn color="primary" variant="flat" @click="publishActivity">发布</v-btn>
+          <v-btn variant="text" @click="cancelEdit">取消</v-btn>
+          <v-btn 
+            color="primary" 
+            variant="flat" 
+            @click="saveActivity"
+            :loading="saving"
+          >
+            {{ isEditing ? '保存' : '发布' }}
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
     <!-- 报名名单弹窗 -->
-    <v-dialog v-model="participantsDialog" max-width="500">
+    <v-dialog v-model="participantsDialog" max-width="600">
       <v-card>
-        <v-card-title>报名名单</v-card-title>
-        <v-list>
-          <v-list-item
-            v-for="(p, i) in mockParticipants"
-            :key="i"
-            :title="p.name"
-            :subtitle="p.phone"
-          >
-            <template #prepend>
-              <v-avatar color="primary" size="36">
-                {{ p.name.charAt(0) }}
-              </v-avatar>
-            </template>
-          </v-list-item>
-        </v-list>
+        <v-card-title class="d-flex align-center">
+          <span>报名名单</span>
+          <v-spacer />
+          <v-chip size="small" color="primary">
+            {{ participants.length }} 人
+          </v-chip>
+        </v-card-title>
+        
+        <v-card-text style="max-height: 400px; overflow-y: auto;">
+          <v-list v-if="participants.length > 0">
+            <v-list-item
+              v-for="participant in participants"
+              :key="participant.id"
+              :title="participant.user.display_name || participant.user.nickname"
+              :subtitle="participant.contact_phone || '未提供联系方式'"
+            >
+              <template #prepend>
+                <v-avatar color="primary" size="36">
+                  <v-img
+                    v-if="participant.user.avatar"
+                    :src="participant.user.avatar"
+                  />
+                  <span v-else>
+                    {{ (participant.user.display_name || participant.user.nickname)?.charAt(0) }}
+                  </span>
+                </v-avatar>
+              </template>
+              
+              <template #append>
+                <v-chip 
+                  :color="getRegistrationStatusColor(participant.status)"
+                  size="small"
+                >
+                  {{ getRegistrationStatusText(participant.status) }}
+                </v-chip>
+              </template>
+            </v-list-item>
+          </v-list>
+          
+          <v-empty-state
+            v-else
+            title="暂无报名"
+            text="还没有人报名参加此活动"
+            icon="mdi-account-group"
+          />
+        </v-card-text>
+        
         <v-card-actions>
           <v-spacer />
           <v-btn variant="text" @click="participantsDialog = false">关闭</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
+    
+    <!-- 删除确认弹窗 -->
+    <v-dialog v-model="deleteDialog" max-width="400">
+      <v-card>
+        <v-card-title>确认删除</v-card-title>
+        <v-card-text>
+          确定要删除活动"{{ deleteTarget?.title }}"吗？此操作不可恢复。
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="deleteDialog = false">取消</v-btn>
+          <v-btn 
+            color="error" 
+            variant="flat" 
+            @click="confirmDelete"
+            :loading="deleting"
+          >
+            删除
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
-    <v-snackbar v-model="snackbar" color="success" location="top">
+    <v-snackbar v-model="snackbar" :color="snackbarColor" location="top">
       {{ snackbarText }}
     </v-snackbar>
   </v-container>
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, reactive, onMounted } from 'vue'
-import { usePropertyStore, type Activity } from '@/stores/property'
+import { ref, reactive, onMounted } from 'vue'
 import dayjs from 'dayjs'
+import { useAuthStore } from '@/stores/auth'
 
-const propertyStore = usePropertyStore()
+// API服务
+const API_BASE = 'http://localhost:8000/api'
 
-const activities = computed(() => propertyStore.activities)
+// 认证store
+const authStore = useAuthStore()
+
+// 获取Authorization头
+const getAuthHeaders = (): Record<string, string> => {
+  // 临时移除认证头进行测试
+  return {}
+  // const token = authStore.token
+  // return token ? { 'Authorization': `Bearer ${token}` } : {}
+}
+
+// 活动类型定义
+interface Activity {
+  id: number
+  title: string
+  description: string
+  location: string
+  start_time: string
+  end_time: string
+  max_participants: number
+  current_participants: number
+  status: 'upcoming' | 'ongoing' | 'ended'
+  organizer: {
+    id: number
+    nickname: string
+    avatar: string | null
+    display_name: string
+  }
+  view_count: number
+  registration_progress: number
+  can_register: boolean
+  user_registered: boolean
+}
+
+interface Participant {
+  id: number
+  user: {
+    id: number
+    nickname: string
+    avatar: string | null
+    display_name: string
+  }
+  status: string
+  contact_phone: string
+  created_at: string
+  time_ago: string
+}
+
+// 响应式数据
+const activities = ref<Activity[]>([])
+const participants = ref<Participant[]>([])
+const loading = ref(false)
+const saving = ref(false)
+const deleting = ref(false)
 
 function getStatusColor(status: string) {
   const colors: Record<string, string> = {
@@ -194,6 +317,9 @@ function formatTime(time: string) {
 
 // 编辑器
 const editorDialog = ref(false)
+const isEditing = ref(false)
+const editingId = ref<number | null>(null)
+
 const form = reactive({
   title: '',
   description: '',
@@ -203,53 +329,211 @@ const form = reactive({
   maxParticipants: 50,
 })
 
-function openEditor(_activity: Activity | null) {
-  form.title = ''
-  form.description = ''
-  form.location = ''
-  form.startTime = ''
-  form.endTime = ''
-  form.maxParticipants = 50
+function openEditor(activity: Activity | null) {
+  if (activity) {
+    isEditing.value = true
+    editingId.value = activity.id
+    form.title = activity.title
+    form.description = activity.description
+    form.location = activity.location
+    form.startTime = dayjs(activity.start_time).format('YYYY-MM-DDTHH:mm')
+    form.endTime = dayjs(activity.end_time).format('YYYY-MM-DDTHH:mm')
+    form.maxParticipants = activity.max_participants
+  } else {
+    isEditing.value = false
+    editingId.value = null
+    form.title = ''
+    form.description = ''
+    form.location = ''
+    form.startTime = ''
+    form.endTime = ''
+    form.maxParticipants = 50
+  }
   editorDialog.value = true
 }
 
-function publishActivity() {
-  propertyStore.addActivity({
-    title: form.title,
-    description: form.description,
-    location: form.location,
-    startTime: form.startTime,
-    endTime: form.endTime,
-    maxParticipants: form.maxParticipants,
-    status: 'upcoming',
-  })
-  showSnackbar('活动已发布')
-  editorDialog.value = false
-}
+
 
 // 报名名单
 const participantsDialog = ref(false)
-const mockParticipants = [
-  { name: '张三', phone: '138****8001' },
-  { name: '李四', phone: '138****8002' },
-  { name: '王五', phone: '138****8003' },
-]
 
-function viewParticipants(_activity: Activity) {
+async function viewParticipants(activity: Activity) {
   participantsDialog.value = true
+  await fetchParticipants(activity.id)
+}
+
+// 删除活动
+const deleteDialog = ref(false)
+const deleteTarget = ref<Activity | null>(null)
+
+function deleteActivity(activity: Activity) {
+  deleteTarget.value = activity
+  deleteDialog.value = true
+}
+
+async function confirmDelete() {
+  if (deleteTarget.value) {
+    const success = await deleteActivityApi(deleteTarget.value.id)
+    if (success) {
+      deleteDialog.value = false
+      deleteTarget.value = null
+    }
+  }
+}
+
+// 工具函数
+function getRegistrationStatusColor(status: string) {
+  const colors: Record<string, string> = {
+    approved: 'success',
+    pending: 'warning',
+    rejected: 'error',
+    cancelled: 'grey',
+  }
+  return colors[status] || 'grey'
+}
+
+function getRegistrationStatusText(status: string) {
+  const texts: Record<string, string> = {
+    approved: '已通过',
+    pending: '待审核',
+    rejected: '已拒绝',
+    cancelled: '已取消',
+  }
+  return texts[status] || status
 }
 
 // 提示
 const snackbar = ref(false)
 const snackbarText = ref('')
+const snackbarColor = ref('success')
 
-function showSnackbar(text: string) {
+function showSnackbar(text: string, color: string = 'success') {
   snackbarText.value = text
+  snackbarColor.value = color
   snackbar.value = true
 }
 
+// 获取活动列表
+async function fetchActivities() {
+  loading.value = true
+  try {
+    const response = await fetch(`${API_BASE}/community/activities/`, {
+      headers: getAuthHeaders(),
+    })
+    const data = await response.json()
+    if (data.code === 200) {
+      activities.value = data.data
+      // 将后端数据映射到前端模型
+      activities.value = data.data.map((item: any) => ({
+        ...item,
+        current_participants: item.participants_count,
+        max_participants: item.max_participants,
+        start_time: item.start_time,
+        end_time: item.end_time,
+      }))
+    }
+  } catch (error) {
+    console.error('获取活动列表失败:', error)
+    showSnackbar('获取活动列表失败', 'error')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 获取报名名单
+async function fetchParticipants(activityId: number) {
+  try {
+    const response = await fetch(`${API_BASE}/community/activities/${activityId}/participants/`, {
+      headers: getAuthHeaders(),
+    })
+    const data = await response.json()
+    if (data.code === 200) {
+      participants.value = data.data
+    }
+  } catch (error) {
+    console.error('获取报名名单失败:', error)
+    showSnackbar('获取报名名单失败', 'error')
+  }
+}
+
+// 保存活动
+async function saveActivity() {
+  saving.value = true
+  try {
+    const url = isEditing.value && editingId.value
+      ? `${API_BASE}/community/activities/${editingId.value}/`
+      : `${API_BASE}/community/activities/`
+    
+    const method = isEditing.value ? 'PUT' : 'POST'
+
+    // 构造请求数据
+    const payload = {
+      title: form.title,
+      description: form.description,
+      location: form.location,
+      start_time: form.startTime,
+      end_time: form.endTime,
+      max_participants: form.maxParticipants,
+      require_approval: true // 默认为true，或者根据form添加字段
+    }
+
+    const response = await fetch(url, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders(),
+      },
+      body: JSON.stringify(payload),
+    })
+
+    const data = await response.json()
+    if (data.code === 200) {
+      showSnackbar(isEditing.value ? '活动已更新' : '活动已发布')
+      editorDialog.value = false
+      fetchActivities()
+    } else {
+      showSnackbar(data.message || '操作失败', 'error')
+    }
+  } catch (error) {
+    console.error('保存活动失败:', error)
+    showSnackbar('保存活动失败', 'error')
+  } finally {
+    saving.value = false
+  }
+}
+
+// 删除活动API
+async function deleteActivityApi(id: number) {
+  deleting.value = true
+  try {
+    const response = await fetch(`${API_BASE}/community/activities/${id}/`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    })
+    const data = await response.json()
+    if (data.code === 200) {
+      showSnackbar('活动已删除')
+      fetchActivities()
+      return true
+    } else {
+      showSnackbar(data.message || '删除失败', 'error')
+      return false
+    }
+  } catch (error) {
+    console.error('删除活动失败:', error)
+    showSnackbar('删除活动失败', 'error')
+    return false
+  } finally {
+    deleting.value = false
+  }
+}
+
+function cancelEdit() {
+  editorDialog.value = false
+}
+
 onMounted(() => {
-  propertyStore.loadAll()
+  fetchActivities()
 })
 
 defineOptions({
