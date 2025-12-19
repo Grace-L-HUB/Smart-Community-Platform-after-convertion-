@@ -36,6 +36,26 @@
           <div class="text-caption text-grey">{{ item.ownerPhone }}</div>
         </template>
 
+        <template #item.idCard="{ item }">
+          <div class="d-flex align-center">
+            <span :class="{ 'text-monospace': true }">
+              {{ getDisplayIdCard(item.id) }}
+            </span>
+            <v-btn
+              icon
+              size="x-small"
+              variant="text"
+              class="ml-2"
+              @click="toggleIdCardVisibility(item.id)"
+            >
+              <v-icon :icon="isIdCardVisible(item.id) ? 'mdi-eye-off' : 'mdi-eye'" />
+              <v-tooltip activator="parent" location="top">
+                {{ isIdCardVisible(item.id) ? '隐藏' : '显示' }}身份证号
+              </v-tooltip>
+            </v-btn>
+          </div>
+        </template>
+
         <template #item.applyTime="{ item }">
           {{ formatTime(item.applyTime) }}
         </template>
@@ -112,6 +132,7 @@ const headers = [
   { title: '车辆信息', key: 'carInfo' },
   { title: '类型', key: 'applyType' },
   { title: '申请人', key: 'applicant' },
+  { title: '身份证号', key: 'idCard' },
   { title: '申请时间', key: 'applyTime' },
   { title: '操作', key: 'actions', sortable: false, align: 'center' as const },
 ] as const
@@ -120,9 +141,14 @@ function formatTime(time: string) {
   return dayjs(time).format('MM-DD HH:mm')
 }
 
-function approve(apply: ParkingApply) {
-  propertyStore.approveParking(apply.id)
-  showSnackbar('success', '已通过审核')
+async function approve(apply: ParkingApply) {
+  try {
+    await propertyStore.approveParking(apply.id)
+    showSnackbar('success', '已通过审核')
+  } catch (error) {
+    console.error('审核失败:', error)
+    showSnackbar('error', '审核失败，请重试')
+  }
 }
 
 const rejectDialog = ref(false)
@@ -135,21 +161,62 @@ function openRejectDialog(apply: ParkingApply) {
   rejectDialog.value = true
 }
 
-function confirmReject() {
+async function confirmReject() {
   if (!rejectReason.value || !rejectingApply.value) return
-  propertyStore.rejectParking(rejectingApply.value.id, rejectReason.value)
-  showSnackbar('error', '已拒绝申请')
-  rejectDialog.value = false
+  
+  try {
+    await propertyStore.rejectParking(rejectingApply.value.id, rejectReason.value)
+    showSnackbar('error', '已拒绝申请')
+    rejectDialog.value = false
+  } catch (error) {
+    console.error('拒绝失败:', error)
+    showSnackbar('error', '操作失败，请重试')
+  }
 }
 
 const snackbar = ref(false)
 const snackbarText = ref('')
 const snackbarColor = ref('success')
 
+// 身份证号可见性管理
+const visibleIdCards = ref(new Set<number>())
+
 function showSnackbar(color: string, text: string) {
   snackbarColor.value = color
   snackbarText.value = text
   snackbar.value = true
+}
+
+// 身份证号显示控制
+function toggleIdCardVisibility(id: number) {
+  if (visibleIdCards.value.has(id)) {
+    visibleIdCards.value.delete(id)
+  } else {
+    visibleIdCards.value.add(id)
+  }
+}
+
+function isIdCardVisible(id: number): boolean {
+  return visibleIdCards.value.has(id)
+}
+
+function getDisplayIdCard(id: number): string {
+  const apply = pendingApplies.value.find(a => a.id === id)
+  if (!apply) return ''
+  
+  const idCard = apply.idCard || ''
+  if (!idCard) return '无'
+  
+  // 如果可见，显示完整身份证号；否则只显示前4位和后4位，中间用*遮盖
+  if (isIdCardVisible(id)) {
+    return idCard
+  } else {
+    if (idCard.length <= 8) return '*'.repeat(idCard.length)
+    const start = idCard.substring(0, 4)
+    const end = idCard.substring(idCard.length - 4)
+    const middle = '*'.repeat(idCard.length - 8)
+    return `${start}${middle}${end}`
+  }
 }
 
 onMounted(() => {

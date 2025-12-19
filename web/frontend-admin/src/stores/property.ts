@@ -2,7 +2,6 @@
 import { defineStore } from 'pinia'
 import {
     mockHouses,
-    mockResidents,
     mockWorkOrders,
     mockBills,
     mockAnnouncements,
@@ -10,12 +9,7 @@ import {
     mockAccessLogs,
     mockEmployees,
     mockPropertyStats,
-    mockParkings,
-    mockParkingApplies,
     type House,
-    type Resident,
-    type Parking,
-    type ParkingApply,
     type WorkOrder,
     type Bill,
     type Announcement,
@@ -23,8 +17,129 @@ import {
     type AccessLog,
     type Employee,
 } from '@/mocks/property'
+import { 
+    propertyAPI, 
+    type HouseBindingApplication,
+    type ParkingBindingApplication,
+    type HouseUserBinding,
+    type ParkingUserBinding
+} from '@/services/property'
 
-export type { House, Resident, Parking, ParkingApply, WorkOrder, Bill, Announcement, Activity, AccessLog, Employee }
+// 更新数据类型以匹配后端API
+export interface Resident {
+    id: number
+    name: string
+    phone: string
+    idCard: string
+    houseAddress: string
+    identity: 'owner' | 'tenant' | 'family'
+    status: 0 | 1 | 2 // 0-待审核, 1-已通过, 2-已拒绝
+    applyTime: string
+    rejectReason?: string
+}
+
+export interface ParkingApply {
+    id: number
+    communityName: string
+    parkingType: 'owned' | 'rented'
+    parkingArea: string
+    parkingNo: string
+    carNo: string
+    carBrand: string
+    carColor: string
+    ownerName: string
+    ownerPhone: string
+    idCard: string
+    status: 0 | 1 | 2 // 0-待审核, 1-已通过, 2-已拒绝
+    applyTime: string
+    rejectReason?: string
+}
+
+export interface Parking {
+    id: number
+    area: string
+    parkingNo: string
+    carNo: string
+    carBrand: string
+    carColor: string
+    ownerName: string
+    ownerPhone: string
+    type: 'owned' | 'rented'
+    status: 'active' | 'expired' | 'empty'
+}
+
+export type { House, WorkOrder, Bill, Announcement, Activity, AccessLog, Employee }
+
+// ===== 数据转换函数 =====
+
+/**
+ * 将房屋绑定申请转换为住户格式
+ */
+function convertHouseApplicationToResident(app: HouseBindingApplication): Resident {
+    // 身份映射: 1-业主, 2-家庭成员, 3-租客
+    const identityMap: Record<number, 'owner' | 'tenant' | 'family'> = {
+        1: 'owner',
+        2: 'family', 
+        3: 'tenant'
+    }
+
+    return {
+        id: app.id,
+        name: app.applicant_name,
+        phone: app.applicant_phone,
+        idCard: app.id_card_number,
+        houseAddress: `${app.building_name}${app.unit_name}${app.room_number}`,
+        identity: identityMap[app.identity] || 'owner',
+        status: app.status as 0 | 1 | 2,
+        applyTime: app.created_at,
+        rejectReason: app.reject_reason
+    }
+}
+
+/**
+ * 将房屋绑定关系转换为住户格式
+ */
+function convertHouseBindingToResident(binding: HouseUserBinding): Resident {
+    // 从identity_display解析身份
+    const identityMap: Record<string, 'owner' | 'tenant' | 'family'> = {
+        '业主': 'owner',
+        '家庭成员': 'family',
+        '租客': 'tenant'
+    }
+
+    return {
+        id: binding.id,
+        name: 'N/A', // 绑定关系中没有姓名信息，需要从申请信息获取
+        phone: 'N/A', // 同上
+        idCard: 'N/A', // 绑定关系中没有身份证信息
+        houseAddress: binding.house_info.full_address,
+        identity: identityMap[binding.identity_display] || 'owner',
+        status: binding.status as 1, // 绑定关系都是已通过状态
+        applyTime: binding.created_at
+    }
+}
+
+/**
+ * 将车位绑定申请转换为车位申请格式
+ */
+function convertParkingApplicationToParkingApply(app: ParkingBindingApplication): ParkingApply {
+    return {
+        id: app.id,
+        communityName: app.community_name,
+        parkingType: app.parking_type,
+        parkingArea: app.parking_area,
+        parkingNo: app.parking_no,
+        carNo: app.car_no,
+        carBrand: app.car_brand,
+        carColor: app.car_color,
+        ownerName: app.owner_name,
+        ownerPhone: app.owner_phone,
+        idCard: app.id_card,
+        status: app.status as 0 | 1 | 2,
+        applyTime: app.created_at,
+        rejectReason: app.reject_reason
+    }
+}
 
 interface PropertyState {
     houses: House[]
@@ -39,6 +154,11 @@ interface PropertyState {
     parkingApplies: ParkingApply[]
     stats: typeof mockPropertyStats
     loading: boolean
+    // 新增：原始API数据存储
+    houseBindingApplications: HouseBindingApplication[]
+    parkingBindingApplications: ParkingBindingApplication[]
+    approvedHouseBindings: HouseUserBinding[]
+    approvedParkingBindings: ParkingUserBinding[]
 }
 
 export const usePropertyStore = defineStore('property', {
@@ -55,15 +175,31 @@ export const usePropertyStore = defineStore('property', {
         parkingApplies: [],
         stats: mockPropertyStats,
         loading: false,
+        // 新增状态
+        houseBindingApplications: [],
+        parkingBindingApplications: [],
+        approvedHouseBindings: [],
+        approvedParkingBindings: [],
     }),
 
     getters: {
-        // 房产与住户
-        pendingResidents: (state) => state.residents.filter(r => r.status === 0),
-        approvedResidents: (state) => state.residents.filter(r => r.status === 1),
+        // 房产与住户 - 使用转换后的数据
+        pendingResidents: (state) => {
+            // 将后端数据转换为前端期望的格式
+            return state.houseBindingApplications
+                .filter(app => app.status === 0)
+                .map(app => convertHouseApplicationToResident(app))
+        },
+        approvedResidents: (state) => {
+            return state.approvedHouseBindings.map(binding => convertHouseBindingToResident(binding))
+        },
 
-        // 车位申请
-        pendingParkingApplies: (state) => state.parkingApplies.filter(p => p.status === 0),
+        // 车位申请 - 使用转换后的数据
+        pendingParkingApplies: (state) => {
+            return state.parkingBindingApplications
+                .filter(app => app.status === 0)
+                .map(app => convertParkingApplicationToParkingApply(app))
+        },
 
         // 工单管理
         pendingWorkOrders: (state) => state.workOrders.filter(o => o.status === 'pending'),
@@ -83,78 +219,158 @@ export const usePropertyStore = defineStore('property', {
         // 加载所有数据
         async loadAll() {
             this.loading = true
-            // 模拟网络延迟
-            await new Promise(resolve => setTimeout(resolve, 300))
+            
+            try {
+                // 并行加载数据
+                const [
+                    houseAuditResponse,
+                    parkingAuditResponse,
+                    approvedHousesResponse,
+                    approvedParkingsResponse
+                ] = await Promise.all([
+                    propertyAPI.getHouseBindingAuditList(),
+                    propertyAPI.getParkingBindingAuditList(),
+                    propertyAPI.getApprovedResidents(),
+                    propertyAPI.getApprovedParkings()
+                ])
 
-            this.houses = [...mockHouses]
-            this.residents = [...mockResidents]
-            this.workOrders = [...mockWorkOrders]
-            this.bills = [...mockBills]
-            this.announcements = [...mockAnnouncements]
-            this.activities = [...mockActivities]
-            this.accessLogs = [...mockAccessLogs]
-            this.employees = [...mockEmployees]
-            this.parkings = [...mockParkings]
-            this.parkingApplies = [...mockParkingApplies]
-            this.stats = { ...mockPropertyStats }
+                // 存储原始API数据
+                this.houseBindingApplications = houseAuditResponse.data || []
+                this.parkingBindingApplications = parkingAuditResponse.data || []
+                this.approvedHouseBindings = approvedHousesResponse.data || []
+                this.approvedParkingBindings = approvedParkingsResponse.data || []
+
+                // 保持mock数据用于其他功能
+                this.houses = [...mockHouses]
+                this.workOrders = [...mockWorkOrders]
+                this.bills = [...mockBills]
+                this.announcements = [...mockAnnouncements]
+                this.activities = [...mockActivities]
+                this.accessLogs = [...mockAccessLogs]
+                this.employees = [...mockEmployees]
+                this.stats = { ...mockPropertyStats }
+
+            } catch (error) {
+                console.error('加载数据失败:', error)
+                // 失败时使用mock数据作为fallback
+                this.houseBindingApplications = []
+                this.parkingBindingApplications = []
+                this.approvedHouseBindings = []
+                this.approvedParkingBindings = []
+            }
 
             this.loading = false
         },
 
         // 住户审核
-        approveResident(id: number) {
-            const resident = this.residents.find(r => r.id === id)
-            if (resident) {
-                resident.status = 1
+        async approveResident(id: number) {
+            try {
+                const response = await propertyAPI.auditHouseBinding(id, 'approve')
+                if (response.code === 200) {
+                    // 更新本地状态
+                    const application = this.houseBindingApplications.find(app => app.id === id)
+                    if (application) {
+                        application.status = 1
+                    }
+                    // 重新加载数据以获取最新状态
+                    await this.loadAll()
+                }
+                return response
+            } catch (error) {
+                console.error('审核住户失败:', error)
+                throw error
             }
         },
 
-        rejectResident(id: number, reason: string) {
-            const resident = this.residents.find(r => r.id === id)
-            if (resident) {
-                resident.status = 2
-                resident.rejectReason = reason
+        async rejectResident(id: number, reason: string) {
+            try {
+                const response = await propertyAPI.auditHouseBinding(id, 'reject', reason)
+                if (response.code === 200) {
+                    // 更新本地状态
+                    const application = this.houseBindingApplications.find(app => app.id === id)
+                    if (application) {
+                        application.status = 2
+                        application.reject_reason = reason
+                    }
+                    await this.loadAll()
+                }
+                return response
+            } catch (error) {
+                console.error('拒绝住户申请失败:', error)
+                throw error
             }
         },
 
         // 车位审核
-        approveParking(id: number) {
-            const apply = this.parkingApplies.find(p => p.id === id)
-            if (apply) {
-                apply.status = 1
-                // 同时更新车位状态（可选逻辑，根据业务需求）
-                const parking = this.parkings.find(p => p.area === apply.parkingArea && p.parkingNo === apply.parkingNo)
-                if (parking) {
-                    parking.status = 'active'
-                    parking.ownerName = apply.ownerName
-                    parking.ownerPhone = apply.ownerPhone
-                    parking.carNo = apply.carNo
-                    parking.carBrand = apply.carBrand
-                    parking.carColor = apply.carColor
-                    parking.type = apply.parkingType
-                } else {
-                    // 如果车位不存在，创建一个新记录
-                    this.parkings.push({
-                        id: this.parkings.length + 1,
-                        area: apply.parkingArea,
-                        parkingNo: apply.parkingNo,
-                        carNo: apply.carNo,
-                        carBrand: apply.carBrand,
-                        carColor: apply.carColor,
-                        ownerName: apply.ownerName,
-                        ownerPhone: apply.ownerPhone,
-                        type: apply.parkingType,
-                        status: 'active'
-                    })
+        async approveParking(id: number) {
+            try {
+                const response = await propertyAPI.auditParkingBinding(id, 'approve')
+                if (response.code === 200) {
+                    // 更新本地状态
+                    const application = this.parkingBindingApplications.find(app => app.id === id)
+                    if (application) {
+                        application.status = 1
+                    }
+                    await this.loadAll()
                 }
+                return response
+            } catch (error) {
+                console.error('审核车位失败:', error)
+                throw error
             }
         },
 
-        rejectParking(id: number, reason: string) {
-            const apply = this.parkingApplies.find(p => p.id === id)
-            if (apply) {
-                apply.status = 2
-                apply.rejectReason = reason
+        async rejectParking(id: number, reason: string) {
+            try {
+                const response = await propertyAPI.auditParkingBinding(id, 'reject', reason)
+                if (response.code === 200) {
+                    // 更新本地状态
+                    const application = this.parkingBindingApplications.find(app => app.id === id)
+                    if (application) {
+                        application.status = 2
+                        application.reject_reason = reason
+                    }
+                    await this.loadAll()
+                }
+                return response
+            } catch (error) {
+                console.error('拒绝车位申请失败:', error)
+                throw error
+            }
+        },
+
+        // === 解绑功能 ===
+
+        /**
+         * 解绑房屋绑定关系
+         */
+        async unbindHouse(bindingId: number) {
+            try {
+                const response = await propertyAPI.unbindHouse(bindingId)
+                if (response.code === 200) {
+                    // 重新加载数据以获取最新状态
+                    await this.loadAll()
+                }
+                return response
+            } catch (error) {
+                console.error('解绑房屋失败:', error)
+                throw error
+            }
+        },
+
+        /**
+         * 解绑车位绑定关系
+         */
+        async unbindParkingSpace(bindingId: number) {
+            try {
+                const response = await propertyAPI.unbindParkingSpace(bindingId)
+                if (response.code === 200) {
+                    await this.loadAll()
+                }
+                return response
+            } catch (error) {
+                console.error('解绑车位失败:', error)
+                throw error
             }
         },
 

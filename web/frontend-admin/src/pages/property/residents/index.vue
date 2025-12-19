@@ -193,11 +193,16 @@ function confirmUnbind(resident: Resident) {
   unbindDialog.value = true
 }
 
-function executeUnbind() {
+async function executeUnbind() {
   if (unbindingResident.value) {
-    // 实际操作：从列表移除
-    propertyStore.rejectResident(unbindingResident.value.id, '已解绑')
-    showSnackbar(`已解除 ${unbindingResident.value.name} 的绑定`)
+    try {
+      // 使用绑定ID而不是申请ID
+      await propertyStore.unbindHouse(unbindingResident.value.id)
+      showSnackbar(`已解除 ${unbindingResident.value.name} 的绑定`)
+    } catch (error) {
+      console.error('解绑失败:', error)
+      showSnackbar('解绑失败，请重试')
+    }
   }
   unbindDialog.value = false
 }

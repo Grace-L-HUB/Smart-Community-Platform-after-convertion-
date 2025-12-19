@@ -116,6 +116,18 @@ class MyHouseListView(APIView):
     def get(self, request):
         """获取用户已绑定的房屋列表"""
         user_id = request.GET.get('user_id')
+        
+        # 如果user_id为'all'，返回所有绑定记录（用于管理员查看）
+        if user_id == 'all':
+            bindings = HouseUserBinding.objects.filter(status=1).order_by('-created_at')
+            serializer = HouseUserBindingSerializer(bindings, many=True)
+            
+            return Response({
+                "code": 200,
+                "message": "获取成功",
+                "data": serializer.data
+            })
+        
         if not user_id:
             return Response({
                 "code": 400,
@@ -521,6 +533,18 @@ class MyParkingListView(APIView):
     def get(self, request):
         """获取用户已绑定的车位列表"""
         user_id = request.GET.get('user_id')
+        
+        # 如果user_id为'all'，返回所有绑定记录（用于管理员查看）
+        if user_id == 'all':
+            bindings = ParkingUserBinding.objects.filter(status=1).order_by('-created_at')
+            serializer = ParkingUserBindingSerializer(bindings, many=True)
+            
+            return Response({
+                "code": 200,
+                "message": "获取成功",
+                "data": serializer.data
+            })
+        
         if not user_id:
             return Response({
                 "code": 400,
@@ -564,4 +588,212 @@ class ParkingBindingStatsView(APIView):
             "code": 200,
             "message": "获取成功",
             "data": stats
+        })
+
+
+class HouseBindingAuditView(APIView):
+    """房屋绑定审核接口"""
+    permission_classes = []
+    
+    def get(self, request):
+        """获取待审核的房屋绑定申请列表"""
+        applications = HouseBindingApplication.objects.filter(status=0).order_by('-created_at')
+        from .serializers import HouseBindingApplicationListSerializer
+        serializer = HouseBindingApplicationListSerializer(applications, many=True)
+        
+        return Response({
+            "code": 200,
+            "message": "获取成功",
+            "data": serializer.data
+        })
+    
+    def patch(self, request, application_id):
+        """审核房屋绑定申请"""
+        try:
+            application = HouseBindingApplication.objects.get(id=application_id)
+        except HouseBindingApplication.DoesNotExist:
+            return Response({
+                "code": 404,
+                "message": "申请记录不存在"
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        action = request.data.get('action')
+        
+        if action == 'approve':
+            # 通过申请
+            application.status = 1
+            application.audit_time = timezone.now()
+            # TODO: 从JWT获取审核人
+            # application.auditor = request.user
+            application.audit_remark = request.data.get('remark', '')
+            application.save()
+            
+            # 创建正式绑定关系
+            HouseUserBinding.objects.create(
+                user=application.user,
+                application=application,
+                identity=application.identity
+            )
+            
+            logger.info(f"房屋绑定申请 {application_id} 已通过审核")
+            
+            return Response({
+                "code": 200,
+                "message": "审核通过"
+            })
+        
+        elif action == 'reject':
+            # 拒绝申请
+            reject_reason = request.data.get('reject_reason')
+            if not reject_reason:
+                return Response({
+                    "code": 400,
+                    "message": "请输入拒绝原因"
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            application.status = 2
+            application.audit_time = timezone.now()
+            # application.auditor = request.user
+            application.reject_reason = reject_reason
+            application.save()
+            
+            logger.info(f"房屋绑定申请 {application_id} 已拒绝，原因：{reject_reason}")
+            
+            return Response({
+                "code": 200,
+                "message": "已拒绝申请"
+            })
+        
+        return Response({
+            "code": 400,
+            "message": "无效的操作"
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ParkingBindingAuditView(APIView):
+    """车位绑定审核接口"""
+    permission_classes = []
+    
+    def get(self, request):
+        """获取待审核的车位绑定申请列表"""
+        applications = ParkingBindingApplication.objects.filter(status=0).order_by('-created_at')
+        from .serializers import ParkingBindingApplicationListSerializer
+        serializer = ParkingBindingApplicationListSerializer(applications, many=True)
+        
+        return Response({
+            "code": 200,
+            "message": "获取成功",
+            "data": serializer.data
+        })
+    
+    def patch(self, request, application_id):
+        """审核车位绑定申请"""
+        try:
+            application = ParkingBindingApplication.objects.get(id=application_id)
+        except ParkingBindingApplication.DoesNotExist:
+            return Response({
+                "code": 404,
+                "message": "申请记录不存在"
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        action = request.data.get('action')
+        
+        if action == 'approve':
+            # 通过申请
+            application.status = 1
+            application.audit_time = timezone.now()
+            # application.auditor = request.user
+            application.audit_remark = request.data.get('remark', '')
+            application.save()
+            
+            # 创建正式绑定关系
+            ParkingUserBinding.objects.create(
+                user=application.user,
+                application=application
+            )
+            
+            logger.info(f"车位绑定申请 {application_id} 已通过审核")
+            
+            return Response({
+                "code": 200,
+                "message": "审核通过"
+            })
+        
+        elif action == 'reject':
+            # 拒绝申请
+            reject_reason = request.data.get('reject_reason')
+            if not reject_reason:
+                return Response({
+                    "code": 400,
+                    "message": "请输入拒绝原因"
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            application.status = 2
+            application.audit_time = timezone.now()
+            # application.auditor = request.user
+            application.reject_reason = reject_reason
+            application.save()
+            
+            logger.info(f"车位绑定申请 {application_id} 已拒绝，原因：{reject_reason}")
+            
+            return Response({
+                "code": 200,
+                "message": "已拒绝申请"
+            })
+        
+        return Response({
+            "code": 400,
+            "message": "无效的操作"
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+
+class HouseBindingUnbindView(APIView):
+    """房屋绑定解绑接口"""
+    permission_classes = []
+    
+    def patch(self, request, binding_id):
+        """解绑房屋绑定关系"""
+        try:
+            binding = HouseUserBinding.objects.get(id=binding_id)
+        except HouseUserBinding.DoesNotExist:
+            return Response({
+                "code": 404,
+                "message": "绑定记录不存在"
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # 执行软删除
+        binding.status = 2  # 已解绑
+        binding.save()
+        
+        logger.info(f"房屋绑定关系 {binding_id} 已解绑")
+        
+        return Response({
+            "code": 200,
+            "message": "已解除绑定"
+        })
+
+
+class ParkingBindingUnbindView(APIView):
+    """车位绑定解绑接口"""  
+    permission_classes = []
+    
+    def patch(self, request, binding_id):
+        """解绑车位绑定关系"""
+        try:
+            binding = ParkingUserBinding.objects.get(id=binding_id)
+        except ParkingUserBinding.DoesNotExist:
+            return Response({
+                "code": 404,
+                "message": "绑定记录不存在"
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # 执行软删除
+        binding.status = 2  # 已解绑
+        binding.save()
+        
+        logger.info(f"车位绑定关系 {binding_id} 已解绑")
+        
+        return Response({
+            "code": 200,
+            "message": "已解除绑定"
         })
