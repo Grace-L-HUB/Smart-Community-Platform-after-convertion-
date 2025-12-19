@@ -258,9 +258,6 @@
 
 .participant-info {
   flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
 }
 
 .participant-name {

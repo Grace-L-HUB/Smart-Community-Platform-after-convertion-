@@ -124,11 +124,6 @@
             variant="outlined"
             class="mb-4"
           />
-          <v-checkbox
-            v-model="form.requireApproval"
-            label="需要审核报名"
-            color="primary"
-          />
         </v-card-text>
         <v-card-actions>
           <v-spacer />
@@ -176,14 +171,6 @@
                 </v-avatar>
               </template>
               
-              <template #append>
-                <v-chip 
-                  :color="getRegistrationStatusColor(participant.status)"
-                  size="small"
-                >
-                  {{ getRegistrationStatusText(participant.status) }}
-                </v-chip>
-              </template>
             </v-list-item>
           </v-list>
           
@@ -381,26 +368,6 @@ async function confirmDelete() {
   }
 }
 
-// 工具函数
-function getRegistrationStatusColor(status: string) {
-  const colors: Record<string, string> = {
-    approved: 'success',
-    pending: 'warning',
-    rejected: 'error',
-    cancelled: 'grey',
-  }
-  return colors[status] || 'grey'
-}
-
-function getRegistrationStatusText(status: string) {
-  const texts: Record<string, string> = {
-    approved: '已通过',
-    pending: '待审核',
-    rejected: '已拒绝',
-    cancelled: '已取消',
-  }
-  return texts[status] || status
-}
 
 // 提示
 const snackbar = ref(false)
@@ -473,8 +440,7 @@ async function saveActivity() {
       location: form.location,
       start_time: form.startTime,
       end_time: form.endTime,
-      max_participants: form.maxParticipants,
-      require_approval: true // 默认为true，或者根据form添加字段
+      max_participants: form.maxParticipants
     }
 
     const response = await fetch(url, {

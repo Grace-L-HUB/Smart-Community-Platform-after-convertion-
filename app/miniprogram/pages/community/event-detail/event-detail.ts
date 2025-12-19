@@ -26,7 +26,6 @@ Page({
         can_register: false,
         user_registered: false,
         is_active: true,
-        require_approval: false,
         
         // 组织者信息
         organizer: {
@@ -95,7 +94,6 @@ Page({
                         can_register: activity.can_register,
                         user_registered: activity.user_registered,
                         is_active: activity.is_active,
-                        require_approval: activity.require_approval,
                         
                         // 组织者信息
                         organizer: {
@@ -147,8 +145,7 @@ Page({
                     const participants = res.data.data.map((item: any) => ({
                         id: item.id,
                         avatar: item.user.avatar || '/image/default-avatar.png',
-                        name: item.user.display_name || item.user.nickname,
-                        status: item.status
+                        name: item.user.display_name || item.user.nickname
                     }));
                     
                     this.setData({ participants });

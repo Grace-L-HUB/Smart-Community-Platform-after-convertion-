@@ -693,7 +693,7 @@ def register_activity(request, pk):
     
     # 检查是否可以报名
     if not activity.can_register():
-        return Response({'error': '活动不可报名'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'code': 400, 'message': '活动不可报名'}, status=status.HTTP_400_BAD_REQUEST)
     
     # 检查用户是否已经报名
     existing_registration = ActivityRegistration.objects.filter(
@@ -702,16 +702,13 @@ def register_activity(request, pk):
     
     if existing_registration:
         if existing_registration.status == 'approved':
-            return Response({'error': '您已经报名了此活动'}, status=status.HTTP_400_BAD_REQUEST)
-        elif existing_registration.status == 'pending':
-            return Response({'error': '您的报名申请正在审核中'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'code': 400, 'message': '您已经报名了此活动'}, status=status.HTTP_400_BAD_REQUEST)
         elif existing_registration.status == 'cancelled':
             # 重新激活报名
-            existing_registration.status = 'approved' if not activity.require_approval else 'pending'
+            existing_registration.status = 'approved'
             existing_registration.save()
             
-            message = '报名成功' if not activity.require_approval else '报名申请已提交，等待审核'
-            return Response({'message': message})
+            return Response({'code': 200, 'message': '报名成功'})
     
     # 创建新的报名记录
     serializer = ActivityRegistrationCreateSerializer(
@@ -721,10 +718,9 @@ def register_activity(request, pk):
     
     if serializer.is_valid():
         serializer.save()
-        message = '报名成功' if not activity.require_approval else '报名申请已提交，等待审核'
-        return Response({'message': message}, status=status.HTTP_201_CREATED)
+        return Response({'code': 200, 'message': '报名成功'}, status=status.HTTP_201_CREATED)
     
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    return Response({'code': 400, 'message': '数据验证失败', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @extend_schema(
@@ -744,13 +740,13 @@ def cancel_registration(request, pk):
     )
     
     if registration.status == 'cancelled':
-        return Response({'error': '您已经取消了报名'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'code': 400, 'message': '您已经取消了报名'}, status=status.HTTP_400_BAD_REQUEST)
     
     # 标记为已取消而不是删除
     registration.status = 'cancelled'
     registration.save()
     
-    return Response({'message': '已取消报名'})
+    return Response({'code': 200, 'message': '已取消报名'})
 
 
 @extend_schema(
@@ -797,46 +793,6 @@ def activity_participants(request, pk):
     })
 
 
-@extend_schema(
-    summary="审核报名申请",
-    description="组织者审核报名申请（通过/拒绝）"
-)
-@api_view(['PUT'])
-@permission_classes([AllowAny])
-def approve_registration(request, pk, registration_id):
-    """审核报名申请"""
-    
-    activity = get_object_or_404(Activity, pk=pk, is_active=True)
-    registration = get_object_or_404(
-        ActivityRegistration, 
-        pk=registration_id, 
-        activity=activity
-    )
-    
-    # 检查权限
-    if activity.organizer != request.user:
-        return Response({'error': '只有组织者可以审核报名'}, 
-                       status=status.HTTP_403_FORBIDDEN)
-    
-    action = request.data.get('action')  # 'approve' 或 'reject'
-    
-    if action not in ['approve', 'reject']:
-        return Response({'error': '无效的操作'}, status=status.HTTP_400_BAD_REQUEST)
-    
-    if action == 'approve':
-        # 检查是否还有名额
-        if activity.current_participants >= activity.max_participants:
-            return Response({'error': '活动已满员'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        registration.status = 'approved'
-        message = '已通过报名申请'
-    else:
-        registration.status = 'rejected'
-        message = '已拒绝报名申请'
-    
-    registration.save()
-    
-    return Response({'message': message})
 
 
 @extend_schema(

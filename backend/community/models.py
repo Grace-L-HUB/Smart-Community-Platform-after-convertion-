@@ -310,7 +310,6 @@ class Activity(models.Model):
     
     # 活动设置
     is_active = models.BooleanField(default=True, verbose_name="是否有效")
-    require_approval = models.BooleanField(default=False, verbose_name="是否需要审核")
     
     # 时间戳
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
@@ -375,9 +374,7 @@ class ActivityRegistration(models.Model):
     """活动报名模型"""
     
     STATUS_CHOICES = [
-        ('pending', '待审核'),
-        ('approved', '已通过'),
-        ('rejected', '已拒绝'),
+        ('approved', '已报名'),
         ('cancelled', '已取消'),
     ]
     

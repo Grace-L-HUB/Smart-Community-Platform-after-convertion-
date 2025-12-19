@@ -23,8 +23,6 @@
 
     <view class="tags-row">
       <van-tag type="{{status_color}}">{{status_text}}</van-tag>
-      <van-tag type="success" wx:if="{{!require_approval}}">无需审核</van-tag>
-      <van-tag type="warning" wx:if="{{require_approval}}">需要审核</van-tag>
     </view>
 
     <!-- 报名进度条 -->
@@ -54,12 +52,6 @@
         <text class="status-label">当前状态：</text>
         <van-tag type="{{status_color}}">{{status_text}}</van-tag>
       </view>
-      <view class="status-item">
-        <text class="status-label">可否报名：</text>
-        <van-tag type="{{can_register ? 'success' : 'default'}}">
-          {{can_register ? '可以报名' : '暂不可报名'}}
-        </van-tag>
-      </view>
       <view class="status-item" wx:if="{{user_registered}}">
         <text class="status-label">您的状态：</text>
         <van-tag type="primary">已报名</van-tag>
@@ -82,9 +74,6 @@
         ></image>
         <view class="participant-info">
           <text class="participant-name">{{item.name}}</text>
-          <van-tag size="small" type="{{item.status === 'approved' ? 'success' : 'warning'}}">
-            {{item.status === 'approved' ? '已通过' : '待审核'}}
-          </van-tag>
         </view>
       </view>
       <view class="more-users" wx:if="{{enrolledCount > participants.length}}">

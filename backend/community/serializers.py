@@ -382,7 +382,7 @@ class ActivityDetailSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'title', 'description', 'location', 'start_time', 'end_time',
             'max_participants', 'current_participants', 'status', 'organizer',
-            'is_active', 'require_approval', 'images', 'registrations',
+            'is_active', 'images', 'registrations',
             'time_ago', 'view_count', 'registration_progress', 'can_register',
             'user_registered', 'is_organizer', 'uploaded_images'
         ]
@@ -455,7 +455,7 @@ class ActivityCreateSerializer(serializers.ModelSerializer):
         model = Activity
         fields = [
             'title', 'description', 'location', 'start_time', 'end_time',
-            'max_participants', 'require_approval'
+            'max_participants'
         ]
     
     def create(self, validated_data):
@@ -474,10 +474,7 @@ class ActivityRegistrationCreateSerializer(serializers.ModelSerializer):
         validated_data['user'] = self.context['request'].user
         validated_data['activity'] = self.context['activity']
         
-        # 如果活动不需要审核，直接设置为已通过
-        if not validated_data['activity'].require_approval:
-            validated_data['status'] = 'approved'
-        else:
-            validated_data['status'] = 'pending'
+        # 直接设置为已报名
+        validated_data['status'] = 'approved'
         
         return super().create(validated_data)

@@ -13,8 +13,7 @@ from .views import (
     
     # 社区活动相关
     ActivityListCreateView, ActivityDetailView, register_activity,
-    cancel_registration, activity_participants, approve_registration,
-    my_activities
+    cancel_registration, activity_participants, my_activities
 )
 
 urlpatterns = [
@@ -84,9 +83,6 @@ urlpatterns = [
     
     # 获取活动报名名单
     path('activities/<int:pk>/participants/', activity_participants, name='activity_participants'),
-    
-    # 审核报名申请
-    path('activities/<int:pk>/registrations/<int:registration_id>/approve/', approve_registration, name='approve_registration'),
     
     # 用户参与的活动
     path('my-activities/', my_activities, name='my_activities'),
