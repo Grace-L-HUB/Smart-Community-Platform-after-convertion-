@@ -61,6 +61,7 @@ class HouseBindingApplicationListSerializer(serializers.ModelSerializer):
 class HouseUserBindingSerializer(serializers.ModelSerializer):
     """用户房屋绑定关系序列化器"""
     house_info = serializers.SerializerMethodField()
+    applicant_info = serializers.SerializerMethodField()
     identity_display = serializers.CharField(source='get_identity_display', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     
@@ -68,7 +69,7 @@ class HouseUserBindingSerializer(serializers.ModelSerializer):
         model = HouseUserBinding
         fields = [
             'id', 'identity', 'identity_display', 'status', 'status_display',
-            'created_at', 'house_info'
+            'created_at', 'house_info', 'applicant_info'
         ]
     
     def get_house_info(self, obj):
@@ -90,6 +91,20 @@ class HouseUserBindingSerializer(serializers.ModelSerializer):
                 'full_address': f"{obj.house.building.name}{obj.house.unit}{obj.house.room_number}"
             }
         return None
+    
+    def get_applicant_info(self, obj):
+        """获取申请人信息"""
+        if obj.application:
+            return {
+                'name': obj.application.applicant_name,
+                'phone': obj.application.applicant_phone,
+                'id_card': obj.application.id_card_number
+            }
+        return {
+            'name': 'N/A',
+            'phone': 'N/A', 
+            'id_card': 'N/A'
+        }
 
 
 class VisitorCreateSerializer(serializers.ModelSerializer):

@@ -109,9 +109,9 @@ function convertHouseBindingToResident(binding: HouseUserBinding): Resident {
 
     return {
         id: binding.id,
-        name: 'N/A', // 绑定关系中没有姓名信息，需要从申请信息获取
-        phone: 'N/A', // 同上
-        idCard: 'N/A', // 绑定关系中没有身份证信息
+        name: binding.applicant_info?.name || 'N/A',
+        phone: binding.applicant_info?.phone || 'N/A',
+        idCard: binding.applicant_info?.id_card || 'N/A',
         houseAddress: binding.house_info.full_address,
         identity: identityMap[binding.identity_display] || 'owner',
         status: binding.status as 1, // 绑定关系都是已通过状态
@@ -226,12 +226,16 @@ export const usePropertyStore = defineStore('property', {
                     houseAuditResponse,
                     parkingAuditResponse,
                     approvedHousesResponse,
-                    approvedParkingsResponse
+                    approvedParkingsResponse,
+                    houseListResponse,
+                    parkingSpaceListResponse
                 ] = await Promise.all([
                     propertyAPI.getHouseBindingAuditList(),
                     propertyAPI.getParkingBindingAuditList(),
                     propertyAPI.getApprovedResidents(),
-                    propertyAPI.getApprovedParkings()
+                    propertyAPI.getApprovedParkings(),
+                    propertyAPI.getHouseList(),
+                    propertyAPI.getParkingSpaceList()
                 ])
 
                 // 存储原始API数据
@@ -240,8 +244,11 @@ export const usePropertyStore = defineStore('property', {
                 this.approvedHouseBindings = approvedHousesResponse.data || []
                 this.approvedParkingBindings = approvedParkingsResponse.data || []
 
+                // 存储基础数据列表
+                this.houses = houseListResponse.data || []
+                this.parkings = parkingSpaceListResponse.data || []
+
                 // 保持mock数据用于其他功能
-                this.houses = [...mockHouses]
                 this.workOrders = [...mockWorkOrders]
                 this.bills = [...mockBills]
                 this.announcements = [...mockAnnouncements]
@@ -257,6 +264,8 @@ export const usePropertyStore = defineStore('property', {
                 this.parkingBindingApplications = []
                 this.approvedHouseBindings = []
                 this.approvedParkingBindings = []
+                this.houses = [...mockHouses] // fallback to mock data
+                this.parkings = [] // 车位数据没有mock，置空
             }
 
             this.loading = false

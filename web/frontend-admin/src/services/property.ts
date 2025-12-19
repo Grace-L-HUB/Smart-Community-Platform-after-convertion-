@@ -64,6 +64,11 @@ export interface HouseUserBinding {
     room_number: string
     full_address: string
   }
+  applicant_info: {
+    name: string
+    phone: string
+    id_card: string
+  }
 }
 
 // 车位绑定关系
@@ -185,6 +190,22 @@ class PropertyAPI {
    */
   async unbindParkingSpace(bindingId: number): Promise<ApiResponse> {
     return apiClient.patch(`/parking/binding/unbind/${bindingId}`)
+  }
+
+  // === 基础数据列表 ===
+
+  /**
+   * 获取房屋基础数据列表
+   */
+  async getHouseList(): Promise<ApiResponse<any[]>> {
+    return apiClient.get('/property/house/list')
+  }
+
+  /**
+   * 获取车位基础数据列表  
+   */
+  async getParkingSpaceList(): Promise<ApiResponse<any[]>> {
+    return apiClient.get('/parking/space/list')
   }
 }
 

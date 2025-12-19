@@ -3,7 +3,8 @@ from .views import (
     HouseBindingApplicationView, MyHouseListView, HouseBindingStatsView,
     VisitorInviteView, VisitorDetailView, VisitorStatusView, VisitorQRCodeView,
     ParkingBindingApplicationView, MyParkingListView, ParkingBindingStatsView,
-    HouseBindingAuditView, ParkingBindingAuditView, HouseBindingUnbindView, ParkingBindingUnbindView
+    HouseBindingAuditView, ParkingBindingAuditView, HouseBindingUnbindView, ParkingBindingUnbindView,
+    HouseListView, ParkingSpaceListView
 )
 
 urlpatterns = [
@@ -47,4 +48,8 @@ urlpatterns = [
     
     # 车位绑定解绑
     path('parking/binding/unbind/<int:binding_id>', ParkingBindingUnbindView.as_view(), name='parking_binding_unbind'),
+    
+    # 基础数据列表
+    path('property/house/list', HouseListView.as_view(), name='house_list'),
+    path('parking/space/list', ParkingSpaceListView.as_view(), name='parking_space_list'),
 ]

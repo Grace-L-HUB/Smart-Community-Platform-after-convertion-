@@ -797,3 +797,121 @@ class ParkingBindingUnbindView(APIView):
             "code": 200,
             "message": "已解除绑定"
         })
+
+
+class HouseListView(APIView):
+    """房屋基础数据列表接口"""
+    permission_classes = []  # 暂时不需要权限认证
+
+    def get(self, request):
+        """获取所有房屋列表，包含绑定信息"""
+        try:
+            from .models import House, Building
+            
+            houses = House.objects.select_related('building').all()
+            house_list = []
+            
+            for house in houses:
+                # 获取绑定信息
+                binding = HouseUserBinding.objects.filter(
+                    house=house, 
+                    status=1  # 已绑定状态
+                ).select_related('application', 'user').first()
+                
+                # 构建房屋数据
+                house_data = {
+                    'id': house.id,
+                    'building': house.building.name,
+                    'unit': house.unit,
+                    'room': house.room_number,
+                    'floor': house.floor,
+                    'area': str(house.area),
+                    'status': 'self' if house.status == 1 else ('rent' if house.status == 2 else 'empty'),
+                    'ownerName': None,
+                    'ownerPhone': None,
+                    'bindingId': None
+                }
+                
+                # 如果有绑定关系，添加绑定信息
+                if binding and binding.application:
+                    house_data.update({
+                        'ownerName': binding.application.applicant_name,
+                        'ownerPhone': binding.application.applicant_phone,
+                        'bindingId': binding.id
+                    })
+                
+                house_list.append(house_data)
+            
+            return Response({
+                "code": 200,
+                "message": "获取成功",
+                "data": house_list
+            })
+            
+        except Exception as e:
+            logger.error(f"获取房屋列表失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"获取房屋列表失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ParkingSpaceListView(APIView):
+    """车位基础数据列表接口"""
+    permission_classes = []  # 暂时不需要权限认证
+
+    def get(self, request):
+        """获取所有车位列表，包含绑定信息"""
+        try:
+            from .models import ParkingSpace
+            
+            parking_spaces = ParkingSpace.objects.all()
+            parking_list = []
+            
+            for space in parking_spaces:
+                # 获取绑定信息
+                binding = ParkingUserBinding.objects.filter(
+                    parking_space=space,
+                    status=1  # 已绑定状态
+                ).select_related('application', 'user').first()
+                
+                # 构建车位数据
+                parking_data = {
+                    'id': space.id,
+                    'area': space.area_name,
+                    'parkingNo': space.space_number,
+                    'type': space.parking_type,
+                    'status': 'active' if space.status == 1 else ('expired' if space.status == 2 else 'empty'),
+                    'carNo': None,
+                    'carBrand': None,
+                    'carColor': None,
+                    'ownerName': None,
+                    'ownerPhone': None,
+                    'bindingId': None
+                }
+                
+                # 如果有绑定关系，添加绑定信息
+                if binding and binding.application:
+                    parking_data.update({
+                        'carNo': binding.application.car_no,
+                        'carBrand': binding.application.car_brand,
+                        'carColor': binding.application.car_color,
+                        'ownerName': binding.application.owner_name,
+                        'ownerPhone': binding.application.owner_phone,
+                        'bindingId': binding.id
+                    })
+                
+                parking_list.append(parking_data)
+            
+            return Response({
+                "code": 200,
+                "message": "获取成功", 
+                "data": parking_list
+            })
+            
+        except Exception as e:
+            logger.error(f"获取车位列表失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"获取车位列表失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
