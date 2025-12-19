@@ -1,5 +1,8 @@
 from rest_framework import serializers
-from .models import HouseBindingApplication, HouseUserBinding, House, Building, Visitor
+from .models import (
+    HouseBindingApplication, HouseUserBinding, House, Building, Visitor,
+    ParkingBindingApplication, ParkingUserBinding, ParkingSpace
+)
 from django.utils import timezone
 
 
@@ -219,3 +222,104 @@ class VisitorDetailSerializer(serializers.ModelSerializer):
             'nickname': obj.inviter.nickname,
             'phone': obj.inviter.phone
         }
+
+
+# ===== 车位绑定相关序列化器 =====
+
+class ParkingBindingApplicationSerializer(serializers.ModelSerializer):
+    """车位绑定申请序列化器"""
+    
+    class Meta:
+        model = ParkingBindingApplication
+        fields = [
+            'id', 'owner_name', 'owner_phone', 'id_card',
+            'community_name', 'parking_type', 'parking_area', 'parking_no',
+            'car_no', 'car_brand', 'car_color',
+            'status', 'created_at', 'audit_remark', 'reject_reason'
+        ]
+        read_only_fields = ['id', 'status', 'created_at', 'audit_remark', 'reject_reason']
+
+    def validate_owner_phone(self, value):
+        """校验手机号格式"""
+        import re
+        if not re.match(r'^1[3-9]\d{9}$', value):
+            raise serializers.ValidationError("手机号格式不正确")
+        return value
+
+    def validate_id_card(self, value):
+        """校验身份证号格式"""
+        import re
+        if not re.match(r'(^\d{15}$)|(^\d{17}(\d|X|x)$)', value):
+            raise serializers.ValidationError("身份证号格式不正确")
+        return value
+
+    def validate_car_no(self, value):
+        """校验车牌号格式"""
+        import re
+        car_no_pattern = r'^[京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼使领][A-Z][A-HJ-NP-Z0-9]{4,5}[A-HJ-NP-Z0-9挂学警港澳]$'
+        if not re.match(car_no_pattern, value):
+            raise serializers.ValidationError("车牌号格式不正确")
+        return value
+
+
+class ParkingBindingApplicationListSerializer(serializers.ModelSerializer):
+    """车位绑定申请列表序列化器（用于管理员查看）"""
+    user_info = serializers.SerializerMethodField()
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    parking_type_display = serializers.CharField(source='get_parking_type_display', read_only=True)
+    
+    class Meta:
+        model = ParkingBindingApplication
+        fields = [
+            'id', 'owner_name', 'owner_phone', 'id_card',
+            'community_name', 'parking_type', 'parking_type_display', 
+            'parking_area', 'parking_no', 'car_no', 'car_brand', 'car_color',
+            'status', 'status_display', 'created_at', 'updated_at', 
+            'audit_time', 'audit_remark', 'reject_reason', 'user_info'
+        ]
+    
+    def get_user_info(self, obj):
+        """获取申请用户信息"""
+        return {
+            'id': obj.user.id,
+            'nickname': obj.user.nickname,
+            'avatar_url': obj.user.avatar.url if obj.user.avatar else None
+        }
+
+
+class ParkingUserBindingSerializer(serializers.ModelSerializer):
+    """用户车位绑定关系序列化器"""
+    parking_info = serializers.SerializerMethodField()
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    
+    class Meta:
+        model = ParkingUserBinding
+        fields = [
+            'id', 'status', 'status_display', 'created_at', 'parking_info'
+        ]
+    
+    def get_parking_info(self, obj):
+        """获取车位信息"""
+        if obj.application:
+            return {
+                'community_name': obj.application.community_name,
+                'parking_type': obj.application.parking_type,
+                'parking_type_display': obj.application.get_parking_type_display(),
+                'parking_area': obj.application.parking_area,
+                'parking_no': obj.application.parking_no,
+                'car_no': obj.application.car_no,
+                'car_brand': obj.application.car_brand,
+                'car_color': obj.application.car_color,
+                'owner_name': obj.application.owner_name,
+                'full_address': f"{obj.application.parking_area}-{obj.application.parking_no}"
+            }
+        elif obj.parking_space:
+            return {
+                'community_name': "阳光花园",  # 临时硬编码
+                'parking_area': obj.parking_space.area_name,
+                'parking_no': obj.parking_space.space_number,
+                'parking_type': obj.parking_space.parking_type,
+                'parking_type_display': obj.parking_space.get_parking_type_display(),
+                'full_address': f"{obj.parking_space.area_name}-{obj.parking_space.space_number}"
+            }
+        return None

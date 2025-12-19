@@ -10,8 +10,12 @@ import {
     mockAccessLogs,
     mockEmployees,
     mockPropertyStats,
+    mockParkings,
+    mockParkingApplies,
     type House,
     type Resident,
+    type Parking,
+    type ParkingApply,
     type WorkOrder,
     type Bill,
     type Announcement,
@@ -19,6 +23,8 @@ import {
     type AccessLog,
     type Employee,
 } from '@/mocks/property'
+
+export type { House, Resident, Parking, ParkingApply, WorkOrder, Bill, Announcement, Activity, AccessLog, Employee }
 
 interface PropertyState {
     houses: House[]
@@ -29,6 +35,8 @@ interface PropertyState {
     activities: Activity[]
     accessLogs: AccessLog[]
     employees: Employee[]
+    parkings: Parking[]
+    parkingApplies: ParkingApply[]
     stats: typeof mockPropertyStats
     loading: boolean
 }
@@ -43,20 +51,32 @@ export const usePropertyStore = defineStore('property', {
         activities: [],
         accessLogs: [],
         employees: [],
+        parkings: [],
+        parkingApplies: [],
         stats: mockPropertyStats,
         loading: false,
     }),
 
     getters: {
+        // 房产与住户
         pendingResidents: (state) => state.residents.filter(r => r.status === 0),
         approvedResidents: (state) => state.residents.filter(r => r.status === 1),
+
+        // 车位申请
+        pendingParkingApplies: (state) => state.parkingApplies.filter(p => p.status === 0),
+
+        // 工单管理
         pendingWorkOrders: (state) => state.workOrders.filter(o => o.status === 'pending'),
         processingWorkOrders: (state) => state.workOrders.filter(o => o.status === 'processing'),
         completedWorkOrders: (state) => state.workOrders.filter(o => o.status === 'completed'),
+
+        // 财务与员工
         unpaidBills: (state) => state.bills.filter(b => b.status === 'unpaid'),
-        publishedAnnouncements: (state) => state.announcements.filter(a => a.status === 'published'),
         activeEmployees: (state) => state.employees.filter(e => e.status === 'active'),
         repairEmployees: (state) => state.employees.filter(e => e.role === 'repair' && e.status === 'active'),
+
+        // 公告
+        publishedAnnouncements: (state) => state.announcements.filter(a => a.status === 'published'),
     },
 
     actions: {
@@ -74,6 +94,8 @@ export const usePropertyStore = defineStore('property', {
             this.activities = [...mockActivities]
             this.accessLogs = [...mockAccessLogs]
             this.employees = [...mockEmployees]
+            this.parkings = [...mockParkings]
+            this.parkingApplies = [...mockParkingApplies]
             this.stats = { ...mockPropertyStats }
 
             this.loading = false
@@ -92,6 +114,47 @@ export const usePropertyStore = defineStore('property', {
             if (resident) {
                 resident.status = 2
                 resident.rejectReason = reason
+            }
+        },
+
+        // 车位审核
+        approveParking(id: number) {
+            const apply = this.parkingApplies.find(p => p.id === id)
+            if (apply) {
+                apply.status = 1
+                // 同时更新车位状态（可选逻辑，根据业务需求）
+                const parking = this.parkings.find(p => p.area === apply.parkingArea && p.parkingNo === apply.parkingNo)
+                if (parking) {
+                    parking.status = 'active'
+                    parking.ownerName = apply.ownerName
+                    parking.ownerPhone = apply.ownerPhone
+                    parking.carNo = apply.carNo
+                    parking.carBrand = apply.carBrand
+                    parking.carColor = apply.carColor
+                    parking.type = apply.parkingType
+                } else {
+                    // 如果车位不存在，创建一个新记录
+                    this.parkings.push({
+                        id: this.parkings.length + 1,
+                        area: apply.parkingArea,
+                        parkingNo: apply.parkingNo,
+                        carNo: apply.carNo,
+                        carBrand: apply.carBrand,
+                        carColor: apply.carColor,
+                        ownerName: apply.ownerName,
+                        ownerPhone: apply.ownerPhone,
+                        type: apply.parkingType,
+                        status: 'active'
+                    })
+                }
+            }
+        },
+
+        rejectParking(id: number, reason: string) {
+            const apply = this.parkingApplies.find(p => p.id === id)
+            if (apply) {
+                apply.status = 2
+                apply.rejectReason = reason
             }
         },
 

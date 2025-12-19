@@ -1,0 +1,69 @@
+/* pages/parking/binding/binding.wxss */
+.container {
+  padding: 30rpx;
+  background-color: var(--bg-color);
+  min-height: 100vh;
+}
+
+.header-tip {
+  margin-bottom: 40rpx;
+  padding: 0 10rpx;
+}
+
+.title {
+  font-size: 40rpx;
+  font-weight: bold;
+  color: #333;
+  display: block;
+  margin-bottom: 12rpx;
+}
+
+.desc {
+  font-size: 26rpx;
+  color: #999;
+  line-height: 1.5;
+}
+
+.form-card {
+  background: var(--card-bg);
+  border-radius: var(--radius-lg);
+  padding: 20rpx 0;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  margin-top: 20rpx;
+}
+
+.radio-field {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 32rpx;
+  border-bottom: 1rpx solid #ebedf0;
+}
+
+.radio-label {
+  width: 180rpx;
+  font-size: 28rpx;
+  color: #323233;
+}
+
+.radio-item {
+  margin-right: 30rpx;
+}
+
+.agreement {
+  padding: 20rpx 32rpx;
+  font-size: 24rpx;
+  color: #969799;
+}
+
+.agreement-text {
+  color: #969799;
+}
+
+.agreement-link {
+  color: var(--primary-color, #07c160);
+}
+
+.btn-area {
+  padding: 60rpx 40rpx 40rpx;
+}

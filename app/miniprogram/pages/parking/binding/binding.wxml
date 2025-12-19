@@ -1,0 +1,114 @@
+<view class="container">
+  <view class="header-tip">
+    <text class="title">绑定车位</text>
+    <text class="desc">绑定您的车位信息后，可享受智能停车、车位管理等服务</text>
+  </view>
+
+  <view class="form-card">
+    <van-cell-group border="{{ false }}">
+      <van-field
+        value="{{ communityName }}"
+        label="当前社区"
+        readonly
+      />
+      
+      <!-- 车位类型 -->
+      <view class="radio-field">
+        <view class="radio-label">车位类型</view>
+        <van-radio-group value="{{ parkingType }}" bind:change="onTypeChange" direction="horizontal">
+          <van-radio name="owned" custom-class="radio-item">自有车位</van-radio>
+          <van-radio name="rented" custom-class="radio-item">租赁车位</van-radio>
+        </van-radio-group>
+      </view>
+      
+      <van-divider contentPosition="left" customStyle="color: #999; border-color: #f5f5f5; font-size: 24rpx; margin: 20rpx 32rpx;">车位信息</van-divider>
+      
+      <van-field
+        value="{{ parkingArea }}"
+        label="停车区域"
+        placeholder="请选择停车区域"
+        readonly
+        is-link
+        bind:tap="showAreaPicker"
+      />
+      
+      <van-field
+        value="{{ parkingNo }}"
+        label="车位号"
+        placeholder="请选择车位号"
+        readonly
+        is-link
+        bind:tap="showParkingNoPicker"
+      />
+
+      <van-divider contentPosition="left" customStyle="color: #999; border-color: #f5f5f5; font-size: 24rpx; margin: 40rpx 32rpx 20rpx;">车辆信息</van-divider>
+
+      <van-field
+        value="{{ carNo }}"
+        label="车牌号"
+        placeholder="请输入车牌号码"
+        bind:change="onCarNoChange"
+      />
+
+      <van-field
+        value="{{ carBrand }}"
+        label="车辆品牌"
+        placeholder="如：宝马、奔驰、特斯拉等"
+        bind:change="onCarBrandChange"
+      />
+
+      <van-field
+        value="{{ carColor }}"
+        label="车辆颜色"
+        placeholder="如：白色、黑色、银色等"
+        bind:change="onCarColorChange"
+      />
+
+      <van-divider contentPosition="left" customStyle="color: #999; border-color: #f5f5f5; font-size: 24rpx; margin: 40rpx 32rpx 20rpx;">车主信息</van-divider>
+
+      <van-field
+        value="{{ ownerName }}"
+        label="车主姓名"
+        placeholder="请输入车主姓名"
+        bind:change="onOwnerNameChange"
+      />
+
+      <van-field
+        value="{{ idCard }}"
+        label="身份证号"
+        placeholder="请输入身份证号码"
+        maxlength="18"
+        bind:change="onIdCardChange"
+      />
+      
+      <van-field
+        value="{{ ownerPhone }}"
+        label="联系电话"
+        placeholder="请输入联系电话"
+        type="number"
+        maxlength="11"
+        bind:change="onOwnerPhoneChange"
+      />
+    </van-cell-group>
+
+    <view class="agreement">
+      <text class="agreement-text">提交即表示同意</text>
+      <text class="agreement-link">《车位管理协议》</text>
+    </view>
+
+    <view class="btn-area">
+      <van-button type="primary" block round bind:tap="onSubmit">提交绑定</van-button>
+    </view>
+  </view>
+
+  <!-- Pickers -->
+  <van-popup show="{{ showPicker }}" position="bottom" round>
+    <van-picker 
+      show-toolbar 
+      title="{{ pickerTitle }}"
+      columns="{{ currentColumns }}" 
+      bind:cancel="onPickerCancel" 
+      bind:confirm="onPickerConfirm" 
+    />
+  </van-popup>
+</view>

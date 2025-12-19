@@ -11,6 +11,36 @@ export interface House {
     ownerPhone: string
 }
 
+export interface Parking {
+    id: number
+    area: string
+    parkingNo: string
+    carNo: string
+    carBrand: string
+    carColor: string
+    ownerName: string
+    ownerPhone: string
+    type: 'owned' | 'rented'
+    status: 'active' | 'expired' | 'empty'
+}
+
+export interface ParkingApply {
+    id: number
+    communityName: string
+    parkingType: 'owned' | 'rented'
+    parkingArea: string
+    parkingNo: string
+    carNo: string
+    carBrand: string
+    carColor: string
+    ownerName: string
+    ownerPhone: string
+    idCard: string
+    status: 0 | 1 | 2 // 0-待审核, 1-已通过, 2-已拒绝
+    applyTime: string
+    rejectReason?: string
+}
+
 export interface Resident {
     id: number
     name: string
@@ -183,6 +213,45 @@ export const mockEmployees: Employee[] = [
     { id: 4, name: '刘维修', phone: '13600136004', role: 'repair', status: 'active', createdAt: '2024-02-10 00:00:00' },
     { id: 5, name: '陈保安', phone: '13600136005', role: 'security', status: 'active', createdAt: '2023-08-05 00:00:00' },
     { id: 6, name: '周保安', phone: '13600136006', role: 'security', status: 'inactive', createdAt: '2023-04-12 00:00:00' },
+]
+
+export const mockParkings: Parking[] = [
+    { id: 1, area: 'A区地下停车场', parkingNo: 'A-001', carNo: '粤B88888', carBrand: '宝马', carColor: '黑色', ownerName: '张三', ownerPhone: '13800138001', type: 'owned', status: 'active' },
+    { id: 2, area: 'A区地下停车场', parkingNo: 'A-002', carNo: '粤B66666', carBrand: '奔驰', carColor: '白色', ownerName: '李四', ownerPhone: '13800138002', type: 'rented', status: 'active' },
+    { id: 3, area: 'B区地下停车场', parkingNo: 'B-101', carNo: '', carBrand: '', carColor: '', ownerName: '', ownerPhone: '', type: 'rented', status: 'empty' },
+]
+
+export const mockParkingApplies: ParkingApply[] = [
+    {
+        id: 1,
+        communityName: '阳光花园',
+        parkingType: 'owned',
+        parkingArea: 'A区地下停车场',
+        parkingNo: 'A-003',
+        carNo: '粤A99999',
+        carBrand: '特斯拉',
+        carColor: '红色',
+        ownerName: '赵六',
+        ownerPhone: '13800138004',
+        idCard: '440101199001011234',
+        status: 0,
+        applyTime: '2024-12-18 15:30:00'
+    },
+    {
+        id: 2,
+        communityName: '阳光花园',
+        parkingType: 'rented',
+        parkingArea: 'C区地面停车场',
+        parkingNo: 'C-001',
+        carNo: '粤B77777',
+        carBrand: '奥迪',
+        carColor: '银色',
+        ownerName: '钱七',
+        ownerPhone: '13800138005',
+        idCard: '440101199111111234',
+        status: 0,
+        applyTime: '2024-12-19 10:00:00'
+    }
 ]
 
 // 统计数据

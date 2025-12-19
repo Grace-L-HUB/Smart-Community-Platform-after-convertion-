@@ -3,10 +3,14 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from .models import HouseBindingApplication, HouseUserBinding, Visitor
+from .models import (
+    HouseBindingApplication, HouseUserBinding, Visitor,
+    ParkingBindingApplication, ParkingUserBinding
+)
 from .serializers import (
     HouseBindingApplicationSerializer, HouseUserBindingSerializer,
-    VisitorCreateSerializer, VisitorListSerializer, VisitorDetailSerializer
+    VisitorCreateSerializer, VisitorListSerializer, VisitorDetailSerializer,
+    ParkingBindingApplicationSerializer, ParkingUserBindingSerializer
 )
 import logging
 import json
@@ -406,4 +410,158 @@ class VisitorQRCodeView(APIView):
                     "visit_time": visitor.visit_time
                 }
             }
+        })
+
+
+# ===== 车位绑定相关视图 =====
+
+class ParkingBindingApplicationView(APIView):
+    """车位绑定申请接口"""
+    permission_classes = []  # 暂时不需要权限认证
+
+    def post(self, request):
+        """提交车位绑定申请"""
+        # TODO: 后续添加JWT认证后，从token获取用户
+        user_id = request.data.get('user_id')
+        if not user_id:
+            return Response({
+                "code": 400,
+                "message": "缺少用户ID参数"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({
+                "code": 404,
+                "message": "用户不存在"
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        # 检查是否已经有待审核的申请（同一车位）
+        existing_application = ParkingBindingApplication.objects.filter(
+            user=user,
+            parking_area=request.data.get('parking_area'),
+            parking_no=request.data.get('parking_no'),
+            status=0  # 待审核状态
+        ).first()
+
+        if existing_application:
+            return Response({
+                "code": 400,
+                "message": "该车位已有待审核的绑定申请，请勿重复提交"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # 检查是否已经绑定了相同车牌号
+        existing_car_binding = ParkingBindingApplication.objects.filter(
+            user=user,
+            car_no=request.data.get('car_no'),
+            status__in=[0, 1]  # 待审核或已通过
+        ).first()
+
+        if existing_car_binding:
+            return Response({
+                "code": 400,
+                "message": "该车辆已有绑定记录，一辆车只能绑定一个车位"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # 创建申请记录
+        serializer = ParkingBindingApplicationSerializer(data=request.data)
+        if serializer.is_valid():
+            application = serializer.save(user=user)
+            logger.info(f"用户 {user.id} 提交车位绑定申请: {application.parking_area}-{application.parking_no} ({application.car_no})")
+            
+            return Response({
+                "code": 200,
+                "message": "申请提交成功，请等待审核",
+                "data": {
+                    "application_id": application.id,
+                    "status": application.status,
+                    "created_at": application.created_at
+                }
+            })
+        
+        return Response({
+            "code": 400,
+            "message": "数据校验失败",
+            "errors": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    def get(self, request):
+        """获取用户的车位绑定申请列表"""
+        # TODO: 后续添加JWT认证后，从token获取用户
+        user_id = request.GET.get('user_id')
+        if not user_id:
+            return Response({
+                "code": 400,
+                "message": "缺少用户ID参数"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({
+                "code": 404,
+                "message": "用户不存在"
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        applications = ParkingBindingApplication.objects.filter(user=user).order_by('-created_at')
+        serializer = ParkingBindingApplicationSerializer(applications, many=True)
+        
+        return Response({
+            "code": 200,
+            "message": "获取成功",
+            "data": serializer.data
+        })
+
+
+class MyParkingListView(APIView):
+    """我的车位列表"""
+    permission_classes = []
+    
+    def get(self, request):
+        """获取用户已绑定的车位列表"""
+        user_id = request.GET.get('user_id')
+        if not user_id:
+            return Response({
+                "code": 400,
+                "message": "缺少用户ID参数"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({
+                "code": 404,
+                "message": "用户不存在"
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        # 获取已绑定的车位（状态为已绑定）
+        bindings = ParkingUserBinding.objects.filter(user=user, status=1).order_by('-created_at')
+        serializer = ParkingUserBindingSerializer(bindings, many=True)
+        
+        return Response({
+            "code": 200,
+            "message": "获取成功",
+            "data": serializer.data
+        })
+
+
+class ParkingBindingStatsView(APIView):
+    """车位绑定统计信息"""
+    permission_classes = []
+    
+    def get(self, request):
+        """获取车位绑定统计数据"""
+        stats = {
+            "total_applications": ParkingBindingApplication.objects.count(),
+            "pending_applications": ParkingBindingApplication.objects.filter(status=0).count(),
+            "approved_applications": ParkingBindingApplication.objects.filter(status=1).count(),
+            "rejected_applications": ParkingBindingApplication.objects.filter(status=2).count(),
+            "total_bindings": ParkingUserBinding.objects.filter(status=1).count(),
+        }
+        
+        return Response({
+            "code": 200,
+            "message": "获取成功",
+            "data": stats
         })

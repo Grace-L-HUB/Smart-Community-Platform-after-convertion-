@@ -187,3 +187,109 @@ class Visitor(models.Model):
         """获取更简洁的二维码字符串"""
         # 格式: v|visitor_id|token
         return f"v|{str(self.id)}|{self.qr_code_token}"
+
+
+# 6. 车位表 (核心资产)
+class ParkingSpace(models.Model):
+    PARKING_TYPE_CHOICES = (
+        ('owned', '自有车位'),
+        ('rented', '租赁车位'),
+    )
+    
+    area_name = models.CharField(max_length=50, verbose_name="停车区域") # 如 "A区地下停车场"
+    space_number = models.CharField(max_length=20, verbose_name="车位号") # 如 "A-001"
+    parking_type = models.CharField(max_length=10, choices=PARKING_TYPE_CHOICES, default='owned', verbose_name="车位类型")
+    
+    # 状态：空闲、已占用、维修中
+    status = models.SmallIntegerField(default=1, verbose_name="车位状态")
+
+    class Meta:
+        unique_together = ('area_name', 'space_number') # 物理唯一性约束
+        verbose_name = "车位"
+        verbose_name_plural = "车位"
+
+    def __str__(self):
+        return f"{self.area_name}-{self.space_number}"
+
+
+# 7. 车位绑定申请表
+class ParkingBindingApplication(models.Model):
+    PARKING_TYPE_CHOICES = (
+        ('owned', '自有车位'),
+        ('rented', '租赁车位'),
+    )
+    STATUS_CHOICES = (
+        (0, '待审核'),
+        (1, '已通过'),
+        (2, '已拒绝'),
+    )
+
+    # 申请人信息
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name="申请用户")
+    owner_name = models.CharField(max_length=20, verbose_name="车主姓名")
+    owner_phone = models.CharField(max_length=15, verbose_name="车主手机号")
+    id_card = models.CharField(max_length=18, verbose_name="身份证号")
+    
+    # 车位信息
+    community_name = models.CharField(max_length=100, default="阳光花园", verbose_name="社区名称")
+    parking_type = models.CharField(max_length=10, choices=PARKING_TYPE_CHOICES, default='owned', verbose_name="车位类型")
+    parking_area = models.CharField(max_length=50, verbose_name="停车区域")
+    parking_no = models.CharField(max_length=20, verbose_name="车位号")
+    
+    # 车辆信息
+    car_no = models.CharField(max_length=20, verbose_name="车牌号")
+    car_brand = models.CharField(max_length=50, blank=True, verbose_name="车辆品牌")
+    car_color = models.CharField(max_length=20, blank=True, verbose_name="车辆颜色")
+    
+    # 申请相关
+    status = models.SmallIntegerField(choices=STATUS_CHOICES, default=0, verbose_name="审核状态")
+    
+    # 时间戳
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="申请时间")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="更新时间")
+    audit_time = models.DateTimeField(null=True, blank=True, verbose_name="审核时间")
+    auditor = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.SET_NULL, 
+        null=True, blank=True, 
+        related_name='audited_parking_applications',
+        verbose_name="审核人"
+    )
+    
+    # 备注信息
+    audit_remark = models.TextField(blank=True, verbose_name="审核备注")
+    reject_reason = models.CharField(max_length=200, blank=True, verbose_name="拒绝原因")
+
+    class Meta:
+        verbose_name = "车位绑定申请"
+        verbose_name_plural = "车位绑定申请"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.owner_name} - {self.parking_area}{self.parking_no} ({self.car_no})"
+
+
+# 8. 车位-用户绑定关系表（审核通过后的正式绑定关系）
+class ParkingUserBinding(models.Model):
+    STATUS_CHOICES = (
+        (1, '已绑定'),
+        (2, '已解绑'), # 软删除，保留历史记录
+    )
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='parking_bindings')
+    parking_space = models.ForeignKey(ParkingSpace, on_delete=models.CASCADE, related_name='user_bindings', null=True, blank=True)
+    application = models.OneToOneField(ParkingBindingApplication, on_delete=models.CASCADE, verbose_name="关联申请")
+    
+    status = models.SmallIntegerField(choices=STATUS_CHOICES, default=1, verbose_name="绑定状态")
+    
+    # 时间戳
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="绑定时间")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="更新时间")
+
+    class Meta:
+        verbose_name = "车位绑定记录"
+        verbose_name_plural = "车位绑定记录"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.application.owner_name} - {self.application.parking_area}{self.application.parking_no}"

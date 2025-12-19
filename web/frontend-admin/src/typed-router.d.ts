@@ -25,7 +25,7 @@ declare module 'vue-router/auto-routes' {
     '/merchant/orders': RouteRecordInfo<'/merchant/orders', '/merchant/orders', Record<never, never>, Record<never, never>>,
     '/merchant/products': RouteRecordInfo<'/merchant/products', '/merchant/products', Record<never, never>, Record<never, never>>,
     '/merchant/settings': RouteRecordInfo<'/merchant/settings', '/merchant/settings', Record<never, never>, Record<never, never>>,
-    '/property': RouteRecordInfo<'/property', '/property', Record<never, never>, Record<never, never>, '/property/access-logs' | '/property/activities' | '/property/announcements' | '/property/dashboard' | '/property/employees' | '/property/fees' | '/property/houses' | '/property/residents/' | '/property/residents/audit' | '/property/work-orders'>,
+    '/property': RouteRecordInfo<'/property', '/property', Record<never, never>, Record<never, never>, '/property/access-logs' | '/property/activities' | '/property/announcements' | '/property/dashboard' | '/property/employees' | '/property/fees' | '/property/houses' | '/property/parking' | '/property/parking-audit' | '/property/residents/' | '/property/residents/audit' | '/property/work-orders'>,
     '/property/access-logs': RouteRecordInfo<'/property/access-logs', '/property/access-logs', Record<never, never>, Record<never, never>>,
     '/property/activities': RouteRecordInfo<'/property/activities', '/property/activities', Record<never, never>, Record<never, never>>,
     '/property/announcements': RouteRecordInfo<'/property/announcements', '/property/announcements', Record<never, never>, Record<never, never>>,
@@ -33,6 +33,8 @@ declare module 'vue-router/auto-routes' {
     '/property/employees': RouteRecordInfo<'/property/employees', '/property/employees', Record<never, never>, Record<never, never>>,
     '/property/fees': RouteRecordInfo<'/property/fees', '/property/fees', Record<never, never>, Record<never, never>>,
     '/property/houses': RouteRecordInfo<'/property/houses', '/property/houses', Record<never, never>, Record<never, never>>,
+    '/property/parking': RouteRecordInfo<'/property/parking', '/property/parking', Record<never, never>, Record<never, never>>,
+    '/property/parking-audit': RouteRecordInfo<'/property/parking-audit', '/property/parking-audit', Record<never, never>, Record<never, never>>,
     '/property/residents/': RouteRecordInfo<'/property/residents/', '/property/residents', Record<never, never>, Record<never, never>>,
     '/property/residents/audit': RouteRecordInfo<'/property/residents/audit', '/property/residents/audit', Record<never, never>, Record<never, never>>,
     '/property/work-orders': RouteRecordInfo<'/property/work-orders', '/property/work-orders', Record<never, never>, Record<never, never>>,
@@ -78,7 +80,7 @@ declare module 'vue-router/auto-routes' {
       views: never
     }
     'src/pages/property.vue': {
-      routes: '/property' | '/property/residents/' | '/property/access-logs' | '/property/activities' | '/property/announcements' | '/property/residents/audit' | '/property/dashboard' | '/property/employees' | '/property/fees' | '/property/houses' | '/property/residents' | '/property/work-orders'
+      routes: '/property' | '/property/residents/' | '/property/access-logs' | '/property/activities' | '/property/announcements' | '/property/residents/audit' | '/property/dashboard' | '/property/employees' | '/property/fees' | '/property/houses' | '/property/parking' | '/property/parking-audit' | '/property/residents' | '/property/work-orders'
       views: 'default'
     }
     'src/pages/property/access-logs.vue': {
@@ -107,6 +109,14 @@ declare module 'vue-router/auto-routes' {
     }
     'src/pages/property/houses.vue': {
       routes: '/property/houses'
+      views: never
+    }
+    'src/pages/property/parking.vue': {
+      routes: '/property/parking'
+      views: never
+    }
+    'src/pages/property/parking-audit.vue': {
+      routes: '/property/parking-audit'
       views: never
     }
     'src/pages/property/residents/index.vue': {

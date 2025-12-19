@@ -59,6 +59,7 @@
             :value="item.to"
             rounded="lg"
             class="mb-1"
+            exact
           />
 
           <!-- 有子菜单 -->
@@ -82,6 +83,7 @@
               :value="child.to"
               rounded="lg"
               class="mb-1"
+              exact
             />
           </v-list-group>
         </template>
@@ -110,6 +112,13 @@ const { mobile } = useDisplay()
 
 const drawer = ref(true)
 
+interface MenuItem {
+  title: string
+  icon: string
+  to?: string
+  children?: MenuItem[]
+}
+
 // 用户信息
 const userName = computed(() => authStore.userName || '管理员')
 const userAvatar = computed(() => authStore.user?.avatar || 'https://picsum.photos/seed/avatar/100/100')
@@ -120,14 +129,16 @@ const roleLabel = computed(() => userRole.value === 'property' ? '物业管理�
 const appTitle = computed(() => userRole.value === 'property' ? '物业管理系统' : '商户管理系统')
 
 // 物业端菜单
-const propertyMenuItems = [
+const propertyMenuItems: MenuItem[] = [
   { title: '工作台', icon: 'mdi-view-dashboard', to: '/property/dashboard' },
   {
     title: '房屋与住户',
     icon: 'mdi-home-city',
     children: [
       { title: '房产列表', icon: 'mdi-home', to: '/property/houses' },
+      { title: '车位总表', icon: 'mdi-parking', to: '/property/parking' },
       { title: '住户审核', icon: 'mdi-account-check', to: '/property/residents/audit' },
+      { title: '车位审核', icon: 'mdi-car-cog', to: '/property/parking-audit' },
       { title: '住户总表', icon: 'mdi-account-group', to: '/property/residents' },
     ],
   },
@@ -152,7 +163,7 @@ const propertyMenuItems = [
 ]
 
 // 商户端菜单
-const merchantMenuItems = [
+const merchantMenuItems: MenuItem[] = [
   { title: '经营概览', icon: 'mdi-view-dashboard', to: '/merchant/dashboard' },
   { title: '订单管理', icon: 'mdi-receipt', to: '/merchant/orders' },
   { title: '商品管理', icon: 'mdi-package-variant', to: '/merchant/products' },
@@ -174,6 +185,8 @@ const breadcrumbs = computed(() => {
     items.push({ title: '物业管理' })
     if (path.includes('dashboard')) items.push({ title: '工作台', disabled: true })
     else if (path.includes('houses')) items.push({ title: '房产列表', disabled: true })
+    else if (path.includes('parking-audit')) items.push({ title: '车位审核', disabled: true })
+    else if (path.includes('parking')) items.push({ title: '车位总表', disabled: true })
     else if (path.includes('residents/audit')) items.push({ title: '住户审核', disabled: true })
     else if (path.includes('residents')) items.push({ title: '住户总表', disabled: true })
     else if (path.includes('work-orders')) items.push({ title: '工单中心', disabled: true })

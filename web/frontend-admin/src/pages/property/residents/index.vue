@@ -162,8 +162,8 @@ const headers = [
   { title: '绑定房屋', key: 'houseAddress' },
   { title: '身份', key: 'identity' },
   { title: '状态', key: 'status' },
-  { title: '操作', key: 'actions', sortable: false, align: 'center' },
-]
+  { title: '操作', key: 'actions', sortable: false, align: 'center' as const },
+] as const
 
 // 身份标签
 function getIdentityColor(identity: string) {

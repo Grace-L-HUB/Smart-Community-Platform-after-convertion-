@@ -1,9 +1,9 @@
 <template>
   <v-container fluid>
     <div class="d-flex align-center mb-6">
-      <h1 class="text-h4 font-weight-bold">住户审核</h1>
+      <h1 class="text-h4 font-weight-bold">车位绑定审核</h1>
       <v-chip color="warning" class="ml-3" size="small">
-        {{ pendingResidents.length }} 条待处理
+        {{ pendingApplies.length }} 条待审核
       </v-chip>
     </div>
 
@@ -11,18 +11,29 @@
     <v-card rounded="lg">
       <v-data-table
         :headers="headers"
-        :items="pendingResidents"
+        :items="pendingApplies"
         :items-per-page="10"
         class="elevation-0"
       >
-        <template #item.identity="{ item }">
-          <v-chip
-            :color="getIdentityColor(item.identity)"
-            size="small"
-            variant="tonal"
-          >
-            {{ getIdentityText(item.identity) }}
+        <template #item.parkingInfo="{ item }">
+          <div class="font-weight-medium text-primary">{{ item.parkingNo }}</div>
+          <div class="text-caption text-grey">{{ item.parkingArea }}</div>
+        </template>
+
+        <template #item.carInfo="{ item }">
+          <div><v-chip size="x-small" variant="flat" class="mr-1">{{ item.carNo }}</v-chip></div>
+          <div class="text-caption text-grey">{{ item.carBrand }} · {{ item.carColor }}</div>
+        </template>
+
+        <template #item.applyType="{ item }">
+          <v-chip size="small" :color="item.parkingType === 'owned' ? 'primary' : 'info'" variant="tonal">
+            {{ item.parkingType === 'owned' ? '自有车位' : '租赁车位' }}
           </v-chip>
+        </template>
+
+        <template #item.applicant="{ item }">
+          <div class="font-weight-medium">{{ item.ownerName }}</div>
+          <div class="text-caption text-grey">{{ item.ownerPhone }}</div>
         </template>
 
         <template #item.applyTime="{ item }">
@@ -35,9 +46,8 @@
             size="small"
             variant="tonal"
             class="mr-2"
-            @click="approveResident(item)"
+            @click="approve(item)"
           >
-            <v-icon start icon="mdi-check" />
             通过
           </v-btn>
           <v-btn
@@ -46,40 +56,33 @@
             variant="tonal"
             @click="openRejectDialog(item)"
           >
-            <v-icon start icon="mdi-close" />
             拒绝
           </v-btn>
         </template>
       </v-data-table>
 
       <v-alert
-        v-if="pendingResidents.length === 0"
+        v-if="pendingApplies.length === 0"
         type="info"
         variant="tonal"
         class="ma-4"
       >
-        暂无待审核的住户申请
+        暂无待处理的车位申请
       </v-alert>
     </v-card>
 
     <!-- 拒绝原因弹窗 -->
     <v-dialog v-model="rejectDialog" max-width="500">
       <v-card>
-        <v-card-title class="text-error">
-          <v-icon icon="mdi-alert-circle" class="mr-2" />
-          拒绝申请
-        </v-card-title>
+        <v-card-title class="text-error">拒绝申请</v-card-title>
         <v-card-text>
-          <p class="mb-4">
-            确定要拒绝 <strong>{{ rejectingResident?.name }}</strong> 的住户绑定申请吗？
-          </p>
+          <p class="mb-4">确定要拒绝 <strong>{{ rejectingApply?.ownerName }}</strong> 的车位 <strong>{{ rejectingApply?.parkingNo }}</strong> 绑定申请吗？</p>
           <v-textarea
             v-model="rejectReason"
             label="拒绝原因"
-            placeholder="请输入拒绝原因（将发送给申请人）"
             variant="outlined"
             rows="3"
-            :rules="[v => !!v || '请输入拒绝原因']"
+            :rules="[v => !!v || '请输入原因']"
           />
         </v-card-text>
         <v-card-actions>
@@ -90,7 +93,6 @@
       </v-card>
     </v-dialog>
 
-    <!-- 成功提示 -->
     <v-snackbar v-model="snackbar" :color="snackbarColor" location="top">
       {{ snackbarText }}
     </v-snackbar>
@@ -99,73 +101,47 @@
 
 <script lang="ts" setup>
 import { ref, computed, onMounted } from 'vue'
-import { usePropertyStore, type Resident } from '@/stores/property'
+import { usePropertyStore, type ParkingApply } from '@/stores/property'
 import dayjs from 'dayjs'
 
 const propertyStore = usePropertyStore()
+const pendingApplies = computed(() => propertyStore.pendingParkingApplies)
 
-const pendingResidents = computed(() => propertyStore.pendingResidents)
-
-// 表格配置
 const headers = [
-  { title: '申请人', key: 'name' },
-  { title: '手机号', key: 'phone' },
-  { title: '申请房屋', key: 'houseAddress' },
-  { title: '身份', key: 'identity' },
+  { title: '车位信息', key: 'parkingInfo' },
+  { title: '车辆信息', key: 'carInfo' },
+  { title: '类型', key: 'applyType' },
+  { title: '申请人', key: 'applicant' },
   { title: '申请时间', key: 'applyTime' },
   { title: '操作', key: 'actions', sortable: false, align: 'center' as const },
 ] as const
 
-// 身份标签
-function getIdentityColor(identity: string) {
-  const colors: Record<string, string> = {
-    owner: 'primary',
-    tenant: 'secondary',
-    family: 'info',
-  }
-  return colors[identity] || 'grey'
-}
-
-function getIdentityText(identity: string) {
-  const texts: Record<string, string> = {
-    owner: '业主',
-    tenant: '租客',
-    family: '家属',
-  }
-  return texts[identity] || identity
-}
-
-// 时间格式化
 function formatTime(time: string) {
   return dayjs(time).format('MM-DD HH:mm')
 }
 
-// 通过审核
-function approveResident(resident: Resident) {
-  propertyStore.approveResident(resident.id)
-  showSnackbar('success', `已通过 ${resident.name} 的绑定申请`)
+function approve(apply: ParkingApply) {
+  propertyStore.approveParking(apply.id)
+  showSnackbar('success', '已通过审核')
 }
 
-// 拒绝审核
 const rejectDialog = ref(false)
-const rejectingResident = ref<Resident | null>(null)
+const rejectingApply = ref<ParkingApply | null>(null)
 const rejectReason = ref('')
 
-function openRejectDialog(resident: Resident) {
-  rejectingResident.value = resident
+function openRejectDialog(apply: ParkingApply) {
+  rejectingApply.value = apply
   rejectReason.value = ''
   rejectDialog.value = true
 }
 
 function confirmReject() {
-  if (!rejectReason.value || !rejectingResident.value) return
-
-  propertyStore.rejectResident(rejectingResident.value.id, rejectReason.value)
-  showSnackbar('error', `已拒绝 ${rejectingResident.value.name} 的绑定申请`)
+  if (!rejectReason.value || !rejectingApply.value) return
+  propertyStore.rejectParking(rejectingApply.value.id, rejectReason.value)
+  showSnackbar('error', '已拒绝申请')
   rejectDialog.value = false
 }
 
-// 提示消息
 const snackbar = ref(false)
 const snackbarText = ref('')
 const snackbarColor = ref('success')
