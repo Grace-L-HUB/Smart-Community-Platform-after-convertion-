@@ -70,15 +70,53 @@
     <!-- Tab 3: Community Events -->
     <van-tab title="社区活动">
        <view class="p-30">
-         <view class="event-card" bind:tap="onEventClick" data-id="1">
-           <image class="event-banner" src="https://img.yzcdn.cn/vant/apple-1.jpg" mode="aspectFill"></image>
-           <view class="event-info">
-             <text class="event-title">周末亲子绘画比赛报名啦！</text>
-             <text class="event-time">时间：本周六 下午2:00</text>
-             <text class="event-loc">地点：社区活动中心2楼</text>
-             <van-button block color="#07c160" round size="small" custom-class="mt-20" catch:tap="onEventEnrollClick">立即报名</van-button>
+         <block wx:for="{{ activities }}" wx:key="id">
+           <view class="event-card" bind:tap="onEventClick" data-id="{{item.id}}">
+             <image class="event-banner" src="{{item.banner}}" mode="aspectFill"></image>
+             <view class="event-info">
+               <text class="event-title">{{item.title}}</text>
+               <text class="event-time">时间：{{item.time_display}}</text>
+               <text class="event-loc">地点：{{item.location}}</text>
+               
+               <!-- 活动状态和报名进度 -->
+               <view class="event-status">
+                 <van-tag type="{{item.status_color}}" size="small">{{item.status_text}}</van-tag>
+                 <text class="participants-count">{{item.current_participants}}/{{item.max_participants}}人</text>
+               </view>
+               
+               <!-- 报名进度条 -->
+               <van-progress 
+                 percentage="{{item.registration_progress}}" 
+                 stroke-width="4" 
+                 color="#07c160" 
+                 inactive-color="#f2f3f5"
+                 show-pivot="{{false}}"
+               />
+               
+               <!-- 报名按钮 -->
+               <van-button 
+                 block 
+                 color="#07c160" 
+                 round 
+                 size="small" 
+                 custom-class="mt-20"
+                 disabled="{{!item.can_register || item.user_registered}}"
+                 catch:tap="onEventEnrollClick" 
+                 data-id="{{item.id}}"
+               >
+                 {{item.user_registered ? '已报名' : (item.can_register ? '立即报名' : '暂不可报名')}}
+               </van-button>
+             </view>
            </view>
+         </block>
+         
+         <!-- 空状态 -->
+         <view wx:if="{{activities.length === 0 && !loading}}" class="empty-state">
+           <van-empty description="暂无社区活动" />
          </view>
+         
+         <!-- 加载状态 -->
+         <van-loading wx:if="{{loading}}" type="spinner" color="#07c160">加载中...</van-loading>
        </view>
     </van-tab>
   </van-tabs>

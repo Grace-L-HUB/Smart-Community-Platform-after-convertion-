@@ -685,7 +685,7 @@ class ActivityDetailView(generics.RetrieveUpdateDestroyAPIView):
     description="用户报名参加指定活动"
 )
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def register_activity(request, pk):
     """报名活动"""
     
@@ -732,7 +732,7 @@ def register_activity(request, pk):
     description="用户取消活动报名"
 )
 @api_view(['DELETE'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def cancel_registration(request, pk):
     """取消报名"""
     
@@ -844,7 +844,7 @@ def approve_registration(request, pk, registration_id):
     description="获取当前用户报名的活动列表"
 )
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def my_activities(request):
     """获取用户参与的活动"""
     

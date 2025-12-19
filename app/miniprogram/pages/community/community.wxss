@@ -152,3 +152,16 @@
   justify-content: center;
   z-index: 100;
 }
+
+/* 新增：活动卡片状态样式 */
+.event-card .event-info .event-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 16rpx 0;
+}
+
+.event-card .event-info .participants-count {
+  font-size: 22rpx;
+  color: var(--text-gray);
+}

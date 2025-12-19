@@ -22,9 +22,21 @@
     </view>
 
     <view class="tags-row">
-      <van-tag type="success" wx:if="{{isFree}}">免费</van-tag>
-      <van-tag type="primary" wx:if="{{isHot}}">热门</van-tag>
-      <van-tag type="warning" wx:if="{{deadline}}">报名截止: {{deadline}}</van-tag>
+      <van-tag type="{{status_color}}">{{status_text}}</van-tag>
+      <van-tag type="success" wx:if="{{!require_approval}}">无需审核</van-tag>
+      <van-tag type="warning" wx:if="{{require_approval}}">需要审核</van-tag>
+    </view>
+
+    <!-- 报名进度条 -->
+    <view class="progress-section">
+      <text class="progress-text">报名进度</text>
+      <van-progress 
+        percentage="{{(enrolledCount/maxCount)*100}}" 
+        stroke-width="6" 
+        color="#07c160" 
+        inactive-color="#f2f3f5"
+        show-pivot="{{false}}"
+      />
     </view>
   </view>
 
@@ -34,19 +46,25 @@
     <text class="desc-text">{{description}}</text>
   </view>
 
-  <!-- Event Schedule -->
-  <view class="card schedule-section" wx:if="{{schedule.length > 0}}">
-    <view class="section-title">活动流程</view>
-    <view class="schedule-item" wx:for="{{schedule}}" wx:key="index">
-      <view class="schedule-time">{{item.time}}</view>
-      <view class="schedule-content">{{item.content}}</view>
+  <!-- Activity Status -->
+  <view class="card status-section">
+    <view class="section-title">活动状态</view>
+    <view class="status-info">
+      <view class="status-item">
+        <text class="status-label">当前状态：</text>
+        <van-tag type="{{status_color}}">{{status_text}}</van-tag>
+      </view>
+      <view class="status-item">
+        <text class="status-label">可否报名：</text>
+        <van-tag type="{{can_register ? 'success' : 'default'}}">
+          {{can_register ? '可以报名' : '暂不可报名'}}
+        </van-tag>
+      </view>
+      <view class="status-item" wx:if="{{user_registered}}">
+        <text class="status-label">您的状态：</text>
+        <van-tag type="primary">已报名</van-tag>
+      </view>
     </view>
-  </view>
-
-  <!-- Requirements -->
-  <view class="card requirements-section" wx:if="{{requirements}}">
-    <view class="section-title">参与须知</view>
-    <text class="requirements-text">{{requirements}}</text>
   </view>
 
   <!-- Enrolled Users -->
@@ -56,15 +74,21 @@
       <text class="count-text">{{enrolledCount}}人</text>
     </view>
     
-    <view class="enrolled-list" wx:if="{{enrolledUsers.length > 0}}">
-      <image 
-        class="enrolled-avatar" 
-        wx:for="{{enrolledUsers}}" 
-        wx:key="id"
-        src="{{item.avatar || '/image/default-avatar.png'}}"
-      ></image>
-      <view class="more-users" wx:if="{{enrolledCount > 10}}">
-        <text>+{{enrolledCount - 10}}</text>
+    <view class="enrolled-list" wx:if="{{participants.length > 0}}">
+      <view class="participant-item" wx:for="{{participants}}" wx:key="id">
+        <image 
+          class="enrolled-avatar" 
+          src="{{item.avatar}}"
+        ></image>
+        <view class="participant-info">
+          <text class="participant-name">{{item.name}}</text>
+          <van-tag size="small" type="{{item.status === 'approved' ? 'success' : 'warning'}}">
+            {{item.status === 'approved' ? '已通过' : '待审核'}}
+          </van-tag>
+        </view>
+      </view>
+      <view class="more-users" wx:if="{{enrolledCount > participants.length}}">
+        <text>+{{enrolledCount - participants.length}}</text>
       </view>
     </view>
 
@@ -75,9 +99,12 @@
 
   <!-- Organizer Info -->
   <view class="card organizer-section">
-    <view class="section-title">主办方</view>
+    <view class="section-title">组织者</view>
     <view class="organizer-info">
-      <image class="organizer-logo" src="{{organizer.logo}}"></image>
+      <image 
+        class="organizer-logo" 
+        src="{{organizer.logo || '/image/default-avatar.png'}}"
+      ></image>
       <view class="organizer-details">
         <text class="organizer-name">{{organizer.name}}</text>
         <text class="organizer-desc">{{organizer.description}}</text>
@@ -104,11 +131,12 @@
       </van-button>
       <van-button 
         round 
-        color="#07c160" 
+        color="{{user_registered ? '#ff6b6b' : '#07c160'}}" 
         bind:click="onEnroll"
-        disabled="{{isEnrolled || isFull}}"
+        disabled="{{!can_register && !user_registered}}"
+        loading="{{loading}}"
       >
-        {{isEnrolled ? '已报名' : isFull ? '名额已满' : '立即报名'}}
+        {{user_registered ? '取消报名' : (can_register ? '立即报名' : '暂不可报名')}}
       </van-button>
     </view>
   </view>
