@@ -24,6 +24,10 @@ Page({
         ]
     },
 
+    onTabChange(e: any) {
+        this.setData({ active: e.detail.name });
+    },
+
     onMarketItemClick(e: any) {
         const id = e.currentTarget.dataset.id;
         wx.navigateTo({
@@ -31,7 +35,7 @@ Page({
         });
     },
 
-    onChatClick(e: any) {
+    onChatClick(_e: any) {
         wx.showToast({
             title: '打开聊天窗口',
             icon: 'none'
@@ -45,7 +49,7 @@ Page({
         });
     },
 
-    onHelpButtonClick(e: any) {
+    onHelpButtonClick(_e: any) {
         wx.navigateTo({
             url: `/pages/community/help-detail/help-detail?id=1`
         });
@@ -58,15 +62,21 @@ Page({
         });
     },
 
-    onEventEnrollClick(e: any) {
+    onEventEnrollClick(_e: any) {
         wx.navigateTo({
             url: `/pages/community/event-detail/event-detail?id=1`
         });
     },
 
     onPostClick() {
-        wx.navigateTo({
-            url: '/pages/community/post-item/post-item'
-        });
+        if (this.data.active === 1) {
+            wx.navigateTo({
+                url: '/pages/community/help-publish/help-publish'
+            });
+        } else {
+            wx.navigateTo({
+                url: '/pages/community/post-item/post-item'
+            });
+        }
     }
 });

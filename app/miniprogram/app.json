@@ -19,6 +19,7 @@
     "pages/community/post-item/post-item",
     "pages/community/help-detail/help-detail",
     "pages/community/event-detail/event-detail",
+    "pages/community/help-publish/help-publish",
     "pages/services/announcements/announcements",
     "pages/services/announcement-detail/announcement-detail",
     "pages/services/visitor/visitor",
@@ -30,7 +31,8 @@
     "pages/profile/my-posts/my-posts",
     "pages/profile/settings/settings",
     "pages/express/express",
-    "pages/qrcode/qrcode"
+    "pages/qrcode/qrcode",
+    "pages/message/chat/chat"
   ],
   "window": {
     "navigationBarTextStyle": "black",

@@ -1,0 +1,17 @@
+<view class="chat-container">
+  <scroll-view class="message-list" scroll-y scroll-into-view="{{scrollToView}}">
+    <block wx:for="{{messages}}" wx:key="id">
+      <view id="{{item.id}}" class="message-item {{item.isMe ? 'me' : 'other'}}">
+        <image class="avatar" src="{{item.isMe ? '/image/default-avatar.png' : '/image/default-avatar.png'}}"></image>
+        <view class="content">
+            <view class="bubble">{{item.content}}</view>
+        </view>
+      </view>
+    </block>
+  </scroll-view>
+
+  <view class="input-area">
+    <input class="input" type="text" confirm-type="send" value="{{inputValue}}" bindinput="onInput" bindconfirm="onSend" placeholder="发送消息..." />
+    <van-button size="small" type="primary" bind:click="onSend" disabled="{{!inputValue}}">发送</van-button>
+  </view>
+</view>

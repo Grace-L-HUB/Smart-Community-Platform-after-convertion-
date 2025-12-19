@@ -1,7 +1,7 @@
 <view class="container">
   <van-search placeholder="搜索闲置物品/帖子" shape="round" background="#f7f8fa" />
   
-  <van-tabs active="{{ active }}" color="#07c160" sticky>
+  <van-tabs active="{{ active }}" color="#07c160" sticky bind:change="onTabChange">
     <!-- Tab 1: Second-hand Market -->
     <van-tab title="二手闲置">
       <view class="p-30">

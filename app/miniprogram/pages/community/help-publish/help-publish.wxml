@@ -1,0 +1,38 @@
+<view class="container">
+  <view class="form-group">
+    <textarea 
+      class="content-input" 
+      placeholder="需要邻居帮什么忙？描述清楚更容易获得帮助哦~" 
+      bindinput="onInput" 
+      maxlength="200"
+    ></textarea>
+  </view>
+
+  <view class="form-group">
+    <view class="section-title">标签选择</view>
+    <view class="tags-container">
+      <view 
+        wx:for="{{tags}}" 
+        wx:key="*this" 
+        class="tag {{selectedTag === item ? 'active' : ''}}" 
+        bindtap="onTagSelect" 
+        data-tag="{{item}}"
+      >
+        {{item}}
+      </view>
+    </view>
+  </view>
+
+  <view class="form-group">
+    <van-field
+      label="联系电话"
+      placeholder="选填，方便邻居联系"
+      border="{{ false }}"
+      bind:change="onPhoneInput"
+    />
+  </view>
+
+  <view class="submit-btn-container">
+    <van-button round block type="primary" bind:click="onSubmit">发布求助</van-button>
+  </view>
+</view>

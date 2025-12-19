@@ -1,0 +1,7 @@
+{
+    "navigationBarTitleText": "发布求助",
+    "usingComponents": {
+        "van-button": "@vant/weapp/button/index",
+        "van-field": "@vant/weapp/field/index"
+    }
+}

@@ -20,7 +20,14 @@ Page({
         category: '家用电器',
         publishTime: '2小时前',
         tradeType: '自提',
-        isFavorite: false
+
+        isFavorite: false,
+        showContactSheet: false,
+        contactActions: [
+            { name: '私聊', color: '#07c160' },
+            { name: '拨打电话' },
+            { name: '复制微信号' }
+        ]
     },
 
     onLoad(options: any) {
@@ -36,12 +43,56 @@ Page({
         console.log('Loading goods detail:', id);
     },
 
-    onChat() {
-        wx.showToast({
-            title: '打开聊天窗口',
-            icon: 'none'
+    onContact() {
+        this.setData({ showContactSheet: true });
+    },
+
+    onCloseContact() {
+        this.setData({ showContactSheet: false });
+    },
+
+    onSelectContact(event: any) {
+        const { name } = event.detail;
+        if (name === '私聊') {
+            this.goToChat();
+        } else if (name === '拨打电话') {
+            this.makeCall();
+        } else if (name === '复制微信号') {
+            this.copyWeChat();
+        }
+    },
+
+    goToChat() {
+        const { id, seller } = this.data;
+        wx.navigateTo({
+            url: `/pages/message/chat/chat?targetId=${seller.name}&targetName=${seller.name}&itemId=${id}`
         });
-        // TODO: 跳转到聊天页面
+    },
+
+    makeCall() {
+        wx.makePhoneCall({
+            phoneNumber: '13800000000' // Mock phone number
+        });
+    },
+
+    copyWeChat() {
+        wx.setClipboardData({
+            data: 'wxid_mock123456', // Mock WeChat ID
+            success: () => {
+                wx.showToast({
+                    title: '微信号已复制',
+                    icon: 'success'
+                });
+            }
+        });
+    },
+
+    onWant() {
+        // "I want this" can directly go to chat with pre-filled message
+        const { id, seller } = this.data;
+        wx.navigateTo({
+            url: `/pages/message/chat/chat?targetId=${seller.name}&targetName=${seller.name}&itemId=${id}`
+        });
     },
 
     onFavorite() {
@@ -50,22 +101,6 @@ Page({
         wx.showToast({
             title: isFavorite ? '已收藏' : '已取消收藏',
             icon: 'success'
-        });
-    },
-
-    onWant() {
-        wx.showModal({
-            title: '确认购买',
-            content: '确定要购买这件商品吗？',
-            success: (res) => {
-                if (res.confirm) {
-                    wx.showToast({
-                        title: '已发送购买意向',
-                        icon: 'success'
-                    });
-                    // TODO: 发送购买意向给卖家
-                }
-            }
         });
     }
 });

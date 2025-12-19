@@ -27,7 +27,7 @@
           <text class="seller-location">{{seller.location}}</text>
         </view>
       </view>
-      <van-button size="small" round plain type="primary" bind:click="onChat">私聊</van-button>
+      <van-button size="small" round plain type="primary" bind:click="onContact">私聊</van-button>
     </view>
   </view>
 
@@ -55,8 +55,17 @@
       <text class="action-text">收藏</text>
     </view>
     <view class="action-buttons">
-      <van-button round plain type="primary" bind:click="onChat">联系卖家</van-button>
+      <van-button round plain type="primary" bind:click="onContact">联系卖家</van-button>
       <van-button round color="#07c160" bind:click="onWant">我想要</van-button>
     </view>
   </view>
+
+  <van-action-sheet
+    show="{{ showContactSheet }}"
+    actions="{{ contactActions }}"
+    cancel-text="取消"
+    bind:close="onCloseContact"
+    bind:cancel="onCloseContact"
+    bind:select="onSelectContact"
+  />
 </view>
