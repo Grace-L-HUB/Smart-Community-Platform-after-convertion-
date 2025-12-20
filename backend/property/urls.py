@@ -7,7 +7,9 @@ from .views import (
     HouseListView, ParkingSpaceListView, DashboardStatsView, EmployeeListView,
     HouseBuildingOptionsView, HouseUnitOptionsView, HouseRoomOptionsView,
     ParkingAreaOptionsView, ParkingSpaceOptionsView,
-    HouseIdentityOptionsView, ParkingIdentityOptionsView
+    HouseIdentityOptionsView, ParkingIdentityOptionsView,
+    AnnouncementListView, AnnouncementCreateView, AnnouncementDetailView,
+    AnnouncementUpdateView, AnnouncementStatusView, AnnouncementDeleteView
 )
 
 urlpatterns = [
@@ -74,4 +76,18 @@ urlpatterns = [
     # 身份选项数据
     path('property/house/options/identities', HouseIdentityOptionsView.as_view(), name='house_identities'),
     path('parking/options/identities', ParkingIdentityOptionsView.as_view(), name='parking_identities'),
+    
+    # ===== 公告管理相关路由 =====
+    
+    # 公告创建（必须放在列表前面）
+    path('property/announcements/create', AnnouncementCreateView.as_view(), name='announcement_create'),
+    
+    # 公告详情、更新、状态管理、删除
+    path('property/announcements/<int:announcement_id>', AnnouncementDetailView.as_view(), name='announcement_detail'),
+    path('property/announcements/<int:announcement_id>/update', AnnouncementUpdateView.as_view(), name='announcement_update'),
+    path('property/announcements/<int:announcement_id>/status', AnnouncementStatusView.as_view(), name='announcement_status'),
+    path('property/announcements/<int:announcement_id>/delete', AnnouncementDeleteView.as_view(), name='announcement_delete'),
+    
+    # 公告列表（放在最后，避免匹配冲突）
+    path('property/announcements', AnnouncementListView.as_view(), name='announcement_list'),
 ]

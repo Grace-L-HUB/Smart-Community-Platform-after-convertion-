@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import (
     HouseBindingApplication, HouseUserBinding, House, Building, Visitor,
-    ParkingBindingApplication, ParkingUserBinding, ParkingSpace
+    ParkingBindingApplication, ParkingUserBinding, ParkingSpace, Announcement
 )
 from django.utils import timezone
 
@@ -340,3 +340,105 @@ class ParkingUserBindingSerializer(serializers.ModelSerializer):
                 'full_address': f"{obj.parking_space.area_name}-{obj.parking_space.space_number}"
             }
         return None
+
+
+# ===== 公告相关序列化器 =====
+
+class AnnouncementCreateSerializer(serializers.ModelSerializer):
+    """公告创建/更新序列化器"""
+    target_buildings = serializers.ListField(
+        child=serializers.CharField(max_length=50),
+        required=False,
+        allow_empty=True,
+        help_text="目标楼栋列表，当scope为'building'时必填"
+    )
+    
+    class Meta:
+        model = Announcement
+        fields = [
+            'title', 'content', 'scope', 'target_buildings'
+        ]
+    
+    def validate(self, data):
+        """验证数据"""
+        scope = data.get('scope')
+        target_buildings = data.get('target_buildings')
+        
+        # 如果选择指定楼栋，必须提供楼栋列表
+        if scope == 'building' and (not target_buildings or len(target_buildings) == 0):
+            raise serializers.ValidationError("指定楼栋发送时必须选择至少一个楼栋")
+        
+        # 如果是全员发送，清空楼栋列表
+        if scope == 'all':
+            data['target_buildings'] = None
+            
+        return data
+    
+    def validate_title(self, value):
+        """验证标题"""
+        if not value or len(value.strip()) == 0:
+            raise serializers.ValidationError("标题不能为空")
+        if len(value) > 200:
+            raise serializers.ValidationError("标题长度不能超过200字符")
+        return value.strip()
+    
+    def validate_content(self, value):
+        """验证内容"""
+        if not value or len(value.strip()) == 0:
+            raise serializers.ValidationError("内容不能为空")
+        return value
+
+
+class AnnouncementListSerializer(serializers.ModelSerializer):
+    """公告列表序列化器"""
+    author = serializers.CharField(source='author_name', read_only=True)
+    status_text = serializers.CharField(source='get_status_display', read_only=True)
+    scope_text = serializers.CharField(source='get_scope_display', read_only=True)
+    created_at = serializers.DateTimeField(format='%Y-%m-%d %H:%M:%S', read_only=True)
+    published_at = serializers.DateTimeField(format='%Y-%m-%d %H:%M:%S', read_only=True)
+    
+    class Meta:
+        model = Announcement
+        fields = [
+            'id', 'title', 'content', 'status', 'status_text', 
+            'scope', 'scope_text', 'target_buildings',
+            'author', 'created_at', 'published_at', 'read_count'
+        ]
+
+
+class AnnouncementDetailSerializer(serializers.ModelSerializer):
+    """公告详情序列化器"""
+    author = serializers.CharField(source='author_name', read_only=True)
+    status_text = serializers.CharField(source='get_status_display', read_only=True)
+    scope_text = serializers.CharField(source='get_scope_display', read_only=True)
+    author_info = serializers.SerializerMethodField()
+    created_at = serializers.DateTimeField(format='%Y-%m-%d %H:%M:%S', read_only=True)
+    updated_at = serializers.DateTimeField(format='%Y-%m-%d %H:%M:%S', read_only=True)
+    published_at = serializers.DateTimeField(format='%Y-%m-%d %H:%M:%S', read_only=True)
+    withdrawn_at = serializers.DateTimeField(format='%Y-%m-%d %H:%M:%S', read_only=True)
+    
+    class Meta:
+        model = Announcement
+        fields = [
+            'id', 'title', 'content', 'status', 'status_text',
+            'scope', 'scope_text', 'target_buildings',
+            'author', 'author_info', 'created_at', 'updated_at',
+            'published_at', 'withdrawn_at', 'read_count'
+        ]
+    
+    def get_author_info(self, obj):
+        """获取作者详细信息"""
+        if obj.author:
+            return {
+                'id': obj.author.id,
+                'name': obj.author_name,
+                'nickname': getattr(obj.author, 'nickname', obj.author_name),
+                'avatar': obj.author.avatar.url if hasattr(obj.author, 'avatar') and obj.author.avatar else None
+            }
+        else:
+            return {
+                'id': None,
+                'name': obj.author_name,
+                'nickname': obj.author_name,
+                'avatar': None
+            }

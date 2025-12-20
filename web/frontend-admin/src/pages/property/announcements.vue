@@ -73,7 +73,7 @@
             <v-icon icon="mdi-undo" />
             <v-tooltip activator="parent" location="top">撤回</v-tooltip>
           </v-btn>
-          <v-btn icon size="small" variant="text" color="error">
+          <v-btn icon size="small" variant="text" color="error" @click="deleteAnnouncement(item)">
             <v-icon icon="mdi-delete" />
           </v-btn>
         </template>
@@ -231,40 +231,98 @@ function openEditor(announcement: Announcement | null) {
   editorDialog.value = true
 }
 
-function saveAsDraft() {
-  propertyStore.addAnnouncement({
-    title: form.title,
-    content: form.content,
-    scope: form.scope,
-    targetBuildings: form.targetBuildings,
-    author: authStore.userName || '管理员',
-    status: 'draft',
-  })
-  showSnackbar('success', '草稿已保存')
-  editorDialog.value = false
-}
-
-function publishAnnouncement() {
+async function saveAsDraft() {
   if (!form.title) {
     showSnackbar('error', '请输入标题')
     return
   }
-  propertyStore.addAnnouncement({
-    title: form.title,
-    content: form.content,
-    scope: form.scope,
-    targetBuildings: form.targetBuildings,
-    author: authStore.userName || '管理员',
-    status: 'published',
-    publishedAt: new Date().toISOString().replace('T', ' ').slice(0, 19),
-  })
-  showSnackbar('success', '公告已发布')
-  editorDialog.value = false
+  
+  try {
+    if (editingAnnouncement.value) {
+      // 更新草稿
+      await propertyStore.updateAnnouncement(editingAnnouncement.value.id, {
+        title: form.title,
+        content: form.content,
+        scope: form.scope,
+        targetBuildings: form.targetBuildings,
+        action: 'save'
+      })
+    } else {
+      // 创建草稿
+      await propertyStore.addAnnouncement({
+        title: form.title,
+        content: form.content,
+        scope: form.scope,
+        targetBuildings: form.targetBuildings,
+        author: authStore.userName || '管理员',
+        status: 'draft',
+        action: 'draft'
+      })
+    }
+    showSnackbar('success', '草稿已保存')
+    editorDialog.value = false
+  } catch (error) {
+    console.error('保存草稿失败:', error)
+    showSnackbar('error', '保存草稿失败，请重试')
+  }
 }
 
-function withdrawAnnouncement(announcement: Announcement) {
-  propertyStore.withdrawAnnouncement(announcement.id)
-  showSnackbar('warning', '公告已撤回')
+async function publishAnnouncement() {
+  if (!form.title) {
+    showSnackbar('error', '请输入标题')
+    return
+  }
+  
+  try {
+    if (editingAnnouncement.value) {
+      // 发布草稿
+      await propertyStore.updateAnnouncement(editingAnnouncement.value.id, {
+        title: form.title,
+        content: form.content,
+        scope: form.scope,
+        targetBuildings: form.targetBuildings,
+        action: 'publish'
+      })
+    } else {
+      // 直接创建并发布
+      await propertyStore.addAnnouncement({
+        title: form.title,
+        content: form.content,
+        scope: form.scope,
+        targetBuildings: form.targetBuildings,
+        author: authStore.userName || '管理员',
+        status: 'published',
+        action: 'publish'
+      })
+    }
+    showSnackbar('success', '公告已发布')
+    editorDialog.value = false
+  } catch (error) {
+    console.error('发布公告失败:', error)
+    showSnackbar('error', '发布公告失败，请重试')
+  }
+}
+
+async function withdrawAnnouncement(announcement: Announcement) {
+  try {
+    await propertyStore.withdrawAnnouncement(announcement.id)
+    showSnackbar('warning', '公告已撤回')
+  } catch (error) {
+    console.error('撤回公告失败:', error)
+    showSnackbar('error', '撤回公告失败，请重试')
+  }
+}
+
+async function deleteAnnouncement(announcement: Announcement) {
+  if (confirm(`确定要删除公告"${announcement.title}"吗？此操作不可恢复。`)) {
+    try {
+      await propertyStore.deleteAnnouncement(announcement.id)
+      showSnackbar('success', '公告已删除')
+    } catch (error) {
+      console.error('删除公告失败:', error)
+      showSnackbar('error', '删除公告失败，请重试')
+    }
+  }
 }
 
 // 预览

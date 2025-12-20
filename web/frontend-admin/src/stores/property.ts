@@ -22,7 +22,9 @@ import {
     type HouseBindingApplication,
     type ParkingBindingApplication,
     type HouseUserBinding,
-    type ParkingUserBinding
+    type ParkingUserBinding,
+    type AnnouncementAPI,
+    type AnnouncementCreateData
 } from '@/services/property'
 
 // 更新数据类型以匹配后端API
@@ -193,6 +195,8 @@ interface PropertyState {
     parkingBindingApplications: ParkingBindingApplication[]
     approvedHouseBindings: HouseUserBinding[]
     approvedParkingBindings: ParkingUserBinding[]
+    // 公告API数据
+    announcementsAPI: AnnouncementAPI[]
 }
 
 export const usePropertyStore = defineStore('property', {
@@ -214,6 +218,7 @@ export const usePropertyStore = defineStore('property', {
         parkingBindingApplications: [],
         approvedHouseBindings: [],
         approvedParkingBindings: [],
+        announcementsAPI: [],
     }),
 
     getters: {
@@ -269,7 +274,8 @@ export const usePropertyStore = defineStore('property', {
                     houseListResponse,
                     parkingSpaceListResponse,
                     statsResponse,
-                    employeesResponse
+                    employeesResponse,
+                    announcementsResponse
                 ] = await Promise.all([
                     propertyAPI.getHouseBindingAuditList(),
                     propertyAPI.getParkingBindingAuditList(),
@@ -278,7 +284,8 @@ export const usePropertyStore = defineStore('property', {
                     propertyAPI.getHouseList(),
                     propertyAPI.getParkingSpaceList(),
                     propertyAPI.getDashboardStats(),
-                    propertyAPI.getEmployeeList()
+                    propertyAPI.getEmployeeList(),
+                    propertyAPI.getAnnouncementList()
                 ])
 
                 // 存储原始API数据
@@ -295,10 +302,13 @@ export const usePropertyStore = defineStore('property', {
                 this.stats = statsResponse.data || mockPropertyStats
                 this.employees = employeesResponse.data || []
 
+                // 存储公告API数据，并转换格式给前端使用
+                this.announcementsAPI = announcementsResponse.data || []
+                this.announcements = this.convertAnnouncementsToFrontend(this.announcementsAPI)
+
                 // 保持mock数据用于其他功能
                 this.workOrders = [...mockWorkOrders]
                 this.bills = [...mockBills]
-                this.announcements = [...mockAnnouncements]
                 this.activities = [...mockActivities]
                 this.accessLogs = [...mockAccessLogs]
 
@@ -309,10 +319,12 @@ export const usePropertyStore = defineStore('property', {
                 this.parkingBindingApplications = []
                 this.approvedHouseBindings = []
                 this.approvedParkingBindings = []
+                this.announcementsAPI = []
                 this.houses = [...mockHouses] // fallback to mock data
                 this.parkings = [] // 车位数据没有mock，置空
                 this.stats = { ...mockPropertyStats } // fallback to mock stats
                 this.employees = [...mockEmployees] // fallback to mock employees
+                this.announcements = [...mockAnnouncements] // fallback to mock announcements
             }
 
             this.loading = false
@@ -469,21 +481,158 @@ export const usePropertyStore = defineStore('property', {
             return { success: true, message: `已为 ${buildings.length} 栋楼生成账单` }
         },
 
-        // 公告操作
-        addAnnouncement(announcement: Omit<Announcement, 'id' | 'createdAt'>) {
-            const newAnnouncement: Announcement = {
-                ...announcement,
-                id: this.announcements.length + 1,
-                createdAt: new Date().toISOString().replace('T', ' ').slice(0, 19),
-            }
-            this.announcements.unshift(newAnnouncement)
-            return newAnnouncement
+        // ===== 数据转换方法 =====
+
+        /**
+         * 将后端公告数据转换为前端格式
+         */
+        convertAnnouncementsToFrontend(apiAnnouncements: AnnouncementAPI[]): Announcement[] {
+            return apiAnnouncements.map(apiAnn => ({
+                id: apiAnn.id,
+                title: apiAnn.title,
+                content: apiAnn.content,
+                status: apiAnn.status,
+                scope: apiAnn.scope,
+                targetBuildings: apiAnn.target_buildings || [],
+                author: apiAnn.author,
+                createdAt: apiAnn.created_at,
+                publishedAt: apiAnn.published_at
+            }))
         },
 
-        withdrawAnnouncement(id: number) {
-            const announcement = this.announcements.find(a => a.id === id)
-            if (announcement) {
-                announcement.status = 'withdrawn'
+        // ===== 公告操作（使用API） =====
+
+        /**
+         * 创建公告（支持草稿和直接发布）
+         */
+        async addAnnouncement(announcementData: Omit<Announcement, 'id' | 'createdAt'> & { action?: 'draft' | 'publish' }) {
+            try {
+                const createData: AnnouncementCreateData = {
+                    title: announcementData.title,
+                    content: announcementData.content,
+                    scope: announcementData.scope,
+                    target_buildings: announcementData.targetBuildings,
+                    action: announcementData.action || (announcementData.status === 'published' ? 'publish' : 'draft'),
+                    author: announcementData.author,
+                    user_id: 1 // TODO: 从auth store获取真实用户ID
+                }
+
+                const response = await propertyAPI.createAnnouncement(createData)
+                
+                if (response.code === 200) {
+                    // 重新加载公告列表
+                    await this.reloadAnnouncements()
+                    return response.data
+                } else {
+                    throw new Error(response.message || '创建公告失败')
+                }
+            } catch (error) {
+                console.error('创建公告失败:', error)
+                throw error
+            }
+        },
+
+        /**
+         * 更新公告（仅限草稿）
+         */
+        async updateAnnouncement(id: number, announcementData: Partial<Announcement> & { action?: 'save' | 'publish' }) {
+            try {
+                const updateData: AnnouncementCreateData = {
+                    title: announcementData.title!,
+                    content: announcementData.content!,
+                    scope: announcementData.scope!,
+                    target_buildings: announcementData.targetBuildings,
+                    action: announcementData.action || 'save',
+                    user_id: 1 // TODO: 从auth store获取真实用户ID
+                }
+
+                const response = await propertyAPI.updateAnnouncement(id, updateData)
+                
+                if (response.code === 200) {
+                    // 重新加载公告列表
+                    await this.reloadAnnouncements()
+                    return response.data
+                } else {
+                    throw new Error(response.message || '更新公告失败')
+                }
+            } catch (error) {
+                console.error('更新公告失败:', error)
+                throw error
+            }
+        },
+
+        /**
+         * 撤回公告
+         */
+        async withdrawAnnouncement(id: number) {
+            try {
+                const response = await propertyAPI.withdrawAnnouncement(id)
+                
+                if (response.code === 200) {
+                    // 重新加载公告列表
+                    await this.reloadAnnouncements()
+                    return response.data
+                } else {
+                    throw new Error(response.message || '撤回公告失败')
+                }
+            } catch (error) {
+                console.error('撤回公告失败:', error)
+                throw error
+            }
+        },
+
+        /**
+         * 发布公告（草稿->已发布）
+         */
+        async publishAnnouncement(id: number) {
+            try {
+                const response = await propertyAPI.publishAnnouncement(id)
+                
+                if (response.code === 200) {
+                    // 重新加载公告列表
+                    await this.reloadAnnouncements()
+                    return response.data
+                } else {
+                    throw new Error(response.message || '发布公告失败')
+                }
+            } catch (error) {
+                console.error('发布公告失败:', error)
+                throw error
+            }
+        },
+
+        /**
+         * 删除公告
+         */
+        async deleteAnnouncement(id: number) {
+            try {
+                const response = await propertyAPI.deleteAnnouncement(id)
+                
+                if (response.code === 200) {
+                    // 重新加载公告列表
+                    await this.reloadAnnouncements()
+                    return response.data
+                } else {
+                    throw new Error(response.message || '删除公告失败')
+                }
+            } catch (error) {
+                console.error('删除公告失败:', error)
+                throw error
+            }
+        },
+
+        /**
+         * 重新加载公告列表
+         */
+        async reloadAnnouncements() {
+            try {
+                const response = await propertyAPI.getAnnouncementList()
+                if (response.code === 200) {
+                    this.announcementsAPI = response.data || []
+                    this.announcements = this.convertAnnouncementsToFrontend(this.announcementsAPI)
+                }
+            } catch (error) {
+                console.error('重新加载公告列表失败:', error)
             }
         },
 

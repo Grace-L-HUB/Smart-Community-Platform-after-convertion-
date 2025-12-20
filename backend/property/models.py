@@ -295,3 +295,71 @@ class ParkingUserBinding(models.Model):
 
     def __str__(self):
         return f"{self.application.owner_name} - {self.application.parking_area}{self.application.parking_no}"
+
+
+# ===== 公告管理模型 =====
+
+class Announcement(models.Model):
+    """公告模型"""
+    STATUS_CHOICES = (
+        ('draft', '草稿'),
+        ('published', '已发布'),
+        ('withdrawn', '已撤回'),
+    )
+    
+    SCOPE_CHOICES = (
+        ('all', '全员'),
+        ('building', '指定楼栋'),
+    )
+    
+    # 基本信息
+    title = models.CharField(max_length=200, verbose_name="公告标题")
+    content = models.TextField(verbose_name="公告内容")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft', verbose_name="状态")
+    
+    # 发送范围
+    scope = models.CharField(max_length=20, choices=SCOPE_CHOICES, default='all', verbose_name="发送范围")
+    target_buildings = models.JSONField(blank=True, null=True, verbose_name="目标楼栋")  # 存储楼栋列表
+    
+    # 作者信息
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.CASCADE, 
+        related_name='announcements',
+        null=True, 
+        blank=True,
+        verbose_name="作者"
+    )
+    author_name = models.CharField(max_length=50, verbose_name="作者姓名")  # 冗余字段，方便显示
+    
+    # 时间信息
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="更新时间")
+    published_at = models.DateTimeField(null=True, blank=True, verbose_name="发布时间")
+    withdrawn_at = models.DateTimeField(null=True, blank=True, verbose_name="撤回时间")
+    
+    # 统计信息
+    read_count = models.IntegerField(default=0, verbose_name="阅读次数")
+
+    class Meta:
+        verbose_name = "公告"
+        verbose_name_plural = "公告"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        author_display = self.author_name if self.author_name else (self.author.nickname if self.author else '系统')
+        return f"{self.title} - {self.get_status_display()} - {author_display}"
+    
+    def publish(self):
+        """发布公告"""
+        if self.status == 'draft':
+            self.status = 'published'
+            self.published_at = timezone.now()
+            self.save()
+    
+    def withdraw(self):
+        """撤回公告"""
+        if self.status == 'published':
+            self.status = 'withdrawn'
+            self.withdrawn_at = timezone.now()
+            self.save()

@@ -94,6 +94,41 @@ export interface ParkingUserBinding {
   }
 }
 
+// 公告数据类型
+export interface AnnouncementAPI {
+  id: number
+  title: string
+  content: string
+  status: 'draft' | 'published' | 'withdrawn'
+  status_text: string
+  scope: 'all' | 'building'
+  scope_text: string
+  target_buildings?: string[]
+  author: string
+  author_info?: {
+    id: number
+    name: string
+    nickname: string
+    avatar?: string
+  }
+  created_at: string
+  updated_at?: string
+  published_at?: string
+  withdrawn_at?: string
+  read_count: number
+}
+
+// 公告创建/更新数据
+export interface AnnouncementCreateData {
+  title: string
+  content: string
+  scope: 'all' | 'building'
+  target_buildings?: string[]
+  action?: 'draft' | 'publish' // draft=保存草稿, publish=直接发布
+  author?: string
+  user_id?: number
+}
+
 // ===== API 服务类 =====
 
 class PropertyAPI {
@@ -235,6 +270,57 @@ class PropertyAPI {
   async addEmployee(data: { name: string; phone: string; role: string }): Promise<ApiResponse<any>> {
     return apiClient.post('/property/employees', data)
   }
+
+  // === 公告管理 ===
+
+  /**
+   * 获取公告列表
+   */
+  async getAnnouncementList(): Promise<ApiResponse<AnnouncementAPI[]>> {
+    return apiClient.get('/property/announcements')
+  }
+
+  /**
+   * 获取公告详情
+   */
+  async getAnnouncementDetail(id: number): Promise<ApiResponse<AnnouncementAPI>> {
+    return apiClient.get(`/property/announcements/${id}`)
+  }
+
+  /**
+   * 创建公告
+   */
+  async createAnnouncement(data: AnnouncementCreateData): Promise<ApiResponse<any>> {
+    return apiClient.post('/property/announcements/create', data)
+  }
+
+  /**
+   * 更新公告（仅限草稿状态）
+   */
+  async updateAnnouncement(id: number, data: AnnouncementCreateData): Promise<ApiResponse<any>> {
+    return apiClient.put(`/property/announcements/${id}/update`, data)
+  }
+
+  /**
+   * 发布公告（草稿 -> 已发布）
+   */
+  async publishAnnouncement(id: number): Promise<ApiResponse<any>> {
+    return apiClient.patch(`/property/announcements/${id}/status`, { action: 'publish' })
+  }
+
+  /**
+   * 撤回公告（已发布 -> 已撤回）
+   */
+  async withdrawAnnouncement(id: number): Promise<ApiResponse<any>> {
+    return apiClient.patch(`/property/announcements/${id}/status`, { action: 'withdraw' })
+  }
+
+  /**
+   * 删除公告
+   */
+  async deleteAnnouncement(id: number): Promise<ApiResponse<any>> {
+    return apiClient.delete(`/property/announcements/${id}/delete`)
+  }
 }
 
 // 创建并导出 API 实例
@@ -245,5 +331,7 @@ export type {
   HouseBindingApplication,
   ParkingBindingApplication, 
   HouseUserBinding,
-  ParkingUserBinding
+  ParkingUserBinding,
+  AnnouncementAPI,
+  AnnouncementCreateData
 }

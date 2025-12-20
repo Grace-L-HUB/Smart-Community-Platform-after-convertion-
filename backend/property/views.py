@@ -5,12 +5,13 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from .models import (
     HouseBindingApplication, HouseUserBinding, Visitor,
-    ParkingBindingApplication, ParkingUserBinding
+    ParkingBindingApplication, ParkingUserBinding, Announcement
 )
 from .serializers import (
     HouseBindingApplicationSerializer, HouseUserBindingSerializer,
     VisitorCreateSerializer, VisitorListSerializer, VisitorDetailSerializer,
-    ParkingBindingApplicationSerializer, ParkingUserBindingSerializer
+    ParkingBindingApplicationSerializer, ParkingUserBindingSerializer,
+    AnnouncementCreateSerializer, AnnouncementListSerializer, AnnouncementDetailSerializer
 )
 import logging
 import json
@@ -1423,4 +1424,302 @@ class ParkingIdentityOptionsView(APIView):
             return Response({
                 "code": 500,
                 "message": f"获取车位身份选项失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ===== 公告管理相关视图 =====
+
+class AnnouncementListView(APIView):
+    """公告列表接口"""
+    permission_classes = []  # 暂时不需要权限认证
+    
+    def get(self, request):
+        """获取公告列表"""
+        try:
+            announcements = Announcement.objects.all().order_by('-created_at')
+            
+            from .serializers import AnnouncementListSerializer
+            serializer = AnnouncementListSerializer(announcements, many=True)
+            
+            return Response({
+                "code": 200,
+                "message": "获取成功",
+                "data": serializer.data
+            })
+            
+        except Exception as e:
+            logger.error(f"获取公告列表失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"获取公告列表失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class AnnouncementCreateView(APIView):
+    """公告创建接口"""
+    permission_classes = []  # 暂时不需要权限认证
+    
+    def post(self, request):
+        """创建公告"""
+        try:
+            from .serializers import AnnouncementCreateSerializer
+            
+            # 获取作者信息
+            # TODO: 后续添加JWT认证后，从token获取用户
+            user_id = request.data.get('user_id')  # 临时从请求中获取用户ID
+            author = None
+            author_name = request.data.get('author', '管理员')  # 默认作者名
+            
+            if user_id:
+                try:
+                    author = User.objects.get(id=user_id)
+                    author_name = author.real_name or author.nickname or f"用户{author.id}"
+                except User.DoesNotExist:
+                    # 用户不存在时使用默认作者，不报错
+                    logger.warning(f"用户ID {user_id} 不存在，使用默认作者")
+                    pass
+            
+            # 验证数据
+            serializer = AnnouncementCreateSerializer(data=request.data)
+            if serializer.is_valid():
+                # 确定状态：如果是发布操作则设为已发布，否则为草稿
+                action = request.data.get('action', 'draft')  # draft 或 publish
+                status_value = 'published' if action == 'publish' else 'draft'
+                
+                # 创建公告
+                announcement = serializer.save(
+                    author=author,
+                    author_name=author_name,
+                    status=status_value
+                )
+                
+                # 如果是发布操作，设置发布时间
+                if status_value == 'published':
+                    announcement.published_at = timezone.now()
+                    announcement.save()
+                
+                logger.info(f"用户 {author_name} {'发布' if status_value == 'published' else '保存'}公告: {announcement.title}")
+                
+                return Response({
+                    "code": 200,
+                    "message": "发布成功" if status_value == 'published' else "草稿已保存",
+                    "data": {
+                        "id": announcement.id,
+                        "title": announcement.title,
+                        "status": announcement.status,
+                        "created_at": announcement.created_at.strftime('%Y-%m-%d %H:%M:%S')
+                    }
+                })
+            else:
+                return Response({
+                    "code": 400,
+                    "message": "数据验证失败",
+                    "errors": serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+                
+        except Exception as e:
+            logger.error(f"创建公告失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"创建公告失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class AnnouncementDetailView(APIView):
+    """公告详情接口"""
+    permission_classes = []
+    
+    def get(self, request, announcement_id):
+        """获取公告详情"""
+        try:
+            announcement = Announcement.objects.get(id=announcement_id)
+            
+            from .serializers import AnnouncementDetailSerializer
+            serializer = AnnouncementDetailSerializer(announcement)
+            
+            # 增加阅读次数（只对已发布的公告）
+            if announcement.status == 'published':
+                announcement.read_count += 1
+                announcement.save(update_fields=['read_count'])
+            
+            return Response({
+                "code": 200,
+                "message": "获取成功",
+                "data": serializer.data
+            })
+            
+        except Announcement.DoesNotExist:
+            return Response({
+                "code": 404,
+                "message": "公告不存在"
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"获取公告详情失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"获取公告详情失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class AnnouncementUpdateView(APIView):
+    """公告更新接口（仅限草稿状态）"""
+    permission_classes = []
+    
+    def put(self, request, announcement_id):
+        """更新公告内容"""
+        try:
+            announcement = Announcement.objects.get(id=announcement_id)
+            
+            # 只能更新草稿状态的公告
+            if announcement.status != 'draft':
+                return Response({
+                    "code": 400,
+                    "message": "只能编辑草稿状态的公告"
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            from .serializers import AnnouncementCreateSerializer
+            serializer = AnnouncementCreateSerializer(announcement, data=request.data, partial=True)
+            
+            if serializer.is_valid():
+                # 确定操作类型
+                action = request.data.get('action', 'save')  # save 或 publish
+                
+                if action == 'publish':
+                    # 发布公告
+                    announcement = serializer.save(
+                        status='published',
+                        published_at=timezone.now()
+                    )
+                    message = "公告已发布"
+                else:
+                    # 保存草稿
+                    announcement = serializer.save()
+                    message = "草稿已保存"
+                
+                logger.info(f"公告 {announcement_id} 已更新: {announcement.title}")
+                
+                return Response({
+                    "code": 200,
+                    "message": message,
+                    "data": {
+                        "id": announcement.id,
+                        "title": announcement.title,
+                        "status": announcement.status,
+                        "updated_at": announcement.updated_at.strftime('%Y-%m-%d %H:%M:%S')
+                    }
+                })
+            else:
+                return Response({
+                    "code": 400,
+                    "message": "数据验证失败",
+                    "errors": serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+                
+        except Announcement.DoesNotExist:
+            return Response({
+                "code": 404,
+                "message": "公告不存在"
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"更新公告失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"更新公告失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class AnnouncementStatusView(APIView):
+    """公告状态管理接口"""
+    permission_classes = []
+    
+    def patch(self, request, announcement_id):
+        """更新公告状态（发布/撤回）"""
+        try:
+            announcement = Announcement.objects.get(id=announcement_id)
+            action = request.data.get('action')
+            
+            if action == 'publish':
+                if announcement.status != 'draft':
+                    return Response({
+                        "code": 400,
+                        "message": "只能发布草稿状态的公告"
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                
+                announcement.publish()
+                message = "公告已发布"
+                
+            elif action == 'withdraw':
+                if announcement.status != 'published':
+                    return Response({
+                        "code": 400,
+                        "message": "只能撤回已发布的公告"
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                
+                announcement.withdraw()
+                message = "公告已撤回"
+                
+            else:
+                return Response({
+                    "code": 400,
+                    "message": "无效的操作类型"
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            logger.info(f"公告 {announcement_id} 状态已更新为: {announcement.status}")
+            
+            return Response({
+                "code": 200,
+                "message": message,
+                "data": {
+                    "id": announcement.id,
+                    "status": announcement.status,
+                    "updated_at": announcement.updated_at.strftime('%Y-%m-%d %H:%M:%S')
+                }
+            })
+            
+        except Announcement.DoesNotExist:
+            return Response({
+                "code": 404,
+                "message": "公告不存在"
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"更新公告状态失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"更新公告状态失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class AnnouncementDeleteView(APIView):
+    """公告删除接口"""
+    permission_classes = []
+    
+    def delete(self, request, announcement_id):
+        """删除公告（硬删除）"""
+        try:
+            announcement = Announcement.objects.get(id=announcement_id)
+            
+            # 记录删除信息
+            title = announcement.title
+            status = announcement.status
+            
+            # 删除公告
+            announcement.delete()
+            
+            logger.info(f"公告已删除: {title} (状态: {status})")
+            
+            return Response({
+                "code": 200,
+                "message": "公告已删除"
+            })
+            
+        except Announcement.DoesNotExist:
+            return Response({
+                "code": 404,
+                "message": "公告不存在"
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"删除公告失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"删除公告失败: {str(e)}"
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
