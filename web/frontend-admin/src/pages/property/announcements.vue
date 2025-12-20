@@ -130,11 +130,12 @@
           <v-select
             v-if="form.scope === 'building'"
             v-model="form.targetBuildings"
-            :items="['1栋', '2栋', '3栋', '4栋']"
+            :items="buildingOptions"
             label="选择楼栋"
             variant="outlined"
             multiple
             chips
+            :rules="[v => form.scope === 'all' || (v && v.length > 0) || '请选择至少一个楼栋']"
           />
         </v-card-text>
         <v-card-actions>
@@ -221,6 +222,7 @@ function formatTime(time: string) {
 const editorDialog = ref(false)
 const editingAnnouncement = ref<Announcement | null>(null)
 const categoryOptions = ref<Array<{value: string, label: string}>>([])
+const buildingOptions = ref<string[]>([])
 const form = reactive({
   title: '',
   content: '',
@@ -367,7 +369,10 @@ function showSnackbar(color: string, text: string) {
 
 onMounted(async () => {
   propertyStore.loadAll()
-  await loadCategoryOptions()
+  await Promise.all([
+    loadCategoryOptions(),
+    loadBuildingOptions()
+  ])
 })
 
 // 加载分类选项
@@ -385,6 +390,27 @@ async function loadCategoryOptions() {
       { value: 'community_news', label: '社区新闻' },
       { value: 'warm_tips', label: '温馨提示' }
     ]
+  }
+}
+
+// 加载楼栋选项
+async function loadBuildingOptions() {
+  console.log('开始加载楼栋选项...')
+  try {
+    const response = await propertyAPI.getBuildingOptions()
+    console.log('楼栋选项API响应:', response)
+    if (response.code === 200) {
+      buildingOptions.value = response.data || []
+      console.log('楼栋选项加载成功:', buildingOptions.value)
+    } else {
+      console.error('楼栋选项API返回错误:', response)
+      // 使用默认楼栋选项作为备选
+      buildingOptions.value = ['1栋', '2栋', '3栋', '4栋']
+    }
+  } catch (error) {
+    console.error('加载楼栋选项失败:', error)
+    // 使用默认楼栋选项作为备选
+    buildingOptions.value = ['1栋', '2栋', '3栋', '4栋']
   }
 }
 

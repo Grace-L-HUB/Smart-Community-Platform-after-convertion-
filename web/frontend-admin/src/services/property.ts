@@ -329,6 +329,13 @@ class PropertyAPI {
   async getAnnouncementCategories(): Promise<ApiResponse<any>> {
     return apiClient.get('/property/announcements/options/categories')
   }
+
+  /**
+   * 获取楼栋列表选项
+   */
+  async getBuildingOptions(): Promise<ApiResponse<string[]>> {
+    return apiClient.get('/property/house/options/buildings')
+  }
 }
 
 // 创建并导出 API 实例

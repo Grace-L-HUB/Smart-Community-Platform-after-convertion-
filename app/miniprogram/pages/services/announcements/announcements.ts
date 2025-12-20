@@ -16,10 +16,13 @@ Page({
             '温馨提示': 'warm_tips'
         } as Record<string, string>,
         // 原始数据存储
-        allAnnouncements: [] as any[]
+        allAnnouncements: [] as any[],
+        // 用户房屋绑定信息
+        userBuildings: [] as string[]
     },
 
     onLoad() {
+        this.loadUserBuildings();
         this.loadAnnouncements();
     },
 
@@ -49,6 +52,7 @@ Page({
                             views: item.read_count || 0,
                             status: item.status,
                             scope: item.scope,
+                            target_buildings: item.target_buildings || [], // 存储目标楼栋信息
                             created_at: item.created_at,
                             content: item.content
                         }))
@@ -132,9 +136,66 @@ Page({
         }
     },
 
+    // 加载用户房屋绑定信息
+    loadUserBuildings() {
+        // 获取用户信息
+        const userInfo = wx.getStorageSync('userInfo');
+        if (!userInfo || !userInfo.user_id) {
+            console.log('用户未登录，无法获取房屋绑定信息');
+            return;
+        }
+
+        wx.request({
+            url: `http://127.0.0.1:8000/api/property/house/my-houses?user_id=${userInfo.user_id}`,
+            method: 'GET',
+            success: (res: any) => {
+                if (res.statusCode === 200 && res.data.code === 200) {
+                    const bindings = res.data.data || [];
+                    // 提取用户绑定的楼栋名称
+                    const userBuildings = bindings.map((binding: any) => 
+                        binding.house_info?.building_name
+                    ).filter((building: string) => building);
+                    
+                    this.setData({ userBuildings });
+                    console.log('用户绑定的楼栋:', userBuildings);
+                    
+                    // 重新应用筛选条件（包含身份校验）
+                    this.applyFilter();
+                } else {
+                    console.error('获取用户房屋绑定信息失败:', res.data);
+                }
+            },
+            fail: (err) => {
+                console.error('获取用户房屋绑定信息网络请求失败:', err);
+            }
+        });
+    },
+
+    // 校验用户是否有权限查看指定楼栋的公告
+    canViewBuildingAnnouncement(targetBuildings: string[]): boolean {
+        if (!targetBuildings || targetBuildings.length === 0) {
+            return true; // 没有指定楼栋，默认可以查看
+        }
+        
+        // 检查用户绑定的楼栋是否与公告目标楼栋有交集
+        return this.data.userBuildings.some(userBuilding => 
+            targetBuildings.includes(userBuilding)
+        );
+    },
+
     // 应用筛选条件
     applyFilter() {
         let filtered = [...this.data.allAnnouncements];
+        
+        // 身份校验：过滤掉用户无权查看的楼栋公告
+        filtered = filtered.filter((item: any) => {
+            if (item.scope === 'all') {
+                return true; // 全员公告，所有人都可以看
+            } else if (item.scope === 'building') {
+                return this.canViewBuildingAnnouncement(item.target_buildings);
+            }
+            return true;
+        });
         
         // 按分类筛选
         if (this.data.activeTab > 0) {

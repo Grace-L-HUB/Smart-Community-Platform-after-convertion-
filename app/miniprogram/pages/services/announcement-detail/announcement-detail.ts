@@ -13,13 +13,17 @@ Page({
         publisher: '',
         author: '',
         scope: '',
-        status: ''
+        status: '',
+        target_buildings: [] as string[],
+        // 用户房屋绑定信息
+        userBuildings: [] as string[]
     },
 
     onLoad(options: any) {
         if (options.id) {
             const announcementId = parseInt(options.id);
             this.setData({ id: announcementId });
+            this.loadUserBuildings();
             this.loadAnnouncementDetail(announcementId);
         } else {
             wx.showToast({
@@ -42,6 +46,20 @@ Page({
                 if (res.statusCode === 200 && res.data.code === 200) {
                     const announcement = res.data.data;
                     
+                    // 权限校验：检查用户是否有权限查看此公告
+                    if (!this.canViewBuildingAnnouncement(announcement.scope, announcement.target_buildings || [])) {
+                        wx.showModal({
+                            title: '无权限',
+                            content: '您无权查看此公告，可能是因为您未绑定相关楼栋。',
+                            showCancel: false,
+                            success: () => {
+                                wx.navigateBack();
+                            }
+                        });
+                        this.setData({ loading: false });
+                        return;
+                    }
+                    
                     this.setData({
                         id: announcement.id,
                         title: announcement.title,
@@ -53,6 +71,7 @@ Page({
                         category: this.getCategoryName(announcement.category, announcement.category_text),
                         scope: announcement.scope,
                         status: announcement.status,
+                        target_buildings: announcement.target_buildings || [],
                         isTop: false, // 暂未实现置顶功能
                         attachments: [], // 暂未实现附件功能
                         loading: false
@@ -117,6 +136,54 @@ Page({
         };
         
         return categoryMap[category] || '物业通知';
+    },
+
+    // 加载用户房屋绑定信息
+    loadUserBuildings() {
+        // 获取用户信息
+        const userInfo = wx.getStorageSync('userInfo');
+        if (!userInfo || !userInfo.user_id) {
+            console.log('用户未登录，无法获取房屋绑定信息');
+            return;
+        }
+
+        wx.request({
+            url: `http://127.0.0.1:8000/api/property/house/my-houses?user_id=${userInfo.user_id}`,
+            method: 'GET',
+            success: (res: any) => {
+                if (res.statusCode === 200 && res.data.code === 200) {
+                    const bindings = res.data.data || [];
+                    // 提取用户绑定的楼栋名称
+                    const userBuildings = bindings.map((binding: any) => 
+                        binding.house_info?.building_name
+                    ).filter((building: string) => building);
+                    
+                    this.setData({ userBuildings });
+                    console.log('详情页-用户绑定的楼栋:', userBuildings);
+                } else {
+                    console.error('获取用户房屋绑定信息失败:', res.data);
+                }
+            },
+            fail: (err) => {
+                console.error('获取用户房屋绑定信息网络请求失败:', err);
+            }
+        });
+    },
+
+    // 校验用户是否有权限查看指定楼栋的公告
+    canViewBuildingAnnouncement(scope: string, targetBuildings: string[]): boolean {
+        if (scope === 'all') {
+            return true; // 全员公告，所有人都可以看
+        }
+        
+        if (scope === 'building' && targetBuildings && targetBuildings.length > 0) {
+            // 检查用户绑定的楼栋是否与公告目标楼栋有交集
+            return this.data.userBuildings.some((userBuilding: string) => 
+                targetBuildings.includes(userBuilding)
+            );
+        }
+        
+        return true;
     },
 
     increaseViews() {
