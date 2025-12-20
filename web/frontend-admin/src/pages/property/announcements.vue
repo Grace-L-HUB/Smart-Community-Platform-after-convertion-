@@ -100,6 +100,17 @@
             :rules="[v => !!v || '请输入标题']"
           />
 
+          <v-select
+            v-model="form.category"
+            :items="categoryOptions"
+            label="公告分类"
+            variant="outlined"
+            class="mb-4"
+            item-title="label"
+            item-value="value"
+            :rules="[v => !!v || '请选择分类']"
+          />
+
           <div class="mb-4">
             <div class="text-body-2 mb-2">公告内容</div>
             <QuillEditor
@@ -164,6 +175,7 @@ import { QuillEditor } from '@vueup/vue-quill'
 import '@vueup/vue-quill/dist/vue-quill.snow.css'
 import { usePropertyStore, type Announcement } from '@/stores/property'
 import { useAuthStore } from '@/stores'
+import { propertyAPI } from '@/services/property'
 import dayjs from 'dayjs'
 
 const propertyStore = usePropertyStore()
@@ -208,9 +220,11 @@ function formatTime(time: string) {
 // 编辑器
 const editorDialog = ref(false)
 const editingAnnouncement = ref<Announcement | null>(null)
+const categoryOptions = ref<Array<{value: string, label: string}>>([])
 const form = reactive({
   title: '',
   content: '',
+  category: 'property_notice',
   scope: 'all' as 'all' | 'building',
   targetBuildings: [] as string[],
 })
@@ -220,11 +234,13 @@ function openEditor(announcement: Announcement | null) {
   if (announcement) {
     form.title = announcement.title
     form.content = announcement.content
+    form.category = (announcement as any).category || 'property_notice'
     form.scope = announcement.scope
     form.targetBuildings = announcement.targetBuildings || []
   } else {
     form.title = ''
     form.content = ''
+    form.category = 'property_notice'
     form.scope = 'all'
     form.targetBuildings = []
   }
@@ -243,6 +259,7 @@ async function saveAsDraft() {
       await propertyStore.updateAnnouncement(editingAnnouncement.value.id, {
         title: form.title,
         content: form.content,
+        category: form.category,
         scope: form.scope,
         targetBuildings: form.targetBuildings,
         action: 'save'
@@ -252,6 +269,7 @@ async function saveAsDraft() {
       await propertyStore.addAnnouncement({
         title: form.title,
         content: form.content,
+        category: form.category,
         scope: form.scope,
         targetBuildings: form.targetBuildings,
         author: authStore.userName || '管理员',
@@ -279,6 +297,7 @@ async function publishAnnouncement() {
       await propertyStore.updateAnnouncement(editingAnnouncement.value.id, {
         title: form.title,
         content: form.content,
+        category: form.category,
         scope: form.scope,
         targetBuildings: form.targetBuildings,
         action: 'publish'
@@ -288,6 +307,7 @@ async function publishAnnouncement() {
       await propertyStore.addAnnouncement({
         title: form.title,
         content: form.content,
+        category: form.category,
         scope: form.scope,
         targetBuildings: form.targetBuildings,
         author: authStore.userName || '管理员',
@@ -345,9 +365,28 @@ function showSnackbar(color: string, text: string) {
   snackbar.value = true
 }
 
-onMounted(() => {
+onMounted(async () => {
   propertyStore.loadAll()
+  await loadCategoryOptions()
 })
+
+// 加载分类选项
+async function loadCategoryOptions() {
+  try {
+    const response = await propertyAPI.getAnnouncementCategories()
+    if (response.code === 200) {
+      categoryOptions.value = response.data.categories
+    }
+  } catch (error) {
+    console.error('加载分类选项失败:', error)
+    // 使用默认分类选项作为备选
+    categoryOptions.value = [
+      { value: 'property_notice', label: '物业通知' },
+      { value: 'community_news', label: '社区新闻' },
+      { value: 'warm_tips', label: '温馨提示' }
+    ]
+  }
+}
 
 defineOptions({
   layout: 'admin',

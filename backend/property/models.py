@@ -312,10 +312,17 @@ class Announcement(models.Model):
         ('building', '指定楼栋'),
     )
     
+    CATEGORY_CHOICES = (
+        ('property_notice', '物业通知'),
+        ('community_news', '社区新闻'),
+        ('warm_tips', '温馨提示'),
+    )
+    
     # 基本信息
     title = models.CharField(max_length=200, verbose_name="公告标题")
     content = models.TextField(verbose_name="公告内容")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft', verbose_name="状态")
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='property_notice', verbose_name="公告分类")
     
     # 发送范围
     scope = models.CharField(max_length=20, choices=SCOPE_CHOICES, default='all', verbose_name="发送范围")

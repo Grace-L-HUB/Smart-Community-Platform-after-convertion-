@@ -356,7 +356,7 @@ class AnnouncementCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Announcement
         fields = [
-            'title', 'content', 'scope', 'target_buildings'
+            'title', 'content', 'category', 'scope', 'target_buildings'
         ]
     
     def validate(self, data):
@@ -394,6 +394,7 @@ class AnnouncementListSerializer(serializers.ModelSerializer):
     author = serializers.CharField(source='author_name', read_only=True)
     status_text = serializers.CharField(source='get_status_display', read_only=True)
     scope_text = serializers.CharField(source='get_scope_display', read_only=True)
+    category_text = serializers.CharField(source='get_category_display', read_only=True)
     created_at = serializers.DateTimeField(format='%Y-%m-%d %H:%M:%S', read_only=True)
     published_at = serializers.DateTimeField(format='%Y-%m-%d %H:%M:%S', read_only=True)
     
@@ -401,7 +402,7 @@ class AnnouncementListSerializer(serializers.ModelSerializer):
         model = Announcement
         fields = [
             'id', 'title', 'content', 'status', 'status_text', 
-            'scope', 'scope_text', 'target_buildings',
+            'category', 'category_text', 'scope', 'scope_text', 'target_buildings',
             'author', 'created_at', 'published_at', 'read_count'
         ]
 
@@ -411,6 +412,7 @@ class AnnouncementDetailSerializer(serializers.ModelSerializer):
     author = serializers.CharField(source='author_name', read_only=True)
     status_text = serializers.CharField(source='get_status_display', read_only=True)
     scope_text = serializers.CharField(source='get_scope_display', read_only=True)
+    category_text = serializers.CharField(source='get_category_display', read_only=True)
     author_info = serializers.SerializerMethodField()
     created_at = serializers.DateTimeField(format='%Y-%m-%d %H:%M:%S', read_only=True)
     updated_at = serializers.DateTimeField(format='%Y-%m-%d %H:%M:%S', read_only=True)
@@ -421,7 +423,7 @@ class AnnouncementDetailSerializer(serializers.ModelSerializer):
         model = Announcement
         fields = [
             'id', 'title', 'content', 'status', 'status_text',
-            'scope', 'scope_text', 'target_buildings',
+            'category', 'category_text', 'scope', 'scope_text', 'target_buildings',
             'author', 'author_info', 'created_at', 'updated_at',
             'published_at', 'withdrawn_at', 'read_count'
         ]

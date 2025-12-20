@@ -9,7 +9,8 @@ from .views import (
     ParkingAreaOptionsView, ParkingSpaceOptionsView,
     HouseIdentityOptionsView, ParkingIdentityOptionsView,
     AnnouncementListView, AnnouncementCreateView, AnnouncementDetailView,
-    AnnouncementUpdateView, AnnouncementStatusView, AnnouncementDeleteView
+    AnnouncementUpdateView, AnnouncementStatusView, AnnouncementDeleteView,
+    AnnouncementCategoryOptionsView
 )
 
 urlpatterns = [
@@ -87,6 +88,9 @@ urlpatterns = [
     path('property/announcements/<int:announcement_id>/update', AnnouncementUpdateView.as_view(), name='announcement_update'),
     path('property/announcements/<int:announcement_id>/status', AnnouncementStatusView.as_view(), name='announcement_status'),
     path('property/announcements/<int:announcement_id>/delete', AnnouncementDeleteView.as_view(), name='announcement_delete'),
+    
+    # 公告选项数据
+    path('property/announcements/options/categories', AnnouncementCategoryOptionsView.as_view(), name='announcement_categories'),
     
     # 公告列表（放在最后，避免匹配冲突）
     path('property/announcements', AnnouncementListView.as_view(), name='announcement_list'),

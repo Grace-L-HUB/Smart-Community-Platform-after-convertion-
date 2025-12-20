@@ -122,6 +122,7 @@ export interface AnnouncementAPI {
 export interface AnnouncementCreateData {
   title: string
   content: string
+  category: string
   scope: 'all' | 'building'
   target_buildings?: string[]
   action?: 'draft' | 'publish' // draft=保存草稿, publish=直接发布
@@ -320,6 +321,13 @@ class PropertyAPI {
    */
   async deleteAnnouncement(id: number): Promise<ApiResponse<any>> {
     return apiClient.delete(`/property/announcements/${id}/delete`)
+  }
+
+  /**
+   * 获取公告分类选项
+   */
+  async getAnnouncementCategories(): Promise<ApiResponse<any>> {
+    return apiClient.get('/property/announcements/options/categories')
   }
 }
 

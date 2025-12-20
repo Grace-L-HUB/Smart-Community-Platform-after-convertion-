@@ -50,7 +50,7 @@ Page({
                         views: announcement.read_count || 0,
                         author: announcement.author || '系统',
                         publisher: announcement.author || '物业管理处',
-                        category: this.getCategoryName(announcement.scope, announcement.target_buildings),
+                        category: this.getCategoryName(announcement.category, announcement.category_text),
                         scope: announcement.scope,
                         status: announcement.status,
                         isTop: false, // 暂未实现置顶功能
@@ -102,14 +102,21 @@ Page({
                String(time.getMinutes()).padStart(2, '0');
     },
 
-    // 根据scope和target_buildings生成分类名称
-    getCategoryName(scope: string, targetBuildings: string[]): string {
-        if (scope === 'all') {
-            return '物业通知';
-        } else if (scope === 'building' && targetBuildings && targetBuildings.length > 0) {
-            return '楼栋通知';
+    // 根据category字段获取分类名称
+    getCategoryName(category: string, categoryText?: string): string {
+        // 优先使用后端返回的分类文本
+        if (categoryText) {
+            return categoryText;
         }
-        return '社区公告';
+        
+        // 备用映射
+        const categoryMap: Record<string, string> = {
+            'property_notice': '物业通知',
+            'community_news': '社区新闻',
+            'warm_tips': '温馨提示'
+        };
+        
+        return categoryMap[category] || '物业通知';
     },
 
     increaseViews() {

@@ -1723,3 +1723,35 @@ class AnnouncementDeleteView(APIView):
                 "code": 500,
                 "message": f"删除公告失败: {str(e)}"
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class AnnouncementCategoryOptionsView(APIView):
+    """公告分类选项API"""
+    permission_classes = []
+    
+    def get(self, request):
+        """获取公告分类选项"""
+        try:
+            from .models import Announcement
+            
+            # 获取分类选项
+            category_options = []
+            for value, label in Announcement.CATEGORY_CHOICES:
+                category_options.append({
+                    "value": value,
+                    "label": label
+                })
+            
+            return Response({
+                "code": 200,
+                "message": "获取成功",
+                "data": {
+                    "categories": category_options
+                }
+            })
+        except Exception as e:
+            logger.error(f"获取公告分类选项失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"获取公告分类选项失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -87,6 +87,7 @@ export interface Announcement {
     id: number
     title: string
     content: string
+    category?: string
     scope: 'all' | 'building'
     targetBuildings?: string[]
     author: string

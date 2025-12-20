@@ -510,6 +510,7 @@ export const usePropertyStore = defineStore('property', {
                 const createData: AnnouncementCreateData = {
                     title: announcementData.title,
                     content: announcementData.content,
+                    category: (announcementData as any).category || 'property_notice',
                     scope: announcementData.scope,
                     target_buildings: announcementData.targetBuildings,
                     action: announcementData.action || (announcementData.status === 'published' ? 'publish' : 'draft'),
@@ -540,6 +541,7 @@ export const usePropertyStore = defineStore('property', {
                 const updateData: AnnouncementCreateData = {
                     title: announcementData.title!,
                     content: announcementData.content!,
+                    category: (announcementData as any).category || 'property_notice',
                     scope: announcementData.scope!,
                     target_buildings: announcementData.targetBuildings,
                     action: announcementData.action || 'save',

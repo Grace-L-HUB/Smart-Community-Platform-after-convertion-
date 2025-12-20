@@ -8,8 +8,13 @@ Page({
         hasMore: false,
         loading: false,
         page: 1,
-        // 分类标签
+        // 分类标签（与后端保持一致）
         categories: ['全部', '物业通知', '社区新闻', '温馨提示'],
+        categoryMapping: {
+            '物业通知': 'property_notice',
+            '社区新闻': 'community_news', 
+            '温馨提示': 'warm_tips'
+        } as Record<string, string>,
         // 原始数据存储
         allAnnouncements: [] as any[]
     },
@@ -36,7 +41,8 @@ Page({
                         .map((item: any) => ({
                             id: item.id,
                             isTop: false, // 后端暂未实现置顶功能，可后续添加
-                            category: this.getCategoryName(item.scope, item.target_buildings),
+                            category: this.getCategoryName(item.category, item.category_text),
+                            categoryValue: item.category, // 存储原始分类值用于筛选
                             title: item.title,
                             summary: this.stripHtml(item.content).substring(0, 100) + '...',
                             time: this.formatTime(item.created_at),
@@ -78,14 +84,21 @@ Page({
         });
     },
 
-    // 根据scope和target_buildings生成分类名称
-    getCategoryName(scope: string, targetBuildings: string[]): string {
-        if (scope === 'all') {
-            return '物业通知';
-        } else if (scope === 'building' && targetBuildings && targetBuildings.length > 0) {
-            return '楼栋通知';
+    // 根据category字段获取分类名称
+    getCategoryName(category: string, categoryText?: string): string {
+        // 优先使用后端返回的分类文本
+        if (categoryText) {
+            return categoryText;
         }
-        return '社区公告';
+        
+        // 备用映射
+        const categoryMap: Record<string, string> = {
+            'property_notice': '物业通知',
+            'community_news': '社区新闻', 
+            'warm_tips': '温馨提示'
+        };
+        
+        return categoryMap[category] || '物业通知';
     },
 
     // 去除HTML标签
@@ -125,8 +138,11 @@ Page({
         
         // 按分类筛选
         if (this.data.activeTab > 0) {
-            const activeCategory = this.data.categories[this.data.activeTab];
-            filtered = filtered.filter((item: any) => item.category === activeCategory);
+            const activeCategoryName = this.data.categories[this.data.activeTab];
+            const activeCategoryValue = this.data.categoryMapping[activeCategoryName];
+            if (activeCategoryValue) {
+                filtered = filtered.filter((item: any) => item.categoryValue === activeCategoryValue);
+            }
         }
         
         // 按搜索关键字筛选
