@@ -10,7 +10,10 @@ from .views import (
     HouseIdentityOptionsView, ParkingIdentityOptionsView,
     AnnouncementListView, AnnouncementCreateView, AnnouncementDetailView,
     AnnouncementUpdateView, AnnouncementStatusView, AnnouncementDeleteView,
-    AnnouncementCategoryOptionsView
+    AnnouncementCategoryOptionsView,
+    RepairOrderView, RepairOrderDetailView, RepairOrderAssignView,
+    RepairOrderCompleteView, RepairOrderRejectView, RepairOrderRatingView,
+    RepairEmployeeView, RepairOrderOptionsView
 )
 
 urlpatterns = [
@@ -94,4 +97,22 @@ urlpatterns = [
     
     # 公告列表（放在最后，避免匹配冲突）
     path('property/announcements', AnnouncementListView.as_view(), name='announcement_list'),
+    
+    # ===== 报修工单相关路由 =====
+    
+    # 报修工单基本操作
+    path('property/repair-orders', RepairOrderView.as_view(), name='repair_order_list_create'),
+    path('property/repair-orders/<int:order_id>', RepairOrderDetailView.as_view(), name='repair_order_detail'),
+    
+    # 工单流程操作
+    path('property/repair-orders/<int:order_id>/assign', RepairOrderAssignView.as_view(), name='repair_order_assign'),
+    path('property/repair-orders/<int:order_id>/complete', RepairOrderCompleteView.as_view(), name='repair_order_complete'),
+    path('property/repair-orders/<int:order_id>/reject', RepairOrderRejectView.as_view(), name='repair_order_reject'),
+    path('property/repair-orders/<int:order_id>/rating', RepairOrderRatingView.as_view(), name='repair_order_rating'),
+    
+    # 维修人员管理
+    path('property/repair-employees', RepairEmployeeView.as_view(), name='repair_employee_list'),
+    
+    # 报修选项数据
+    path('property/repair-orders/options', RepairOrderOptionsView.as_view(), name='repair_order_options'),
 ]

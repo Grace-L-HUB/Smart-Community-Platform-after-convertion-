@@ -3,15 +3,20 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from django.db import models
 from .models import (
     HouseBindingApplication, HouseUserBinding, Visitor,
-    ParkingBindingApplication, ParkingUserBinding, Announcement
+    ParkingBindingApplication, ParkingUserBinding, Announcement,
+    RepairOrder, RepairOrderImage, RepairEmployee
 )
 from .serializers import (
     HouseBindingApplicationSerializer, HouseUserBindingSerializer,
     VisitorCreateSerializer, VisitorListSerializer, VisitorDetailSerializer,
     ParkingBindingApplicationSerializer, ParkingUserBindingSerializer,
-    AnnouncementCreateSerializer, AnnouncementListSerializer, AnnouncementDetailSerializer
+    AnnouncementCreateSerializer, AnnouncementListSerializer, AnnouncementDetailSerializer,
+    RepairOrderCreateSerializer, RepairOrderListSerializer, RepairOrderDetailSerializer,
+    RepairOrderAssignSerializer, RepairOrderCompleteSerializer, RepairOrderRatingSerializer,
+    RepairEmployeeSerializer
 )
 import logging
 import json
@@ -1754,4 +1759,419 @@ class AnnouncementCategoryOptionsView(APIView):
             return Response({
                 "code": 500,
                 "message": f"获取公告分类选项失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ===== 报修工单相关视图 =====
+
+class RepairOrderView(APIView):
+    """报修工单接口"""
+    permission_classes = []  # 暂时不需要权限认证
+
+    def post(self, request):
+        """提交报修工单"""
+        # TODO: 后续添加JWT认证后，从token获取用户
+        user_id = request.data.get('user_id')
+        if not user_id:
+            return Response({
+                "code": 400,
+                "message": "缺少用户ID参数"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({
+                "code": 404,
+                "message": "用户不存在"
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            serializer = RepairOrderCreateSerializer(data=request.data)
+            if serializer.is_valid():
+                # 设置报修人
+                repair_order = serializer.save(reporter=user)
+                
+                # 返回创建的工单详情
+                detail_serializer = RepairOrderDetailSerializer(repair_order)
+                return Response({
+                    "code": 200,
+                    "message": "报修工单提交成功",
+                    "data": detail_serializer.data
+                })
+            else:
+                return Response({
+                    "code": 400,
+                    "message": "数据验证失败",
+                    "errors": serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error(f"提交报修工单失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"提交报修工单失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def get(self, request):
+        """获取报修工单列表"""
+        try:
+            # 获取筛选参数
+            status_filter = request.GET.get('status')
+            type_filter = request.GET.get('type')
+            keyword = request.GET.get('keyword', '').strip()
+            user_id = request.GET.get('user_id')  # 用于筛选用户自己的工单
+            
+            # 构建查询条件
+            queryset = RepairOrder.objects.all()
+            
+            if status_filter:
+                queryset = queryset.filter(status=status_filter)
+            
+            if type_filter:
+                queryset = queryset.filter(repair_type=type_filter)
+            
+            if keyword:
+                queryset = queryset.filter(
+                    models.Q(order_no__icontains=keyword) |
+                    models.Q(reporter_name__icontains=keyword) |
+                    models.Q(location__icontains=keyword) |
+                    models.Q(summary__icontains=keyword)
+                )
+            
+            if user_id:
+                queryset = queryset.filter(reporter_id=user_id)
+            
+            # 排序
+            queryset = queryset.order_by('-created_at')
+            
+            # 分页
+            page = int(request.GET.get('page', 1))
+            page_size = int(request.GET.get('page_size', 10))
+            start = (page - 1) * page_size
+            end = start + page_size
+            
+            total = queryset.count()
+            orders = queryset[start:end]
+            
+            serializer = RepairOrderListSerializer(orders, many=True)
+            
+            return Response({
+                "code": 200,
+                "message": "获取成功",
+                "data": {
+                    "list": serializer.data,
+                    "total": total,
+                    "page": page,
+                    "page_size": page_size,
+                    "total_pages": (total + page_size - 1) // page_size
+                }
+            })
+        except Exception as e:
+            logger.error(f"获取报修工单列表失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"获取报修工单列表失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class RepairOrderDetailView(APIView):
+    """报修工单详情接口"""
+    permission_classes = []
+
+    def get(self, request, order_id):
+        """获取工单详情"""
+        try:
+            order = RepairOrder.objects.get(id=order_id)
+            serializer = RepairOrderDetailSerializer(order)
+            
+            return Response({
+                "code": 200,
+                "message": "获取成功",
+                "data": serializer.data
+            })
+        except RepairOrder.DoesNotExist:
+            return Response({
+                "code": 404,
+                "message": "工单不存在"
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"获取工单详情失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"获取工单详情失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class RepairOrderAssignView(APIView):
+    """工单派单接口"""
+    permission_classes = []
+
+    def post(self, request, order_id):
+        """派单"""
+        try:
+            order = RepairOrder.objects.get(id=order_id)
+            
+            if order.status != 'pending':
+                return Response({
+                    "code": 400,
+                    "message": "只能对待受理的工单进行派单"
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            serializer = RepairOrderAssignSerializer(data=request.data)
+            if serializer.is_valid():
+                assignee = serializer.validated_data['assignee']
+                
+                # TODO: 后续从JWT获取当前用户
+                assigned_by_user_id = request.data.get('assigned_by_user_id')
+                assigned_by_user = None
+                if assigned_by_user_id:
+                    try:
+                        assigned_by_user = User.objects.get(id=assigned_by_user_id)
+                    except User.DoesNotExist:
+                        pass
+                
+                # 执行派单
+                order.assign_to(assignee, assigned_by_user)
+                
+                # 返回更新后的工单信息
+                detail_serializer = RepairOrderDetailSerializer(order)
+                return Response({
+                    "code": 200,
+                    "message": "派单成功",
+                    "data": detail_serializer.data
+                })
+            else:
+                return Response({
+                    "code": 400,
+                    "message": "数据验证失败",
+                    "errors": serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+        except RepairOrder.DoesNotExist:
+            return Response({
+                "code": 404,
+                "message": "工单不存在"
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"派单失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"派单失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class RepairOrderCompleteView(APIView):
+    """工单完成接口"""
+    permission_classes = []
+
+    def post(self, request, order_id):
+        """完成工单"""
+        try:
+            order = RepairOrder.objects.get(id=order_id)
+            
+            if order.status != 'processing':
+                return Response({
+                    "code": 400,
+                    "message": "只能完成处理中的工单"
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            serializer = RepairOrderCompleteSerializer(data=request.data)
+            if serializer.is_valid():
+                result = serializer.validated_data['result']
+                cost = serializer.validated_data.get('cost')
+                
+                # 完成工单
+                order.complete_order(result, cost)
+                
+                # 返回更新后的工单信息
+                detail_serializer = RepairOrderDetailSerializer(order)
+                return Response({
+                    "code": 200,
+                    "message": "工单已完成",
+                    "data": detail_serializer.data
+                })
+            else:
+                return Response({
+                    "code": 400,
+                    "message": "数据验证失败",
+                    "errors": serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+        except RepairOrder.DoesNotExist:
+            return Response({
+                "code": 404,
+                "message": "工单不存在"
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"完成工单失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"完成工单失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class RepairOrderRejectView(APIView):
+    """工单驳回接口"""
+    permission_classes = []
+
+    def post(self, request, order_id):
+        """驳回工单"""
+        try:
+            order = RepairOrder.objects.get(id=order_id)
+            
+            if order.status != 'pending':
+                return Response({
+                    "code": 400,
+                    "message": "只能驳回待受理的工单"
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # 驳回工单
+            order.reject_order()
+            
+            # 返回更新后的工单信息
+            detail_serializer = RepairOrderDetailSerializer(order)
+            return Response({
+                "code": 200,
+                "message": "工单已驳回",
+                "data": detail_serializer.data
+            })
+        except RepairOrder.DoesNotExist:
+            return Response({
+                "code": 404,
+                "message": "工单不存在"
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"驳回工单失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"驳回工单失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class RepairOrderRatingView(APIView):
+    """工单评价接口"""
+    permission_classes = []
+
+    def post(self, request, order_id):
+        """评价工单"""
+        try:
+            order = RepairOrder.objects.get(id=order_id)
+            
+            if order.status != 'completed':
+                return Response({
+                    "code": 400,
+                    "message": "只能对已完成的工单进行评价"
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            if order.is_rated:
+                return Response({
+                    "code": 400,
+                    "message": "该工单已经评价过了"
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            serializer = RepairOrderRatingSerializer(data=request.data)
+            if serializer.is_valid():
+                rating = serializer.validated_data['rating']
+                comment = serializer.validated_data.get('comment', '')
+                
+                # 保存评价
+                order.rating = rating
+                order.rating_comment = comment
+                order.is_rated = True
+                order.rated_at = timezone.now()
+                order.save()
+                
+                # 返回更新后的工单信息
+                detail_serializer = RepairOrderDetailSerializer(order)
+                return Response({
+                    "code": 200,
+                    "message": "评价成功",
+                    "data": detail_serializer.data
+                })
+            else:
+                return Response({
+                    "code": 400,
+                    "message": "数据验证失败",
+                    "errors": serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+        except RepairOrder.DoesNotExist:
+            return Response({
+                "code": 404,
+                "message": "工单不存在"
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"评价工单失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"评价工单失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class RepairEmployeeView(APIView):
+    """维修人员接口"""
+    permission_classes = []
+
+    def get(self, request):
+        """获取维修人员列表"""
+        try:
+            employees = RepairEmployee.objects.filter(is_active=True).order_by('name')
+            serializer = RepairEmployeeSerializer(employees, many=True)
+            
+            return Response({
+                "code": 200,
+                "message": "获取成功",
+                "data": serializer.data
+            })
+        except Exception as e:
+            logger.error(f"获取维修人员列表失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"获取维修人员列表失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class RepairOrderOptionsView(APIView):
+    """报修工单选项接口"""
+    permission_classes = []
+
+    def get(self, request):
+        """获取报修相关的选项数据"""
+        try:
+            # 报修类型选项
+            type_options = [
+                {"label": label, "value": value}
+                for value, label in RepairOrder.TYPE_CHOICES
+            ]
+            
+            # 紧急程度选项
+            priority_options = [
+                {"label": label, "value": value}
+                for value, label in RepairOrder.PRIORITY_CHOICES
+            ]
+            
+            # 报修类别选项
+            category_options = [
+                {"label": label, "value": value}
+                for value, label in RepairOrder.REPAIR_CATEGORY_CHOICES
+            ]
+            
+            # 工单状态选项
+            status_options = [
+                {"label": label, "value": value}
+                for value, label in RepairOrder.STATUS_CHOICES
+            ]
+            
+            return Response({
+                "code": 200,
+                "message": "获取成功",
+                "data": {
+                    "types": type_options,
+                    "priorities": priority_options,
+                    "categories": category_options,
+                    "statuses": status_options
+                }
+            })
+        except Exception as e:
+            logger.error(f"获取报修选项失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"获取报修选项失败: {str(e)}"
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

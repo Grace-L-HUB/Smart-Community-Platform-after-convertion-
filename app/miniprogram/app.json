@@ -11,6 +11,7 @@
     "pages/parking/binding/binding",
     "pages/parking/info/info",
     "pages/repair/repair",
+    "pages/repair-progress/repair-progress",
     "pages/payment/payment",
     "pages/market/market",
     "pages/shop/detail/detail",

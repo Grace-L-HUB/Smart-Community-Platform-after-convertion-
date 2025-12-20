@@ -1,0 +1,332 @@
+/* pages/repair-progress/repair-progress.wxss */
+.container {
+  background-color: var(--bg-color);
+  min-height: 100vh;
+}
+
+/* 顶部操作栏 */
+.top-bar {
+  display: flex;
+  align-items: center;
+  padding: 20rpx;
+  background: #fff;
+  gap: 20rpx;
+}
+
+.search-container {
+  flex: 1;
+}
+
+.new-repair-btn {
+  flex-shrink: 0;
+  width: 140rpx !important;
+  height: 64rpx;
+  border-radius: 32rpx !important;
+}
+
+/* 筛选栏 */
+.filter-bar {
+  background: #fff;
+  border-bottom: 1rpx solid #ebedf0;
+}
+
+/* 工单列表 */
+.order-list {
+  padding: 20rpx;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 120rpx 0;
+}
+
+.empty-image {
+  width: 200rpx;
+  height: 200rpx;
+  margin-bottom: 20rpx;
+}
+
+.empty-text {
+  color: #969799;
+  font-size: 28rpx;
+  margin-bottom: 40rpx;
+}
+
+.empty-action-btn {
+  width: 200rpx !important;
+  border-radius: 40rpx !important;
+}
+
+.order-item {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 30rpx;
+  margin-bottom: 20rpx;
+  box-shadow: var(--shadow-sm);
+}
+
+.order-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.order-no {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #323233;
+}
+
+.order-status {
+  padding: 8rpx 16rpx;
+  border-radius: 20rpx;
+  font-size: 24rpx;
+  color: #fff;
+}
+
+.status-pending {
+  background: #ff976a;
+}
+
+.status-processing {
+  background: #1989fa;
+}
+
+.status-completed {
+  background: #07c160;
+}
+
+.status-rejected {
+  background: #ee0a24;
+}
+
+.order-content {
+  margin-bottom: 20rpx;
+}
+
+.order-summary {
+  font-size: 30rpx;
+  color: #323233;
+  margin-bottom: 16rpx;
+  font-weight: 500;
+}
+
+.order-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  font-size: 26rpx;
+  color: #969799;
+}
+
+.info-item text {
+  margin-left: 8rpx;
+}
+
+.order-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.order-type {
+  font-size: 26rpx;
+  color: #646566;
+}
+
+.order-priority {
+  padding: 4rpx 12rpx;
+  border-radius: 12rpx;
+  font-size: 22rpx;
+  color: #fff;
+}
+
+.priority-low {
+  background: #969799;
+}
+
+.priority-medium {
+  background: #ff976a;
+}
+
+.priority-high {
+  background: #ee0a24;
+}
+
+/* 加载更多 */
+.load-more {
+  text-align: center;
+  padding: 40rpx;
+  color: #969799;
+  font-size: 28rpx;
+}
+
+/* 详情弹窗 */
+.detail-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 30rpx;
+  border-bottom: 1rpx solid #ebedf0;
+  background: #fff;
+}
+
+.detail-title {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #323233;
+}
+
+.detail-content {
+  flex: 1;
+  padding: 30rpx;
+}
+
+/* 状态时间线 */
+.status-timeline {
+  margin-bottom: 40rpx;
+}
+
+.timeline-item {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 30rpx;
+  position: relative;
+}
+
+.timeline-item:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 15rpx;
+  top: 30rpx;
+  width: 2rpx;
+  height: 60rpx;
+  background: #ebedf0;
+}
+
+.timeline-item.active::after {
+  background: #07c160;
+}
+
+.timeline-dot {
+  width: 30rpx;
+  height: 30rpx;
+  border-radius: 50%;
+  background: #ebedf0;
+  margin-right: 20rpx;
+  margin-top: 5rpx;
+  flex-shrink: 0;
+}
+
+.timeline-item.active .timeline-dot {
+  background: #07c160;
+}
+
+.timeline-content {
+  flex: 1;
+}
+
+.timeline-title {
+  font-size: 30rpx;
+  color: #323233;
+  font-weight: 500;
+  margin-bottom: 8rpx;
+}
+
+.timeline-time {
+  font-size: 24rpx;
+  color: #969799;
+  margin-bottom: 4rpx;
+}
+
+.timeline-desc {
+  font-size: 26rpx;
+  color: #646566;
+}
+
+/* 详情区块 */
+.detail-section {
+  margin-bottom: 40rpx;
+}
+
+.section-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #323233;
+  margin-bottom: 20rpx;
+}
+
+.info-row {
+  display: flex;
+  margin-bottom: 16rpx;
+  align-items: flex-start;
+}
+
+.info-label {
+  width: 160rpx;
+  font-size: 28rpx;
+  color: #646566;
+  flex-shrink: 0;
+}
+
+.info-value {
+  flex: 1;
+  font-size: 28rpx;
+  color: #323233;
+  word-break: break-all;
+}
+
+.result-content {
+  font-size: 28rpx;
+  color: #323233;
+  line-height: 1.6;
+  margin-bottom: 16rpx;
+}
+
+.cost-info {
+  font-size: 28rpx;
+  color: #646566;
+}
+
+.cost-amount {
+  color: #07c160;
+  font-weight: bold;
+  font-size: 32rpx;
+}
+
+/* 评价区域 */
+.rating-section {
+  padding: 20rpx;
+  background: #f7f8fa;
+  border-radius: 12rpx;
+}
+
+.rating-display {
+  padding: 20rpx;
+  background: #f7f8fa;
+  border-radius: 12rpx;
+}
+
+.rating-comment {
+  margin: 16rpx 0;
+  font-size: 28rpx;
+  color: #323233;
+  line-height: 1.5;
+}
+
+.rating-time {
+  font-size: 24rpx;
+  color: #969799;
+}

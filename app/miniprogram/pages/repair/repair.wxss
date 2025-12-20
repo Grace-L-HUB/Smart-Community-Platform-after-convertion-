@@ -24,6 +24,27 @@
   margin-left: 40rpx;
 }
 
+.picker-field, .input-field {
+  background: #f7f8fa;
+  border-radius: 12rpx;
+  padding: 20rpx !important;
+}
+
+.location-hint, .contact-hint {
+  font-size: 24rpx;
+  color: #969799;
+  margin-bottom: 16rpx;
+  padding-left: 4rpx;
+}
+
+.location-hint::before {
+  content: "💡 ";
+}
+
+.contact-hint::before {
+  content: "👤 ";
+}
+
 .textarea-field {
   background: #f7f8fa;
   border-radius: 12rpx;

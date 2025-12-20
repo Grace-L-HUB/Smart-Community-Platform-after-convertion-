@@ -130,6 +130,72 @@ export interface AnnouncementCreateData {
   user_id?: number
 }
 
+// 报修工单数据类型
+export interface RepairOrderAPI {
+  id: number
+  order_no: string
+  category: string
+  category_display: string
+  repair_type: string
+  type_display: string
+  priority: string
+  priority_display: string
+  summary: string
+  description: string
+  location: string
+  reporter_name: string
+  reporter_phone: string
+  status: string
+  status_display: string
+  assignee?: string
+  assigned_at?: string
+  assigned_by?: number
+  result?: string
+  cost?: string
+  completed_at?: string
+  created_at: string
+  updated_at: string
+  is_rated: boolean
+  rating?: number
+  rating_comment?: string
+  rated_at?: string
+  images?: RepairOrderImageAPI[]
+}
+
+export interface RepairOrderImageAPI {
+  id: number
+  image: string
+  image_type: 'image' | 'video'
+  uploaded_at: string
+}
+
+export interface RepairEmployeeAPI {
+  id: number
+  name: string
+  phone: string
+  speciality: string
+  is_active: boolean
+  total_orders: number
+  completed_orders: number
+  average_rating: string
+}
+
+export interface RepairOrderCreateData {
+  category: string
+  repair_type: string
+  priority: string
+  location: string
+  summary: string
+  description: string
+  reporter_name: string
+  reporter_phone: string
+  user_id: number
+  images?: Array<{
+    image: string
+    image_type: 'image' | 'video'
+  }>
+}
+
 // ===== API 服务类 =====
 
 class PropertyAPI {
@@ -336,6 +402,80 @@ class PropertyAPI {
   async getBuildingOptions(): Promise<ApiResponse<string[]>> {
     return apiClient.get('/property/house/options/buildings')
   }
+
+  // ===== 报修工单相关 API =====
+
+  /**
+   * 获取报修工单列表
+   */
+  async getRepairOrderList(params?: {
+    page?: number
+    page_size?: number
+    status?: string
+    type?: string
+    keyword?: string
+  }): Promise<ApiResponse<{
+    list: RepairOrderAPI[]
+    total: number
+    page: number
+    page_size: number
+    total_pages: number
+  }>> {
+    return apiClient.get('/property/repair-orders', { params })
+  }
+
+  /**
+   * 获取工单详情
+   */
+  async getRepairOrderDetail(id: number): Promise<ApiResponse<RepairOrderAPI>> {
+    return apiClient.get(`/property/repair-orders/${id}`)
+  }
+
+  /**
+   * 派单
+   */
+  async assignRepairOrder(id: number, assignee: string, assignedByUserId?: number): Promise<ApiResponse<RepairOrderAPI>> {
+    return apiClient.post(`/property/repair-orders/${id}/assign`, {
+      assignee,
+      assigned_by_user_id: assignedByUserId
+    })
+  }
+
+  /**
+   * 完成工单
+   */
+  async completeRepairOrder(id: number, result: string, cost?: number): Promise<ApiResponse<RepairOrderAPI>> {
+    return apiClient.post(`/property/repair-orders/${id}/complete`, {
+      result,
+      cost
+    })
+  }
+
+  /**
+   * 驳回工单
+   */
+  async rejectRepairOrder(id: number): Promise<ApiResponse<RepairOrderAPI>> {
+    return apiClient.post(`/property/repair-orders/${id}/reject`)
+  }
+
+  /**
+   * 获取维修人员列表
+   */
+  async getRepairEmployees(): Promise<ApiResponse<RepairEmployeeAPI[]>> {
+    return apiClient.get('/property/repair-employees')
+  }
+
+  /**
+   * 获取报修选项数据
+   */
+  async getRepairOptions(): Promise<ApiResponse<{
+    types: Array<{ label: string; value: string }>
+    priorities: Array<{ label: string; value: string }>
+    categories: Array<{ label: string; value: string }>
+    statuses: Array<{ label: string; value: string }>
+  }>> {
+    return apiClient.get('/property/repair-orders/options')
+  }
 }
 
 // 创建并导出 API 实例
@@ -348,5 +488,9 @@ export type {
   HouseUserBinding,
   ParkingUserBinding,
   AnnouncementAPI,
-  AnnouncementCreateData
+  AnnouncementCreateData,
+  RepairOrderAPI,
+  RepairOrderImageAPI,
+  RepairEmployeeAPI,
+  RepairOrderCreateData
 }

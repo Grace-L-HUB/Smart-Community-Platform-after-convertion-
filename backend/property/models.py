@@ -370,3 +370,176 @@ class Announcement(models.Model):
             self.status = 'withdrawn'
             self.withdrawn_at = timezone.now()
             self.save()
+
+
+# ===== 报修工单管理模型 =====
+
+class RepairOrder(models.Model):
+    """报修工单模型"""
+    STATUS_CHOICES = (
+        ('pending', '待受理'),
+        ('processing', '处理中'),
+        ('completed', '已完成'),
+        ('rejected', '已驳回'),
+    )
+    
+    TYPE_CHOICES = (
+        ('water', '水电'),
+        ('electric', '电气'),
+        ('door', '门窗'),
+        ('public', '公区'),
+        ('other', '其他'),
+    )
+    
+    PRIORITY_CHOICES = (
+        ('low', '一般'),
+        ('medium', '紧急'),
+        ('high', '非常紧急'),
+    )
+    
+    REPAIR_CATEGORY_CHOICES = (
+        ('public', '公共区域'),
+        ('household', '入户维修'),
+    )
+    
+    # 基本信息
+    order_no = models.CharField(max_length=20, unique=True, verbose_name="工单号")
+    category = models.CharField(max_length=20, choices=REPAIR_CATEGORY_CHOICES, default='household', verbose_name="报修类别")
+    repair_type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='other', verbose_name="报修类型")
+    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='low', verbose_name="紧急程度")
+    
+    # 报修内容
+    summary = models.CharField(max_length=200, verbose_name="问题摘要")
+    description = models.TextField(verbose_name="详细描述")
+    location = models.CharField(max_length=200, verbose_name="报修位置")
+    
+    # 报修人信息
+    reporter = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.CASCADE, 
+        related_name='repair_orders',
+        verbose_name="报修人"
+    )
+    reporter_name = models.CharField(max_length=50, verbose_name="报修人姓名")
+    reporter_phone = models.CharField(max_length=15, verbose_name="联系电话")
+    
+    # 工单状态
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name="工单状态")
+    
+    # 处理信息
+    assignee = models.CharField(max_length=50, blank=True, verbose_name="派单给")
+    assigned_at = models.DateTimeField(null=True, blank=True, verbose_name="派单时间")
+    assigned_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='assigned_repair_orders',
+        verbose_name="派单人"
+    )
+    
+    # 完成信息
+    result = models.TextField(blank=True, verbose_name="处理结果")
+    cost = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="维修费用")
+    completed_at = models.DateTimeField(null=True, blank=True, verbose_name="完成时间")
+    
+    # 时间戳
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="提交时间")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="更新时间")
+    
+    # 评价相关
+    is_rated = models.BooleanField(default=False, verbose_name="是否已评价")
+    rating = models.IntegerField(null=True, blank=True, verbose_name="评分")
+    rating_comment = models.TextField(blank=True, verbose_name="评价内容")
+    rated_at = models.DateTimeField(null=True, blank=True, verbose_name="评价时间")
+    
+    class Meta:
+        verbose_name = "报修工单"
+        verbose_name_plural = "报修工单"
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.order_no} - {self.summary}"
+    
+    def save(self, *args, **kwargs):
+        # 自动生成工单号
+        if not self.order_no:
+            import datetime
+            today = datetime.date.today()
+            date_str = today.strftime('%Y%m%d')
+            # 获取当天最后一个工单号
+            last_order = RepairOrder.objects.filter(
+                order_no__startswith=f'WO{date_str}'
+            ).order_by('-order_no').first()
+            
+            if last_order:
+                # 提取序号并+1
+                last_seq = int(last_order.order_no[-3:])
+                new_seq = last_seq + 1
+            else:
+                new_seq = 1
+            
+            self.order_no = f'WO{date_str}{new_seq:03d}'
+        
+        super().save(*args, **kwargs)
+    
+    def assign_to(self, assignee_name, assigned_by_user):
+        """派单"""
+        self.assignee = assignee_name
+        self.assigned_by = assigned_by_user
+        self.assigned_at = timezone.now()
+        self.status = 'processing'
+        self.save()
+    
+    def complete_order(self, result, cost=None):
+        """完成工单"""
+        self.result = result
+        if cost is not None:
+            self.cost = cost
+        self.status = 'completed'
+        self.completed_at = timezone.now()
+        self.save()
+    
+    def reject_order(self):
+        """驳回工单"""
+        self.status = 'rejected'
+        self.save()
+
+
+class RepairOrderImage(models.Model):
+    """报修工单图片模型"""
+    order = models.ForeignKey(RepairOrder, on_delete=models.CASCADE, related_name='images', verbose_name="关联工单")
+    image = models.CharField(max_length=500, verbose_name="图片URL")  # 存储图片URL
+    image_type = models.CharField(max_length=10, choices=(('image', '图片'), ('video', '视频')), default='image', verbose_name="文件类型")
+    uploaded_at = models.DateTimeField(auto_now_add=True, verbose_name="上传时间")
+    
+    class Meta:
+        verbose_name = "报修工单图片"
+        verbose_name_plural = "报修工单图片"
+        ordering = ['uploaded_at']
+    
+    def __str__(self):
+        return f"{self.order.order_no} - 图片{self.id}"
+
+
+class RepairEmployee(models.Model):
+    """维修人员模型"""
+    name = models.CharField(max_length=50, verbose_name="姓名")
+    phone = models.CharField(max_length=15, verbose_name="联系电话")
+    speciality = models.CharField(max_length=100, verbose_name="专业领域")  # 如"水电维修"、"门窗维修"等
+    is_active = models.BooleanField(default=True, verbose_name="是否在职")
+    
+    # 统计信息
+    total_orders = models.IntegerField(default=0, verbose_name="总工单数")
+    completed_orders = models.IntegerField(default=0, verbose_name="已完成工单数")
+    average_rating = models.DecimalField(max_digits=3, decimal_places=2, default=0, verbose_name="平均评分")
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="更新时间")
+    
+    class Meta:
+        verbose_name = "维修人员"
+        verbose_name_plural = "维修人员"
+        ordering = ['name']
+    
+    def __str__(self):
+        return f"{self.name} - {self.speciality}"

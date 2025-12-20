@@ -24,7 +24,9 @@ import {
     type HouseUserBinding,
     type ParkingUserBinding,
     type AnnouncementAPI,
-    type AnnouncementCreateData
+    type AnnouncementCreateData,
+    type RepairOrderAPI,
+    type RepairEmployeeAPI
 } from '@/services/property'
 
 // 更新数据类型以匹配后端API
@@ -197,6 +199,9 @@ interface PropertyState {
     approvedParkingBindings: ParkingUserBinding[]
     // 公告API数据
     announcementsAPI: AnnouncementAPI[]
+    // 报修工单API数据
+    repairOrdersAPI: RepairOrderAPI[]
+    repairEmployeesAPI: RepairEmployeeAPI[]
 }
 
 export const usePropertyStore = defineStore('property', {
@@ -219,6 +224,9 @@ export const usePropertyStore = defineStore('property', {
         approvedHouseBindings: [],
         approvedParkingBindings: [],
         announcementsAPI: [],
+        // 报修工单状态
+        repairOrdersAPI: [],
+        repairEmployeesAPI: [],
     }),
 
     getters: {
@@ -245,15 +253,15 @@ export const usePropertyStore = defineStore('property', {
             return state.approvedParkingBindings.map(binding => convertParkingBindingToParking(binding))
         },
 
-        // 工单管理
-        pendingWorkOrders: (state) => state.workOrders.filter(o => o.status === 'pending'),
-        processingWorkOrders: (state) => state.workOrders.filter(o => o.status === 'processing'),
-        completedWorkOrders: (state) => state.workOrders.filter(o => o.status === 'completed'),
+        // 工单管理 - 使用API数据
+        pendingWorkOrders: (state) => state.repairOrdersAPI.filter(o => o.status === 'pending'),
+        processingWorkOrders: (state) => state.repairOrdersAPI.filter(o => o.status === 'processing'),
+        completedWorkOrders: (state) => state.repairOrdersAPI.filter(o => o.status === 'completed'),
 
         // 财务与员工
         unpaidBills: (state) => state.bills.filter(b => b.status === 'unpaid'),
         activeEmployees: (state) => state.employees.filter(e => e.status === 'active'),
-        repairEmployees: (state) => state.employees.filter(e => e.role === 'repair' && e.status === 'active'),
+        repairEmployees: (state) => state.repairEmployeesAPI.filter(e => e.is_active),
 
         // 公告
         publishedAnnouncements: (state) => state.announcements.filter(a => a.status === 'published'),
@@ -275,7 +283,9 @@ export const usePropertyStore = defineStore('property', {
                     parkingSpaceListResponse,
                     statsResponse,
                     employeesResponse,
-                    announcementsResponse
+                    announcementsResponse,
+                    repairOrdersResponse,
+                    repairEmployeesResponse
                 ] = await Promise.all([
                     propertyAPI.getHouseBindingAuditList(),
                     propertyAPI.getParkingBindingAuditList(),
@@ -285,7 +295,9 @@ export const usePropertyStore = defineStore('property', {
                     propertyAPI.getParkingSpaceList(),
                     propertyAPI.getDashboardStats(),
                     propertyAPI.getEmployeeList(),
-                    propertyAPI.getAnnouncementList()
+                    propertyAPI.getAnnouncementList(),
+                    propertyAPI.getRepairOrderList(),
+                    propertyAPI.getRepairEmployees()
                 ])
 
                 // 存储原始API数据
@@ -306,8 +318,14 @@ export const usePropertyStore = defineStore('property', {
                 this.announcementsAPI = announcementsResponse.data || []
                 this.announcements = this.convertAnnouncementsToFrontend(this.announcementsAPI)
 
+                // 存储报修工单API数据
+                this.repairOrdersAPI = repairOrdersResponse.data?.list || []
+                this.repairEmployeesAPI = repairEmployeesResponse.data || []
+                
+                // 转换报修工单数据为前端格式
+                this.workOrders = this.convertRepairOrdersToFrontend(this.repairOrdersAPI)
+
                 // 保持mock数据用于其他功能
-                this.workOrders = [...mockWorkOrders]
                 this.bills = [...mockBills]
                 this.activities = [...mockActivities]
                 this.accessLogs = [...mockAccessLogs]
@@ -320,11 +338,14 @@ export const usePropertyStore = defineStore('property', {
                 this.approvedHouseBindings = []
                 this.approvedParkingBindings = []
                 this.announcementsAPI = []
+                this.repairOrdersAPI = []
+                this.repairEmployeesAPI = []
                 this.houses = [...mockHouses] // fallback to mock data
                 this.parkings = [] // 车位数据没有mock，置空
                 this.stats = { ...mockPropertyStats } // fallback to mock stats
                 this.employees = [...mockEmployees] // fallback to mock employees
                 this.announcements = [...mockAnnouncements] // fallback to mock announcements
+                this.workOrders = [...mockWorkOrders] // fallback to mock work orders
             }
 
             this.loading = false
@@ -442,31 +463,80 @@ export const usePropertyStore = defineStore('property', {
             }
         },
 
-        // 工单操作
-        assignWorkOrder(id: number, assignee: string) {
-            const order = this.workOrders.find(o => o.id === id)
-            if (order) {
-                order.status = 'processing'
-                order.assignee = assignee
-                order.updatedAt = new Date().toISOString().replace('T', ' ').slice(0, 19)
+        // ===== 报修工单操作（使用API） =====
+
+        /**
+         * 派单
+         */
+        async assignWorkOrder(id: number, assignee: string) {
+            try {
+                const response = await propertyAPI.assignRepairOrder(id, assignee, 1) // TODO: 从auth store获取真实用户ID
+                
+                if (response.code === 200) {
+                    // 重新加载工单列表
+                    await this.reloadRepairOrders()
+                    return response.data
+                } else {
+                    throw new Error(response.message || '派单失败')
+                }
+            } catch (error) {
+                console.error('派单失败:', error)
+                throw error
             }
         },
 
-        completeWorkOrder(id: number, result: string, cost: number) {
-            const order = this.workOrders.find(o => o.id === id)
-            if (order) {
-                order.status = 'completed'
-                order.result = result
-                order.cost = cost
-                order.updatedAt = new Date().toISOString().replace('T', ' ').slice(0, 19)
+        /**
+         * 完成工单
+         */
+        async completeWorkOrder(id: number, result: string, cost?: number) {
+            try {
+                const response = await propertyAPI.completeRepairOrder(id, result, cost)
+                
+                if (response.code === 200) {
+                    // 重新加载工单列表
+                    await this.reloadRepairOrders()
+                    return response.data
+                } else {
+                    throw new Error(response.message || '完成工单失败')
+                }
+            } catch (error) {
+                console.error('完成工单失败:', error)
+                throw error
             }
         },
 
-        rejectWorkOrder(id: number) {
-            const order = this.workOrders.find(o => o.id === id)
-            if (order) {
-                order.status = 'rejected'
-                order.updatedAt = new Date().toISOString().replace('T', ' ').slice(0, 19)
+        /**
+         * 驳回工单
+         */
+        async rejectWorkOrder(id: number) {
+            try {
+                const response = await propertyAPI.rejectRepairOrder(id)
+                
+                if (response.code === 200) {
+                    // 重新加载工单列表
+                    await this.reloadRepairOrders()
+                    return response.data
+                } else {
+                    throw new Error(response.message || '驳回工单失败')
+                }
+            } catch (error) {
+                console.error('驳回工单失败:', error)
+                throw error
+            }
+        },
+
+        /**
+         * 重新加载报修工单列表
+         */
+        async reloadRepairOrders() {
+            try {
+                const response = await propertyAPI.getRepairOrderList()
+                if (response.code === 200) {
+                    this.repairOrdersAPI = response.data?.list || []
+                    this.workOrders = this.convertRepairOrdersToFrontend(this.repairOrdersAPI)
+                }
+            } catch (error) {
+                console.error('重新加载工单列表失败:', error)
             }
         },
 
@@ -497,6 +567,29 @@ export const usePropertyStore = defineStore('property', {
                 author: apiAnn.author,
                 createdAt: apiAnn.created_at,
                 publishedAt: apiAnn.published_at
+            }))
+        },
+
+        /**
+         * 将后端报修工单数据转换为前端格式
+         */
+        convertRepairOrdersToFrontend(apiOrders: RepairOrderAPI[]): WorkOrder[] {
+            return apiOrders.map(apiOrder => ({
+                id: apiOrder.id,
+                orderNo: apiOrder.order_no,
+                type: apiOrder.repair_type as 'water' | 'electric' | 'door' | 'public' | 'other',
+                summary: apiOrder.summary,
+                description: apiOrder.description,
+                location: apiOrder.location,
+                reporterName: apiOrder.reporter_name,
+                reporterPhone: apiOrder.reporter_phone,
+                status: apiOrder.status as 'pending' | 'processing' | 'completed' | 'rejected',
+                assignee: apiOrder.assignee,
+                result: apiOrder.result,
+                cost: apiOrder.cost ? parseFloat(apiOrder.cost) : undefined,
+                createdAt: apiOrder.created_at,
+                updatedAt: apiOrder.updated_at,
+                images: apiOrder.images?.map(img => img.image) || []
             }))
         },
 
@@ -544,7 +637,7 @@ export const usePropertyStore = defineStore('property', {
                     category: (announcementData as any).category || 'property_notice',
                     scope: announcementData.scope!,
                     target_buildings: announcementData.targetBuildings,
-                    action: announcementData.action || 'save',
+                    action: announcementData.action === 'save' ? 'draft' : (announcementData.action || 'draft'),
                     user_id: 1 // TODO: 从auth store获取真实用户ID
                 }
 

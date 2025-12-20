@@ -1,7 +1,8 @@
 from rest_framework import serializers
 from .models import (
     HouseBindingApplication, HouseUserBinding, House, Building, Visitor,
-    ParkingBindingApplication, ParkingUserBinding, ParkingSpace, Announcement
+    ParkingBindingApplication, ParkingUserBinding, ParkingSpace, Announcement,
+    RepairOrder, RepairOrderImage, RepairEmployee
 )
 from django.utils import timezone
 
@@ -444,3 +445,117 @@ class AnnouncementDetailSerializer(serializers.ModelSerializer):
                 'nickname': obj.author_name,
                 'avatar': None
             }
+
+
+# ===== 报修工单相关序列化器 =====
+
+class RepairOrderImageSerializer(serializers.ModelSerializer):
+    """报修工单图片序列化器"""
+    
+    class Meta:
+        model = RepairOrderImage
+        fields = ['id', 'image', 'image_type', 'uploaded_at']
+        read_only_fields = ['id', 'uploaded_at']
+
+
+class RepairOrderCreateSerializer(serializers.ModelSerializer):
+    """创建报修工单序列化器"""
+    images = RepairOrderImageSerializer(many=True, required=False)
+    
+    class Meta:
+        model = RepairOrder
+        fields = [
+            'category', 'repair_type', 'priority', 'summary', 'description', 
+            'location', 'reporter_name', 'reporter_phone', 'images'
+        ]
+    
+    def validate_reporter_phone(self, value):
+        """校验手机号格式"""
+        import re
+        if not re.match(r'^1[3-9]\d{9}$', value):
+            raise serializers.ValidationError("手机号格式不正确")
+        return value
+    
+    def create(self, validated_data):
+        images_data = validated_data.pop('images', [])
+        repair_order = RepairOrder.objects.create(**validated_data)
+        
+        # 创建图片记录
+        for image_data in images_data:
+            RepairOrderImage.objects.create(order=repair_order, **image_data)
+        
+        return repair_order
+
+
+class RepairOrderListSerializer(serializers.ModelSerializer):
+    """报修工单列表序列化器"""
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    type_display = serializers.CharField(source='get_repair_type_display', read_only=True)
+    priority_display = serializers.CharField(source='get_priority_display', read_only=True)
+    category_display = serializers.CharField(source='get_category_display', read_only=True)
+    
+    class Meta:
+        model = RepairOrder
+        fields = [
+            'id', 'order_no', 'category', 'category_display', 'repair_type', 'type_display',
+            'priority', 'priority_display', 'summary', 'location', 'reporter_name', 
+            'reporter_phone', 'status', 'status_display', 'assignee', 'created_at', 'updated_at'
+        ]
+
+
+class RepairOrderDetailSerializer(serializers.ModelSerializer):
+    """报修工单详情序列化器"""
+    images = RepairOrderImageSerializer(many=True, read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    type_display = serializers.CharField(source='get_repair_type_display', read_only=True)
+    priority_display = serializers.CharField(source='get_priority_display', read_only=True)
+    category_display = serializers.CharField(source='get_category_display', read_only=True)
+    
+    class Meta:
+        model = RepairOrder
+        fields = [
+            'id', 'order_no', 'category', 'category_display', 'repair_type', 'type_display',
+            'priority', 'priority_display', 'summary', 'description', 'location',
+            'reporter_name', 'reporter_phone', 'status', 'status_display', 'assignee',
+            'assigned_at', 'result', 'cost', 'completed_at', 'created_at', 'updated_at',
+            'is_rated', 'rating', 'rating_comment', 'rated_at', 'images'
+        ]
+
+
+class RepairOrderAssignSerializer(serializers.Serializer):
+    """派单序列化器"""
+    assignee = serializers.CharField(max_length=50, help_text="派单给的维修人员姓名")
+    
+    def validate_assignee(self, value):
+        if not value.strip():
+            raise serializers.ValidationError("派单人员不能为空")
+        return value.strip()
+
+
+class RepairOrderCompleteSerializer(serializers.Serializer):
+    """完成工单序列化器"""
+    result = serializers.CharField(help_text="处理结果")
+    cost = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, help_text="维修费用")
+    
+    def validate_result(self, value):
+        if not value.strip():
+            raise serializers.ValidationError("处理结果不能为空")
+        return value.strip()
+
+
+class RepairOrderRatingSerializer(serializers.Serializer):
+    """工单评价序列化器"""
+    rating = serializers.IntegerField(min_value=1, max_value=5, help_text="评分(1-5)")
+    comment = serializers.CharField(required=False, allow_blank=True, help_text="评价内容")
+
+
+class RepairEmployeeSerializer(serializers.ModelSerializer):
+    """维修人员序列化器"""
+    
+    class Meta:
+        model = RepairEmployee
+        fields = [
+            'id', 'name', 'phone', 'speciality', 'is_active',
+            'total_orders', 'completed_orders', 'average_rating'
+        ]
+        read_only_fields = ['total_orders', 'completed_orders', 'average_rating']

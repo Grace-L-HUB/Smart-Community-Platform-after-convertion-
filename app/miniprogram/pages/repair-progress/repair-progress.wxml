@@ -1,0 +1,182 @@
+<view class="container">
+  <!-- 顶部操作栏 -->
+  <view class="top-bar">
+    <view class="search-container">
+      <van-search 
+        value="{{ keyword }}" 
+        placeholder="搜索工单号、位置" 
+        bind:search="onSearch"
+        bind:change="onSearchChange"
+      />
+    </view>
+    <van-button 
+      type="primary" 
+      size="small" 
+      icon="add-o"
+      bind:click="goToRepair"
+      class="new-repair-btn"
+    >
+      新报修
+    </van-button>
+  </view>
+
+  <!-- 筛选栏 -->
+  <view class="filter-bar">
+    <van-dropdown-menu>
+      <van-dropdown-item value="{{ statusFilter }}" options="{{ statusOptions }}" bind:change="onStatusFilterChange" />
+      <van-dropdown-item value="{{ typeFilter }}" options="{{ typeOptions }}" bind:change="onTypeFilterChange" />
+    </van-dropdown-menu>
+  </view>
+
+  <!-- 工单列表 -->
+  <view class="order-list">
+    <view wx:if="{{ orderList.length === 0 && !loading }}" class="empty-state">
+      <image src="/assets/images/empty-repair.png" class="empty-image" />
+      <text class="empty-text">暂无报修记录</text>
+      <van-button 
+        type="primary" 
+        size="small" 
+        bind:click="goToRepair"
+        class="empty-action-btn"
+      >
+        提交新报修
+      </van-button>
+    </view>
+    
+    <view wx:for="{{ orderList }}" wx:key="id" class="order-item" bind:tap="onOrderTap" data-order="{{ item }}">
+      <view class="order-header">
+        <view class="order-no">{{ item.order_no }}</view>
+        <view class="order-status status-{{ item.status }}">{{ item.status_display }}</view>
+      </view>
+      
+      <view class="order-content">
+        <view class="order-summary">{{ item.summary }}</view>
+        <view class="order-info">
+          <view class="info-item">
+            <van-icon name="location-o" size="12" />
+            <text>{{ item.location }}</text>
+          </view>
+          <view class="info-item">
+            <van-icon name="clock-o" size="12" />
+            <text>{{ item.created_at }}</text>
+          </view>
+        </view>
+      </view>
+      
+      <view class="order-footer">
+        <view class="order-type">{{ item.category_display }} · {{ item.type_display }}</view>
+        <view class="order-priority priority-{{ item.priority }}">{{ item.priority_display }}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 加载更多 -->
+  <view wx:if="{{ hasMore }}" class="load-more">
+    <van-loading wx:if="{{ loading }}" size="20" />
+    <text wx:else bind:tap="loadMore">加载更多</text>
+  </view>
+</view>
+
+<!-- 工单详情弹窗 -->
+<van-popup show="{{ showDetail }}" position="bottom" custom-style="height: 80%" bind:close="closeDetail">
+  <view class="detail-container" wx:if="{{ selectedOrder }}">
+    <view class="detail-header">
+      <view class="detail-title">工单详情</view>
+      <van-icon name="cross" bind:click="closeDetail" />
+    </view>
+    
+    <scroll-view scroll-y class="detail-content">
+      <!-- 工单状态 -->
+      <view class="status-timeline">
+        <view class="timeline-item {{ selectedOrder.status === 'pending' || selectedOrder.status === 'processing' || selectedOrder.status === 'completed' ? 'active' : '' }}">
+          <view class="timeline-dot"></view>
+          <view class="timeline-content">
+            <view class="timeline-title">已提交</view>
+            <view class="timeline-time">{{ selectedOrder.created_at }}</view>
+          </view>
+        </view>
+        
+        <view class="timeline-item {{ selectedOrder.status === 'processing' || selectedOrder.status === 'completed' ? 'active' : '' }}" wx:if="{{ selectedOrder.assigned_at }}">
+          <view class="timeline-dot"></view>
+          <view class="timeline-content">
+            <view class="timeline-title">已派单</view>
+            <view class="timeline-time">{{ selectedOrder.assigned_at }}</view>
+            <view class="timeline-desc">派单给：{{ selectedOrder.assignee }}</view>
+          </view>
+        </view>
+        
+        <view class="timeline-item {{ selectedOrder.status === 'completed' ? 'active' : '' }}" wx:if="{{ selectedOrder.completed_at }}">
+          <view class="timeline-dot"></view>
+          <view class="timeline-content">
+            <view class="timeline-title">已完成</view>
+            <view class="timeline-time">{{ selectedOrder.completed_at }}</view>
+          </view>
+        </view>
+      </view>
+      
+      <!-- 工单信息 -->
+      <view class="detail-section">
+        <view class="section-title">工单信息</view>
+        <view class="info-row">
+          <text class="info-label">工单号</text>
+          <text class="info-value">{{ selectedOrder.order_no }}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">报修类型</text>
+          <text class="info-value">{{ selectedOrder.type_display }}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">紧急程度</text>
+          <text class="info-value priority-{{ selectedOrder.priority }}">{{ selectedOrder.priority_display }}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">报修位置</text>
+          <text class="info-value">{{ selectedOrder.location }}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">问题摘要</text>
+          <text class="info-value">{{ selectedOrder.summary }}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">详细描述</text>
+          <text class="info-value">{{ selectedOrder.description }}</text>
+        </view>
+      </view>
+      
+      <!-- 处理结果 -->
+      <view class="detail-section" wx:if="{{ selectedOrder.result }}">
+        <view class="section-title">处理结果</view>
+        <view class="result-content">{{ selectedOrder.result }}</view>
+        <view wx:if="{{ selectedOrder.cost }}" class="cost-info">
+          维修费用：<text class="cost-amount">¥{{ selectedOrder.cost }}</text>
+        </view>
+      </view>
+      
+      <!-- 评价区域 -->
+      <view class="detail-section" wx:if="{{ selectedOrder.status === 'completed' && !selectedOrder.is_rated }}">
+        <view class="section-title">服务评价</view>
+        <view class="rating-section">
+          <van-rate value="{{ rating }}" bind:change="onRatingChange" />
+          <van-field
+            value="{{ ratingComment }}"
+            type="textarea"
+            placeholder="请对本次服务进行评价"
+            autosize="{{ {minHeight: 60} }}"
+            bind:change="onRatingCommentChange"
+          />
+          <van-button type="primary" size="small" bind:click="submitRating">提交评价</van-button>
+        </view>
+      </view>
+      
+      <!-- 已评价显示 -->
+      <view class="detail-section" wx:if="{{ selectedOrder.is_rated }}">
+        <view class="section-title">服务评价</view>
+        <view class="rating-display">
+          <van-rate value="{{ selectedOrder.rating }}" readonly />
+          <view class="rating-comment">{{ selectedOrder.rating_comment || '无评价内容' }}</view>
+          <view class="rating-time">评价时间：{{ selectedOrder.rated_at }}</view>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+</van-popup>
