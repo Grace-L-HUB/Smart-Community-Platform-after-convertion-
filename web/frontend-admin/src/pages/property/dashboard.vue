@@ -7,10 +7,22 @@
         <p class="text-body-2 text-grey mt-1">欢迎回来，{{ userName }}</p>
       </div>
       <v-spacer />
-      <v-chip color="primary" variant="tonal" size="small">
-        <v-icon start icon="mdi-clock-outline" />
-        {{ currentTime }}
-      </v-chip>
+      <div class="d-flex align-center gap-2">
+        <v-chip color="primary" variant="tonal" size="small">
+          <v-icon start icon="mdi-clock-outline" />
+          {{ currentTime }}
+        </v-chip>
+        <v-btn
+          icon="mdi-refresh"
+          size="small"
+          variant="tonal"
+          :loading="refreshing"
+          @click="refreshStats"
+        >
+          <v-icon icon="mdi-refresh" />
+          <v-tooltip activator="parent" location="bottom">刷新数据</v-tooltip>
+        </v-btn>
+      </div>
     </div>
 
     <!-- 统计卡片 -->
@@ -181,6 +193,23 @@ const authStore = useAuthStore()
 const userName = computed(() => authStore.userName)
 const stats = computed(() => propertyStore.stats)
 const pendingResidents = computed(() => propertyStore.pendingResidents)
+
+// 刷新状态
+const refreshing = ref(false)
+
+// 刷新统计数据
+async function refreshStats() {
+  refreshing.value = true
+  try {
+    await propertyStore.reloadDashboardStats()
+    // 同时刷新时间
+    updateTime()
+  } catch (error) {
+    console.error('刷新统计数据失败:', error)
+  } finally {
+    refreshing.value = false
+  }
+}
 
 // 当前时间
 const currentTime = ref('')

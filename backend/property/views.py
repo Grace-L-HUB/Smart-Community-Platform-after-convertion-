@@ -2175,3 +2175,96 @@ class RepairOrderOptionsView(APIView):
                 "code": 500,
                 "message": f"获取报修选项失败: {str(e)}"
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class DashboardStatsView(APIView):
+    """Dashboard统计数据接口"""
+    permission_classes = []
+
+    def get(self, request):
+        """获取Dashboard统计数据"""
+        try:
+            from datetime import datetime, timedelta
+            from django.db.models import Count, Q
+            from django.utils import timezone
+            
+            now = timezone.now()
+            today = now.date()
+            
+            # 1. 待处理工单数量
+            pending_work_orders = RepairOrder.objects.filter(status='pending').count()
+            
+            # 2. 今日报修数量
+            today_repairs = RepairOrder.objects.filter(
+                created_at__date=today
+            ).count()
+            
+            # 3. 总住户数量
+            from .models import HouseUserBinding
+            total_residents = HouseUserBinding.objects.filter(status=1).count()
+            
+            # 4. 物业费收缴率 (模拟数据，实际需要根据账单系统计算)
+            fee_collection_rate = 0.856  # 85.6%
+            
+            # 5. 近7天工单趋势
+            work_order_trend = []
+            for i in range(6, -1, -1):  # 从6天前到今天
+                date = today - timedelta(days=i)
+                count = RepairOrder.objects.filter(created_at__date=date).count()
+                work_order_trend.append({
+                    'date': date.strftime('%m-%d'),
+                    'count': count
+                })
+            
+            # 6. 报修类型分布
+            type_distribution = RepairOrder.objects.values('repair_type').annotate(
+                count=Count('id')
+            ).order_by('-count')
+            
+            # 转换为前端需要的格式
+            type_names = {
+                'water': '水电',
+                'electric': '电气', 
+                'door': '门窗',
+                'public': '公区',
+                'other': '其他'
+            }
+            
+            repair_type_distribution = []
+            for item in type_distribution:
+                repair_type_distribution.append({
+                    'type': type_names.get(item['repair_type'], item['repair_type']),
+                    'value': item['count']
+                })
+            
+            # 如果没有数据，提供默认值
+            if not repair_type_distribution:
+                repair_type_distribution = [
+                    {'type': '水电', 'value': 0},
+                    {'type': '电气', 'value': 0}, 
+                    {'type': '门窗', 'value': 0},
+                    {'type': '公区', 'value': 0},
+                    {'type': '其他', 'value': 0}
+                ]
+            
+            stats_data = {
+                'pendingWorkOrders': pending_work_orders,
+                'todayRepairs': today_repairs,
+                'totalResidents': total_residents,
+                'feeCollectionRate': fee_collection_rate,
+                'workOrderTrend': work_order_trend,
+                'repairTypeDistribution': repair_type_distribution
+            }
+            
+            return Response({
+                "code": 200,
+                "message": "获取成功",
+                "data": stats_data
+            })
+            
+        except Exception as e:
+            logger.error(f"获取Dashboard统计数据失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"获取Dashboard统计数据失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

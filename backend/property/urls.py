@@ -13,7 +13,7 @@ from .views import (
     AnnouncementCategoryOptionsView,
     RepairOrderView, RepairOrderDetailView, RepairOrderAssignView,
     RepairOrderCompleteView, RepairOrderRejectView, RepairOrderRatingView,
-    RepairEmployeeView, RepairOrderOptionsView
+    RepairEmployeeView, RepairOrderOptionsView, DashboardStatsView
 )
 
 urlpatterns = [
@@ -115,4 +115,7 @@ urlpatterns = [
     
     # 报修选项数据
     path('property/repair-orders/options', RepairOrderOptionsView.as_view(), name='repair_order_options'),
+    
+    # Dashboard统计数据
+    path('property/dashboard/stats', DashboardStatsView.as_view(), name='dashboard_stats'),
 ]

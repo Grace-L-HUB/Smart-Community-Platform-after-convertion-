@@ -281,7 +281,7 @@ export const usePropertyStore = defineStore('property', {
                     approvedParkingsResponse,
                     houseListResponse,
                     parkingSpaceListResponse,
-                    statsResponse,
+                    dashboardStatsResponse,
                     employeesResponse,
                     announcementsResponse,
                     repairOrdersResponse,
@@ -311,7 +311,7 @@ export const usePropertyStore = defineStore('property', {
                 this.parkings = parkingSpaceListResponse.data || []
 
                 // 存储统计数据和员工数据
-                this.stats = statsResponse.data || mockPropertyStats
+                this.stats = dashboardStatsResponse.data || mockPropertyStats
                 this.employees = employeesResponse.data || []
 
                 // 存储公告API数据，并转换格式给前端使用
@@ -537,6 +537,24 @@ export const usePropertyStore = defineStore('property', {
                 }
             } catch (error) {
                 console.error('重新加载工单列表失败:', error)
+            }
+        },
+
+        /**
+         * 重新加载Dashboard统计数据
+         */
+        async reloadDashboardStats() {
+            try {
+                const response = await propertyAPI.getDashboardStats()
+                if (response.code === 200) {
+                    this.stats = response.data || this.stats
+                    return response.data
+                } else {
+                    throw new Error(response.message || '获取统计数据失败')
+                }
+            } catch (error) {
+                console.error('重新加载Dashboard统计数据失败:', error)
+                throw error
             }
         },
 
