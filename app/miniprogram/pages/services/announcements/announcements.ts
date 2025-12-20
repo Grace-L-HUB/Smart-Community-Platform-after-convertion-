@@ -3,47 +3,15 @@ Page({
     data: {
         searchValue: '',
         activeTab: 0,
-        announcements: [
-            {
-                id: 1,
-                isTop: true,
-                category: '物业通知',
-                title: '关于小区正在进行绿化维护的通知',
-                summary: '尊敬的业主：为提升小区环境，物业将于本周三上午9点至12点进行绿化维护工作...',
-                time: '2小时前',
-                views: 256
-            },
-            {
-                id: 2,
-                isTop: false,
-                category: '社区新闻',
-                title: '阳光花园社区荣获"文明社区"称号',
-                summary: '在市级文明社区评选中，我们社区凭借优秀的管理和服务，成功获评"文明社区"...',
-                time: '1天前',
-                views: 189
-            },
-            {
-                id: 3,
-                isTop: false,
-                category: '温馨提示',
-                title: '近期天气转凉，请注意保暖',
-                summary: '根据天气预报，未来一周气温将明显下降，请各位业主注意添衣保暖...',
-                time: '2天前',
-                views: 142
-            },
-            {
-                id: 4,
-                isTop: false,
-                category: '物业通知',
-                title: '电梯年检通知',
-                summary: '根据相关规定，小区电梯将于下周进行年度安全检查，届时部分电梯将暂停使用...',
-                time: '3天前',
-                views: 321
-            }
-        ],
-        hasMore: true,
+        announcements: [] as any[],
+        filteredAnnouncements: [] as any[],
+        hasMore: false,
         loading: false,
-        page: 1
+        page: 1,
+        // 分类标签
+        categories: ['全部', '物业通知', '社区新闻', '温馨提示'],
+        // 原始数据存储
+        allAnnouncements: [] as any[]
     },
 
     onLoad() {
@@ -51,8 +19,129 @@ Page({
     },
 
     loadAnnouncements() {
-        // TODO: 从服务器加载公告列表
-        console.log('Loading announcements...');
+        if (this.data.loading) return;
+        
+        this.setData({ loading: true });
+
+        wx.request({
+            url: 'http://127.0.0.1:8000/api/property/announcements',
+            method: 'GET',
+            success: (res: any) => {
+                if (res.statusCode === 200 && res.data.code === 200) {
+                    const announcements = res.data.data || [];
+                    
+                    // 处理公告数据格式
+                    const processedAnnouncements = announcements
+                        .filter((item: any) => item.status === 'published') // 只显示已发布的
+                        .map((item: any) => ({
+                            id: item.id,
+                            isTop: false, // 后端暂未实现置顶功能，可后续添加
+                            category: this.getCategoryName(item.scope, item.target_buildings),
+                            title: item.title,
+                            summary: this.stripHtml(item.content).substring(0, 100) + '...',
+                            time: this.formatTime(item.created_at),
+                            views: item.read_count || 0,
+                            status: item.status,
+                            scope: item.scope,
+                            created_at: item.created_at,
+                            content: item.content
+                        }))
+                        .sort((a: any, b: any) => {
+                            // 按创建时间倒序排列
+                            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+                        });
+
+                    this.setData({
+                        allAnnouncements: processedAnnouncements,
+                        loading: false
+                    });
+
+                    // 应用当前的筛选条件
+                    this.applyFilter();
+                } else {
+                    console.error('获取公告列表失败:', res.data);
+                    this.setData({ loading: false });
+                    wx.showToast({
+                        title: '获取公告失败',
+                        icon: 'none'
+                    });
+                }
+            },
+            fail: (err) => {
+                console.error('获取公告列表网络请求失败:', err);
+                this.setData({ loading: false });
+                wx.showToast({
+                    title: '网络请求失败',
+                    icon: 'none'
+                });
+            }
+        });
+    },
+
+    // 根据scope和target_buildings生成分类名称
+    getCategoryName(scope: string, targetBuildings: string[]): string {
+        if (scope === 'all') {
+            return '物业通知';
+        } else if (scope === 'building' && targetBuildings && targetBuildings.length > 0) {
+            return '楼栋通知';
+        }
+        return '社区公告';
+    },
+
+    // 去除HTML标签
+    stripHtml(html: string): string {
+        if (!html) return '';
+        return html.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim();
+    },
+
+    // 格式化时间
+    formatTime(timeStr: string): string {
+        if (!timeStr) return '';
+        
+        const now = new Date();
+        const time = new Date(timeStr);
+        const diff = now.getTime() - time.getTime();
+        
+        const minute = 60 * 1000;
+        const hour = 60 * minute;
+        const day = 24 * hour;
+        
+        if (diff < hour) {
+            return Math.floor(diff / minute) + '分钟前';
+        } else if (diff < day) {
+            return Math.floor(diff / hour) + '小时前';
+        } else if (diff < 7 * day) {
+            return Math.floor(diff / day) + '天前';
+        } else {
+            return time.getFullYear() + '-' + 
+                   String(time.getMonth() + 1).padStart(2, '0') + '-' + 
+                   String(time.getDate()).padStart(2, '0');
+        }
+    },
+
+    // 应用筛选条件
+    applyFilter() {
+        let filtered = [...this.data.allAnnouncements];
+        
+        // 按分类筛选
+        if (this.data.activeTab > 0) {
+            const activeCategory = this.data.categories[this.data.activeTab];
+            filtered = filtered.filter((item: any) => item.category === activeCategory);
+        }
+        
+        // 按搜索关键字筛选
+        if (this.data.searchValue.trim()) {
+            const keyword = this.data.searchValue.trim().toLowerCase();
+            filtered = filtered.filter((item: any) => 
+                item.title.toLowerCase().includes(keyword) ||
+                item.summary.toLowerCase().includes(keyword)
+            );
+        }
+        
+        this.setData({
+            announcements: filtered,
+            hasMore: false // 暂时不支持分页加载
+        });
     },
 
     onSearchChange(event: any) {
@@ -61,18 +150,13 @@ Page({
 
     onSearch() {
         console.log('Search:', this.data.searchValue);
-        // TODO: 执行搜索
-        this.loadAnnouncements();
+        this.applyFilter();
     },
 
     onTabChange(event: any) {
         const activeTab = event.detail.index;
-        this.setData({
-            activeTab,
-            page: 1,
-            announcements: []
-        });
-        this.loadAnnouncements();
+        this.setData({ activeTab });
+        this.applyFilter();
     },
 
     onAnnouncementClick(event: any) {
@@ -86,15 +170,11 @@ Page({
         if (this.data.loading || !this.data.hasMore) {
             return;
         }
-
-        this.setData({ loading: true });
-
-        // TODO: 加载更多数据
-        setTimeout(() => {
-            this.setData({
-                loading: false,
-                page: this.data.page + 1
-            });
-        }, 1000);
+        
+        // 暂时不支持分页，显示提示
+        wx.showToast({
+            title: '已显示全部公告',
+            icon: 'none'
+        });
     }
 });

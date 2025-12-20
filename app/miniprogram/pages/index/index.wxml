@@ -24,8 +24,9 @@
 
   <!-- Notice Bar -->
   <van-notice-bar
+    wx:if="{{showNotice}}"
     left-icon="volume-o"
-    text="关于小区正在进行绿化维护的通知：预计本周三上午9点到12点..."
+    text="{{latestNotice.title}}：{{latestNotice.content}}"
     custom-class="notice-bar"
     background="#fff"
     color="#f57c00"

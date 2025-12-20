@@ -4,6 +4,13 @@
   padding: 24rpx;
 }
 
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 60vh;
+}
+
 .announcement-header {
   padding-bottom: 24rpx;
   border-bottom: 1rpx solid #f0f0f0;

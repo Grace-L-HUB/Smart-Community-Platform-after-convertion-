@@ -2,37 +2,119 @@
 Page({
     data: {
         id: 0,
-        isTop: true,
-        category: '物业通知',
-        title: '关于小区正在进行绿化维护的通知',
-        publishTime: '2024-12-18 10:00',
-        views: 256,
-        content: '<p>尊敬的各位业主：</p><p>为提升小区环境质量，营造更加舒适宜居的生活空间，物业公司决定对小区绿化进行全面维护。现将有关事项通知如下：</p><p><strong>一、维护时间</strong></p><p>2024年12月20日（本周三）上午9:00-12:00</p><p><strong>二、维护范围</strong></p><p>1. 修剪小区内所有绿化带<br/>2. 清理枯枝落叶<br/>3. 补种部分花草<br/>4. 施肥养护</p><p><strong>三、注意事项</strong></p><p>1. 维护期间请勿在绿化带内停留<br/>2. 请将车辆停放在指定位置<br/>3. 如有不便，敬请谅解</p><p>感谢各位业主的理解与支持！</p>',
-        attachments: [
-            { id: 1, name: '绿化维护方案.pdf', url: '' },
-            { id: 2, name: '施工平面图.jpg', url: '' }
-        ],
-        publisher: '阳光花园物业管理处'
+        loading: true,
+        isTop: false,
+        category: '',
+        title: '',
+        publishTime: '',
+        views: 0,
+        content: '',
+        attachments: [] as any[],
+        publisher: '',
+        author: '',
+        scope: '',
+        status: ''
     },
 
     onLoad(options: any) {
         if (options.id) {
-            this.setData({ id: options.id });
-            this.loadAnnouncementDetail(options.id);
+            const announcementId = parseInt(options.id);
+            this.setData({ id: announcementId });
+            this.loadAnnouncementDetail(announcementId);
+        } else {
+            wx.showToast({
+                title: '公告ID无效',
+                icon: 'none'
+            });
+            setTimeout(() => {
+                wx.navigateBack();
+            }, 1500);
         }
-
-        // 增加浏览量
-        this.increaseViews();
     },
 
-    loadAnnouncementDetail(id: string) {
-        // TODO: 加载公告详情
-        console.log('Loading announcement detail:', id);
+    loadAnnouncementDetail(id: number) {
+        this.setData({ loading: true });
+
+        wx.request({
+            url: `http://127.0.0.1:8000/api/property/announcements/${id}`,
+            method: 'GET',
+            success: (res: any) => {
+                if (res.statusCode === 200 && res.data.code === 200) {
+                    const announcement = res.data.data;
+                    
+                    this.setData({
+                        id: announcement.id,
+                        title: announcement.title,
+                        content: announcement.content,
+                        publishTime: this.formatDateTime(announcement.published_at || announcement.created_at),
+                        views: announcement.read_count || 0,
+                        author: announcement.author || '系统',
+                        publisher: announcement.author || '物业管理处',
+                        category: this.getCategoryName(announcement.scope, announcement.target_buildings),
+                        scope: announcement.scope,
+                        status: announcement.status,
+                        isTop: false, // 暂未实现置顶功能
+                        attachments: [], // 暂未实现附件功能
+                        loading: false
+                    });
+
+                    // 设置页面标题
+                    wx.setNavigationBarTitle({
+                        title: announcement.title.length > 10 
+                            ? announcement.title.substring(0, 10) + '...' 
+                            : announcement.title
+                    });
+                } else {
+                    console.error('获取公告详情失败:', res.data);
+                    this.setData({ loading: false });
+                    wx.showToast({
+                        title: res.data.message || '获取公告详情失败',
+                        icon: 'none'
+                    });
+                    setTimeout(() => {
+                        wx.navigateBack();
+                    }, 1500);
+                }
+            },
+            fail: (err) => {
+                console.error('获取公告详情网络请求失败:', err);
+                this.setData({ loading: false });
+                wx.showToast({
+                    title: '网络请求失败',
+                    icon: 'none'
+                });
+                setTimeout(() => {
+                    wx.navigateBack();
+                }, 1500);
+            }
+        });
+    },
+
+    // 格式化日期时间
+    formatDateTime(timeStr: string): string {
+        if (!timeStr) return '';
+        
+        const time = new Date(timeStr);
+        return time.getFullYear() + '-' + 
+               String(time.getMonth() + 1).padStart(2, '0') + '-' + 
+               String(time.getDate()).padStart(2, '0') + ' ' +
+               String(time.getHours()).padStart(2, '0') + ':' + 
+               String(time.getMinutes()).padStart(2, '0');
+    },
+
+    // 根据scope和target_buildings生成分类名称
+    getCategoryName(scope: string, targetBuildings: string[]): string {
+        if (scope === 'all') {
+            return '物业通知';
+        } else if (scope === 'building' && targetBuildings && targetBuildings.length > 0) {
+            return '楼栋通知';
+        }
+        return '社区公告';
     },
 
     increaseViews() {
-        // TODO: 增加浏览量
-        console.log('Increase views');
+        // 浏览量已在后端API中自动处理
+        console.log('Views increased automatically by backend');
     },
 
     onDownload(event: any) {

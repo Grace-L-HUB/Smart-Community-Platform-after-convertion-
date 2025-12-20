@@ -20,6 +20,14 @@
 
   <!-- Announcement List -->
   <view class="announcement-list">
+    <!-- Loading State -->
+    <view class="loading-container" wx:if="{{loading && announcements.length === 0}}">
+      <van-loading type="spinner" size="24px" text-size="14px">
+        正在加载公告列表...
+      </van-loading>
+    </view>
+
+    <!-- Announcement Items -->
     <block wx:for="{{announcements}}" wx:key="id">
       <view 
         class="announcement-card {{item.isTop ? 'is-top' : ''}}" 
@@ -48,7 +56,7 @@
     </block>
 
     <!-- Empty State -->
-    <view class="empty-state" wx:if="{{announcements.length === 0}}">
+    <view class="empty-state" wx:if="{{!loading && announcements.length === 0}}">
       <van-icon name="notes-o" size="64px" color="#ddd" />
       <text class="empty-text">暂无公告</text>
     </view>
