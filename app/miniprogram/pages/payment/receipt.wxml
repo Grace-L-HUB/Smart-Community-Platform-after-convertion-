@@ -1,0 +1,132 @@
+<view class="receipt-container">
+  <!-- 加载状态 -->
+  <van-loading wx:if="{{ loading }}" type="spinner" size="20px" class="loading">加载中...</van-loading>
+  
+  <!-- 电子凭证列表 -->
+  <view wx:else class="receipt-list">
+    <view 
+      class="receipt-card" 
+      wx:for="{{ receiptList }}" 
+      wx:key="receipt_info.receipt_no"
+      wx:for-index="index"
+    >
+      <!-- 凭证头部 -->
+      <view class="receipt-header">
+        <view class="receipt-title">阳光花园物业管理处</view>
+        <view class="receipt-subtitle">电子缴费凭证</view>
+        <view class="receipt-number">凭证编号：{{ item.receipt_info.receipt_no }}</view>
+      </view>
+
+      <!-- 凭证主体 -->
+      <view class="receipt-body">
+        <!-- 缴费信息 -->
+        <view class="info-section">
+          <view class="section-title">缴费信息</view>
+          <view class="info-row">
+            <text class="info-label">项目名称：</text>
+            <text class="info-value">{{ item.bill_info.title }}</text>
+          </view>
+          <view class="info-row">
+            <text class="info-label">费用类型：</text>
+            <text class="info-value">{{ item.bill_info.fee_type_display }}</text>
+          </view>
+          <view class="info-row">
+            <text class="info-label">计费周期：</text>
+            <text class="info-value">{{ item.bill_info.period }}</text>
+          </view>
+          <view class="info-row highlight">
+            <text class="info-label">缴费金额：</text>
+            <text class="info-value amount">¥{{ item.bill_info.paid_amount }}</text>
+          </view>
+        </view>
+
+        <!-- 缴费人信息 -->
+        <view class="info-section">
+          <view class="section-title">缴费人信息</view>
+          <view class="info-row">
+            <text class="info-label">缴费人：</text>
+            <text class="info-value">{{ item.payer_info.name }}</text>
+          </view>
+          <view class="info-row">
+            <text class="info-label">联系电话：</text>
+            <text class="info-value">{{ item.payer_info.phone }}</text>
+          </view>
+        </view>
+
+        <!-- 房屋信息 -->
+        <view class="info-section">
+          <view class="section-title">房屋信息</view>
+          <view class="info-row">
+            <text class="info-label">房屋地址：</text>
+            <text class="info-value">{{ item.property_info.address }}</text>
+          </view>
+          <view class="info-row">
+            <text class="info-label">房屋面积：</text>
+            <text class="info-value">{{ item.property_info.area }}㎡</text>
+          </view>
+          <view class="info-row">
+            <text class="info-label">单价：</text>
+            <text class="info-value">{{ item.property_info.unit_price }}元</text>
+          </view>
+        </view>
+
+        <!-- 支付信息 -->
+        <view class="info-section">
+          <view class="section-title">支付信息</view>
+          <view class="info-row">
+            <text class="info-label">支付方式：</text>
+            <text class="info-value">{{ item.bill_info.payment_method_display }}</text>
+          </view>
+          <view class="info-row">
+            <text class="info-label">支付时间：</text>
+            <text class="info-value">{{ item.bill_info.paid_at }}</text>
+          </view>
+          <view class="info-row">
+            <text class="info-label">流水号：</text>
+            <text class="info-value">{{ item.bill_info.payment_reference }}</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 凭证底部 -->
+      <view class="receipt-footer">
+        <view class="seal-container">
+          <view class="seal">
+            <text class="seal-text">{{ item.receipt_info.seal_text }}</text>
+            <view class="seal-status">{{ item.receipt_info.status }}</view>
+          </view>
+        </view>
+        <view class="generate-time">
+          <text>凭证生成时间：{{ item.receipt_info.generated_at }}</text>
+        </view>
+        <view class="disclaimer">
+          <text>本凭证为电子凭证，与纸质凭证具有同等法律效力</text>
+        </view>
+      </view>
+
+      <!-- 操作按钮 -->
+      <view class="receipt-actions">
+        <van-button 
+          type="default" 
+          size="small"
+          data-index="{{ index }}"
+          bind:click="saveReceipt"
+        >
+          保存凭证
+        </van-button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 空状态 -->
+  <view wx:if="{{ !loading && receiptList.length === 0 }}" class="empty-state">
+    <van-empty description="暂无缴费凭证" />
+    <van-button type="primary" bind:click="onGoBack">返回</van-button>
+  </view>
+
+  <!-- 底部操作栏 -->
+  <view wx:if="{{ receiptList.length > 0 }}" class="bottom-actions">
+    <van-button type="default" bind:click="onGoBack">返回</van-button>
+    <van-button type="primary" open-type="share">分享凭证</van-button>
+  </view>
+</view>

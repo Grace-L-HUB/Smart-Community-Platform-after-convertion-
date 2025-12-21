@@ -93,3 +93,49 @@ class User(AbstractUser):
     def can_access_admin(self):
         """是否可以访问后台管理"""
         return self.role >= 1 and not self.is_banned
+
+
+class Notification(models.Model):
+    """站内通知模型"""
+    TYPE_CHOICES = (
+        ('bill_reminder', '缴费催收'),
+        ('system_notice', '系统通知'),
+        ('activity_notice', '活动通知'),
+        ('maintenance_notice', '维修通知'),
+        ('other', '其他'),
+    )
+    
+    # 基本信息
+    title = models.CharField(max_length=200, verbose_name="通知标题")
+    content = models.TextField(verbose_name="通知内容")
+    notification_type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='other', verbose_name="通知类型")
+    
+    # 接收人
+    recipient = models.ForeignKey('User', on_delete=models.CASCADE, related_name='received_notifications', verbose_name="接收人")
+    
+    # 状态信息
+    is_read = models.BooleanField(default=False, verbose_name="是否已读")
+    read_at = models.DateTimeField(null=True, blank=True, verbose_name="阅读时间")
+    
+    # 关联信息（可选）
+    related_object_type = models.CharField(max_length=50, blank=True, verbose_name="关联对象类型")  # 如'bill', 'repair_order'
+    related_object_id = models.IntegerField(null=True, blank=True, verbose_name="关联对象ID")
+    
+    # 时间戳
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="更新时间")
+    
+    class Meta:
+        verbose_name = "站内通知"
+        verbose_name_plural = "站内通知"
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.title} - {self.recipient.display_name}"
+    
+    def mark_as_read(self):
+        """标记为已读"""
+        if not self.is_read:
+            self.is_read = True
+            self.read_at = timezone.now()
+            self.save()

@@ -7,7 +7,7 @@ from django.db import models
 from .models import (
     HouseBindingApplication, HouseUserBinding, Visitor,
     ParkingBindingApplication, ParkingUserBinding, Announcement,
-    RepairOrder, RepairOrderImage, RepairEmployee
+    RepairOrder, RepairOrderImage, RepairEmployee, FeeStandard, Bill
 )
 from .serializers import (
     HouseBindingApplicationSerializer, HouseUserBindingSerializer,
@@ -2267,4 +2267,571 @@ class DashboardStatsView(APIView):
             return Response({
                 "code": 500,
                 "message": f"获取Dashboard统计数据失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ===== 缴费管理相关视图 =====
+
+class FeeStandardView(APIView):
+    """收费标准管理接口"""
+    permission_classes = []
+
+    def get(self, request):
+        """获取收费标准列表"""
+        try:
+            standards = FeeStandard.objects.filter(is_active=True).order_by('-created_at')
+            from .serializers import FeeStandardSerializer
+            serializer = FeeStandardSerializer(standards, many=True)
+            
+            return Response({
+                "code": 200,
+                "message": "获取成功",
+                "data": serializer.data
+            })
+        except Exception as e:
+            logger.error(f"获取收费标准列表失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"获取收费标准列表失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def post(self, request):
+        """创建收费标准"""
+        try:
+            from .serializers import FeeStandardSerializer
+            serializer = FeeStandardSerializer(data=request.data)
+            if serializer.is_valid():
+                fee_standard = serializer.save()
+                return Response({
+                    "code": 200,
+                    "message": "创建成功",
+                    "data": FeeStandardSerializer(fee_standard).data
+                })
+            else:
+                return Response({
+                    "code": 400,
+                    "message": "数据验证失败",
+                    "errors": serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error(f"创建收费标准失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"创建收费标准失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class BillBatchGenerateView(APIView):
+    """账单批量生成接口"""
+    permission_classes = []
+
+    def post(self, request):
+        """批量生成账单"""
+        try:
+            from .serializers import BillCreateSerializer
+            from datetime import date, timedelta
+            from decimal import Decimal
+            
+            serializer = BillCreateSerializer(data=request.data)
+            if not serializer.is_valid():
+                return Response({
+                    "code": 400,
+                    "message": "数据验证失败",
+                    "errors": serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            validated_data = serializer.validated_data
+            fee_type = validated_data['fee_type']
+            billing_year = validated_data['billing_year']
+            billing_month = validated_data['billing_month']
+            fee_standard_id = validated_data['fee_standard_id']
+            target_buildings = validated_data.get('target_buildings', [])
+
+            # 获取收费标准
+            try:
+                fee_standard = FeeStandard.objects.get(id=fee_standard_id)
+            except FeeStandard.DoesNotExist:
+                return Response({
+                    "code": 404,
+                    "message": "收费标准不存在"
+                }, status=status.HTTP_404_NOT_FOUND)
+
+            # 计算计费周期
+            billing_period_start = date(billing_year, billing_month, 1)
+            # 计算月末日期
+            if billing_month == 12:
+                next_month = date(billing_year + 1, 1, 1)
+            else:
+                next_month = date(billing_year, billing_month + 1, 1)
+            billing_period_end = next_month - timedelta(days=1)
+
+            # 设置缴费截止日期（次月15日）
+            if billing_month == 12:
+                due_date = date(billing_year + 1, 1, 15)
+            else:
+                due_date = date(billing_year, billing_month + 1, 15)
+
+            # 查询要生成账单的房屋
+            from .models import Building, House
+            houses_query = House.objects.all()
+            
+            # 如果指定了楼栋，只生成指定楼栋的账单
+            if target_buildings:
+                buildings = Building.objects.filter(name__in=target_buildings)
+                houses_query = houses_query.filter(building__in=buildings)
+            
+            # 只为已绑定业主的房屋生成账单
+            houses = houses_query.filter(
+                user_bindings__status=1,  # 已绑定状态
+                user_bindings__identity=1  # 业主身份
+            ).distinct()
+
+            # 检查是否已经生成过该期间的账单
+            existing_bills = Bill.objects.filter(
+                house__in=houses,
+                fee_type=fee_type,
+                billing_period_start=billing_period_start,
+                billing_period_end=billing_period_end
+            )
+            if existing_bills.exists():
+                return Response({
+                    "code": 400,
+                    "message": f"{billing_year}年{billing_month}月的{fee_standard.get_fee_type_display()}账单已存在"
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # 批量创建账单
+            bills_to_create = []
+            for house in houses:
+                # 获取该房屋的业主
+                binding = house.user_bindings.filter(status=1, identity=1).first()
+                if not binding:
+                    continue
+                
+                user = binding.user
+                
+                # 计算费用
+                if fee_standard.billing_unit == 'per_sqm_month':
+                    quantity = house.area
+                    amount = quantity * fee_standard.unit_price
+                elif fee_standard.billing_unit == 'per_month':
+                    quantity = Decimal('1')
+                    amount = fee_standard.unit_price
+                else:
+                    # 其他计费方式暂时按固定金额处理
+                    quantity = Decimal('1')
+                    amount = fee_standard.unit_price
+
+                bill = Bill(
+                    title=f"{billing_year}年{billing_month}月{fee_standard.get_fee_type_display()}",
+                    fee_type=fee_type,
+                    house=house,
+                    user=user,
+                    fee_standard=fee_standard,
+                    billing_period_start=billing_period_start,
+                    billing_period_end=billing_period_end,
+                    unit_price=fee_standard.unit_price,
+                    quantity=quantity,
+                    amount=amount,
+                    due_date=due_date,
+                    description=f"房屋地址：{house}，计费面积：{quantity}平米"
+                )
+                bills_to_create.append(bill)
+
+            # 批量创建
+            if bills_to_create:
+                Bill.objects.bulk_create(bills_to_create)
+                logger.info(f"成功生成{len(bills_to_create)}张{fee_standard.get_fee_type_display()}账单")
+                
+                return Response({
+                    "code": 200,
+                    "message": f"成功生成{len(bills_to_create)}张账单",
+                    "data": {
+                        "generated_count": len(bills_to_create),
+                        "fee_type": fee_standard.get_fee_type_display(),
+                        "period": f"{billing_year}年{billing_month}月"
+                    }
+                })
+            else:
+                return Response({
+                    "code": 400,
+                    "message": "没有符合条件的房屋可以生成账单"
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            logger.error(f"批量生成账单失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"批量生成账单失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class BillListView(APIView):
+    """账单列表接口"""
+    permission_classes = []
+
+    def get(self, request):
+        """获取账单列表"""
+        try:
+            # 获取筛选参数
+            fee_type = request.GET.get('fee_type')
+            status_filter = request.GET.get('status')
+            user_id = request.GET.get('user_id')
+            building = request.GET.get('building')
+            is_overdue = request.GET.get('is_overdue')
+            
+            # 构建查询条件
+            queryset = Bill.objects.select_related('house__building', 'user', 'fee_standard').all()
+            
+            if fee_type:
+                queryset = queryset.filter(fee_type=fee_type)
+            
+            if status_filter:
+                queryset = queryset.filter(status=status_filter)
+            
+            if user_id:
+                queryset = queryset.filter(user_id=user_id)
+            
+            if building:
+                queryset = queryset.filter(house__building__name=building)
+            
+            if is_overdue == 'true':
+                from django.utils import timezone
+                queryset = queryset.filter(status='unpaid', due_date__lt=timezone.now().date())
+            
+            # 分页
+            page = int(request.GET.get('page', 1))
+            page_size = int(request.GET.get('page_size', 20))
+            start = (page - 1) * page_size
+            end = start + page_size
+            
+            total = queryset.count()
+            bills = queryset.order_by('-created_at')[start:end]
+            
+            from .serializers import BillListSerializer
+            serializer = BillListSerializer(bills, many=True)
+            
+            return Response({
+                "code": 200,
+                "message": "获取成功",
+                "data": {
+                    "list": serializer.data,
+                    "total": total,
+                    "page": page,
+                    "page_size": page_size,
+                    "total_pages": (total + page_size - 1) // page_size
+                }
+            })
+            
+        except Exception as e:
+            logger.error(f"获取账单列表失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"获取账单列表失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class BillDetailView(APIView):
+    """账单详情接口"""
+    permission_classes = []
+
+    def get(self, request, bill_id):
+        """获取账单详情"""
+        try:
+            bill = Bill.objects.select_related('house__building', 'user', 'fee_standard').get(id=bill_id)
+            from .serializers import BillDetailSerializer
+            serializer = BillDetailSerializer(bill)
+            
+            return Response({
+                "code": 200,
+                "message": "获取成功",
+                "data": serializer.data
+            })
+        except Bill.DoesNotExist:
+            return Response({
+                "code": 404,
+                "message": "账单不存在"
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"获取账单详情失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"获取账单详情失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class BillPaymentView(APIView):
+    """账单支付接口（模拟支付）"""
+    permission_classes = []
+
+    def post(self, request, bill_id):
+        """支付账单（模拟支付）"""
+        try:
+            bill = Bill.objects.get(id=bill_id)
+            
+            if bill.status != 'unpaid':
+                return Response({
+                    "code": 400,
+                    "message": "该账单已支付或状态不允许支付"
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            from .serializers import BillPaymentSerializer
+            serializer = BillPaymentSerializer(data=request.data)
+            if not serializer.is_valid():
+                return Response({
+                    "code": 400,
+                    "message": "数据验证失败",
+                    "errors": serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            payment_method = serializer.validated_data['payment_method']
+            payment_reference = serializer.validated_data.get('payment_reference', '')
+            
+            # 生成模拟的支付流水号
+            if not payment_reference:
+                import random
+                import datetime
+                now = datetime.datetime.now()
+                payment_reference = f"{payment_method.upper()}{now.strftime('%Y%m%d%H%M%S')}{random.randint(1000, 9999)}"
+            
+            # 标记为已支付
+            bill.mark_as_paid(payment_method, payment_reference)
+            
+            logger.info(f"账单 {bill.bill_no} 支付成功，支付方式：{payment_method}，流水号：{payment_reference}")
+            
+            # 返回支付成功结果
+            from .serializers import BillDetailSerializer
+            serializer = BillDetailSerializer(bill)
+            
+            return Response({
+                "code": 200,
+                "message": "支付成功",
+                "data": {
+                    "bill_info": serializer.data,
+                    "payment_info": {
+                        "payment_method": payment_method,
+                        "payment_reference": payment_reference,
+                        "paid_amount": str(bill.paid_amount),
+                        "paid_at": bill.paid_at.strftime('%Y-%m-%d %H:%M:%S')
+                    }
+                }
+            })
+        except Bill.DoesNotExist:
+            return Response({
+                "code": 404,
+                "message": "账单不存在"
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"支付账单失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"支付账单失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class BillReminderView(APIView):
+    """账单催缴接口"""
+    permission_classes = []
+
+    def post(self, request):
+        """批量发送催缴通知"""
+        try:
+            from .serializers import ReminderBatchSerializer
+            from users.models import Notification
+            
+            serializer = ReminderBatchSerializer(data=request.data)
+            if not serializer.is_valid():
+                return Response({
+                    "code": 400,
+                    "message": "数据验证失败",
+                    "errors": serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            bill_ids = serializer.validated_data['bill_ids']
+            message_template = serializer.validated_data['message_template']
+            
+            # 获取未支付的账单
+            bills = Bill.objects.filter(id__in=bill_ids, status='unpaid').select_related('user', 'house')
+            
+            notifications_to_create = []
+            for bill in bills:
+                # 构建催缴消息内容
+                house_info = f"{bill.house}" if bill.house else "您的房屋"
+                content = f"尊敬的业主，{house_info}的{bill.get_fee_type_display()}（{bill.get_period_display()}）尚未缴费，" \
+                         f"金额￥{bill.amount}，请于{bill.due_date}前完成缴费。{message_template}"
+                
+                notification = Notification(
+                    title="缴费催收通知",
+                    content=content,
+                    notification_type='bill_reminder',
+                    recipient=bill.user,
+                    related_object_type='bill',
+                    related_object_id=bill.id
+                )
+                notifications_to_create.append(notification)
+            
+            # 批量创建通知
+            if notifications_to_create:
+                Notification.objects.bulk_create(notifications_to_create)
+                logger.info(f"成功发送{len(notifications_to_create)}条催缴通知")
+                
+                return Response({
+                    "code": 200,
+                    "message": f"成功发送{len(notifications_to_create)}条催缴通知"
+                })
+            else:
+                return Response({
+                    "code": 400,
+                    "message": "没有符合条件的账单可以催缴"
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+        except Exception as e:
+            logger.error(f"发送催缴通知失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"发送催缴通知失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class BillReceiptView(APIView):
+    """电子缴费凭证接口"""
+    permission_classes = []
+
+    def get(self, request, bill_id):
+        """获取电子缴费凭证"""
+        try:
+            bill = Bill.objects.select_related('house__building', 'user', 'fee_standard').get(id=bill_id)
+            
+            if bill.status != 'paid':
+                return Response({
+                    "code": 400,
+                    "message": "该账单尚未支付，无法生成缴费凭证"
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # 构建电子凭证数据
+            receipt_data = {
+                "bill_info": {
+                    "bill_no": bill.bill_no,
+                    "title": bill.title,
+                    "fee_type": bill.get_fee_type_display(),
+                    "amount": str(bill.amount),
+                    "paid_amount": str(bill.paid_amount),
+                    "payment_method": bill.get_payment_method_display(),
+                    "payment_reference": bill.payment_reference,
+                    "paid_at": bill.paid_at.strftime('%Y年%m月%d日 %H:%M:%S'),
+                    "period": bill.get_period_display()
+                },
+                "payer_info": {
+                    "name": bill.user.real_name or bill.user.nickname or f"用户{bill.user.id}",
+                    "phone": bill.user.phone or ''
+                },
+                "property_info": {
+                    "address": str(bill.house) if bill.house else '',
+                    "area": str(bill.house.area) if bill.house else '',
+                    "unit_price": str(bill.unit_price),
+                    "quantity": str(bill.quantity)
+                },
+                "receipt_info": {
+                    "receipt_no": f"RC{bill.bill_no[4:]}",  # 去掉BILL前缀，改为RC
+                    "generated_at": timezone.now().strftime('%Y年%m月%d日 %H:%M:%S'),
+                    "status": "已支付",
+                    "seal_text": "电子缴费凭证"
+                }
+            }
+            
+            return Response({
+                "code": 200,
+                "message": "获取成功",
+                "data": receipt_data
+            })
+            
+        except Bill.DoesNotExist:
+            return Response({
+                "code": 404,
+                "message": "账单不存在"
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"获取电子凭证失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"获取电子凭证失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class BillStatsView(APIView):
+    """账单统计接口"""
+    permission_classes = []
+
+    def get(self, request):
+        """获取账单统计数据"""
+        try:
+            from django.db.models import Sum, Count, Q
+            from django.utils import timezone
+            
+            # 基础统计
+            total_bills = Bill.objects.count()
+            paid_bills = Bill.objects.filter(status='paid').count()
+            unpaid_bills = Bill.objects.filter(status='unpaid').count()
+            overdue_bills = Bill.objects.filter(
+                status='unpaid', 
+                due_date__lt=timezone.now().date()
+            ).count()
+            
+            # 金额统计
+            total_amount = Bill.objects.aggregate(
+                total=Sum('amount')
+            )['total'] or 0
+            
+            paid_amount = Bill.objects.filter(status='paid').aggregate(
+                total=Sum('paid_amount')
+            )['total'] or 0
+            
+            unpaid_amount = Bill.objects.filter(status='unpaid').aggregate(
+                total=Sum('amount')
+            )['total'] or 0
+            
+            # 按费用类型统计
+            type_stats = Bill.objects.values('fee_type').annotate(
+                total_count=Count('id'),
+                paid_count=Count('id', filter=Q(status='paid')),
+                total_amount=Sum('amount'),
+                paid_amount=Sum('paid_amount', filter=Q(status='paid'))
+            )
+            
+            # 转换为前端需要的格式
+            fee_type_distribution = []
+            for stat in type_stats:
+                fee_type_display = dict(Bill.FEE_TYPE_CHOICES).get(stat['fee_type'], stat['fee_type'])
+                fee_type_distribution.append({
+                    'type': fee_type_display,
+                    'total_count': stat['total_count'],
+                    'paid_count': stat['paid_count'] or 0,
+                    'unpaid_count': stat['total_count'] - (stat['paid_count'] or 0),
+                    'total_amount': float(stat['total_amount'] or 0),
+                    'paid_amount': float(stat['paid_amount'] or 0),
+                    'collection_rate': round((stat['paid_count'] or 0) / stat['total_count'] * 100, 2) if stat['total_count'] > 0 else 0
+                })
+            
+            stats_data = {
+                'total_bills': total_bills,
+                'paid_bills': paid_bills,
+                'unpaid_bills': unpaid_bills,
+                'overdue_bills': overdue_bills,
+                'total_amount': float(total_amount),
+                'paid_amount': float(paid_amount),
+                'unpaid_amount': float(unpaid_amount),
+                'collection_rate': round(paid_bills / total_bills * 100, 2) if total_bills > 0 else 0,
+                'fee_type_distribution': fee_type_distribution
+            }
+            
+            return Response({
+                "code": 200,
+                "message": "获取成功",
+                "data": stats_data
+            })
+            
+        except Exception as e:
+            logger.error(f"获取账单统计数据失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"获取账单统计数据失败: {str(e)}"
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

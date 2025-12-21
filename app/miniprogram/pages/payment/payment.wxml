@@ -1,26 +1,50 @@
 <view class="container">
+  <!-- 加载状态 -->
+  <van-loading wx:if="{{ loading }}" type="spinner" size="20px">加载中...</van-loading>
+  
+  <!-- 头部金额卡片 -->
   <view class="header-card">
     <text class="label">待缴总额</text>
     <view class="amount-row">
       <text class="symbol">¥</text>
       <text class="total">{{ totalAmount / 100 }}</text>
     </view>
-    <text class="unit-info">阳光花园 1栋 1单元 101室</text>
+    <text class="unit-info" wx:if="{{ houseInfo }}">{{ houseInfo.address || '阳光花园' }}</text>
   </view>
 
-  <view class="bill-list">
-    <view class="list-title">待缴账单</view>
+  <!-- 空状态 -->
+  <view wx:if="{{ !loading && bills.length === 0 }}" class="empty-state">
+    <van-empty description="暂无待缴费账单" />
+  </view>
+
+  <!-- 账单列表 -->
+  <view wx:else class="bill-list">
+    <view class="list-header">
+      <text class="list-title">待缴账单 ({{ bills.length }})</text>
+      <text class="refresh-btn" bind:tap="onRefresh">刷新</text>
+    </view>
+    
     <van-checkbox-group value="{{ selectedBills }}" bind:change="onBillChange">
       <view class="bill-item" wx:for="{{ bills }}" wx:key="id">
         <van-checkbox name="{{ item.id }}" checked-color="#07c160" label-class="bill-checkbox-label">
           <view class="bill-content">
             <view class="bill-header">
-              <text class="bill-name">{{ item.name }}</text>
-              <text class="bill-amount">¥ {{ item.amount / 100 }}</text>
+              <view class="bill-title-section">
+                <text class="bill-name">{{ item.title }}</text>
+                <van-tag type="{{ item.fee_type }}" size="small">{{ item.fee_type_display }}</van-tag>
+              </view>
+              <text class="bill-amount">¥{{ item.amount }}</text>
             </view>
             <view class="bill-detail">
-              <text>{{ item.period }}</text>
-              <van-tag type="warning" wx:if="{{item.isOverdue}}">已逾期</van-tag>
+              <text class="period-text">{{ item.period_display }}</text>
+              <van-tag type="warning" wx:if="{{ item.is_overdue }}">已逾期</van-tag>
+            </view>
+            <view wx:if="{{ item.house_info }}" class="house-info">
+              <text class="house-address">{{ item.house_info.address }}</text>
+              <text class="house-area">{{ item.house_info.area }}㎡</text>
+            </view>
+            <view class="due-date">
+              <text>截止日期：{{ item.due_date }}</text>
             </view>
           </view>
         </van-checkbox>
@@ -28,15 +52,18 @@
     </van-checkbox-group>
   </view>
   
+  <!-- 底部支付栏 -->
   <van-submit-bar
+    wx:if="{{ bills.length > 0 }}"
     price="{{ totalAmount }}"
-    button-text="立即缴费"
+    button-text="立即缴费 ({{ selectedBills.length }})"
     bind:submit="onSubmit"
-    tip="{{ true }}"
+    tip="{{ hasOverdueBills }}"
+    disabled="{{ selectedBills.length === 0 }}"
   >
-    <van-tag type="primary">全选</van-tag>
-    <view slot="tip">
-      您有 <text style="color: #f44">1</text> 笔逾期账单，请尽快缴纳
+    <van-tag type="primary" bind:tap="selectAll">{{ selectedBills.length === bills.length ? '取消全选' : '全选' }}</van-tag>
+    <view slot="tip" wx:if="{{ hasOverdueBills }}">
+      您有 <text style="color: #f44">{{ overdueBillsCount }}</text> 笔逾期账单，请尽快缴纳
     </view>
   </van-submit-bar>
 </view>

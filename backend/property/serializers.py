@@ -2,7 +2,7 @@ from rest_framework import serializers
 from .models import (
     HouseBindingApplication, HouseUserBinding, House, Building, Visitor,
     ParkingBindingApplication, ParkingUserBinding, ParkingSpace, Announcement,
-    RepairOrder, RepairOrderImage, RepairEmployee
+    RepairOrder, RepairOrderImage, RepairEmployee, FeeStandard, Bill
 )
 from django.utils import timezone
 
@@ -559,3 +559,178 @@ class RepairEmployeeSerializer(serializers.ModelSerializer):
             'total_orders', 'completed_orders', 'average_rating'
         ]
         read_only_fields = ['total_orders', 'completed_orders', 'average_rating']
+
+
+# ===== 缴费相关序列化器 =====
+
+class FeeStandardSerializer(serializers.ModelSerializer):
+    """收费标准序列化器"""
+    fee_type_display = serializers.CharField(source='get_fee_type_display', read_only=True)
+    billing_unit_display = serializers.CharField(source='get_billing_unit_display', read_only=True)
+    
+    class Meta:
+        model = FeeStandard
+        fields = [
+            'id', 'name', 'fee_type', 'fee_type_display', 'unit_price', 
+            'billing_unit', 'billing_unit_display', 'is_active', 'description',
+            'target_buildings', 'created_at', 'updated_at'
+        ]
+
+
+class BillCreateSerializer(serializers.Serializer):
+    """批量生成账单序列化器"""
+    fee_type = serializers.ChoiceField(choices=Bill.FEE_TYPE_CHOICES, help_text="费用类型")
+    billing_year = serializers.IntegerField(min_value=2020, max_value=2030, help_text="计费年份")
+    billing_month = serializers.IntegerField(min_value=1, max_value=12, help_text="计费月份")
+    fee_standard_id = serializers.IntegerField(help_text="收费标准ID")
+    target_buildings = serializers.ListField(
+        child=serializers.CharField(max_length=50),
+        required=False,
+        help_text="目标楼栋列表，为空则生成全小区账单"
+    )
+    
+    def validate_fee_standard_id(self, value):
+        """验证收费标准是否存在且有效"""
+        try:
+            fee_standard = FeeStandard.objects.get(id=value)
+            if not fee_standard.is_active:
+                raise serializers.ValidationError("收费标准已停用")
+            return value
+        except FeeStandard.DoesNotExist:
+            raise serializers.ValidationError("收费标准不存在")
+
+
+class BillListSerializer(serializers.ModelSerializer):
+    """账单列表序列化器"""
+    fee_type_display = serializers.CharField(source='get_fee_type_display', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    payment_method_display = serializers.CharField(source='get_payment_method_display', read_only=True)
+    house_info = serializers.SerializerMethodField()
+    user_info = serializers.SerializerMethodField()
+    period_display = serializers.CharField(source='get_period_display', read_only=True)
+    is_overdue = serializers.BooleanField(read_only=True)
+    
+    class Meta:
+        model = Bill
+        fields = [
+            'id', 'bill_no', 'title', 'fee_type', 'fee_type_display',
+            'amount', 'paid_amount', 'status', 'status_display',
+            'due_date', 'paid_at', 'payment_method', 'payment_method_display',
+            'house_info', 'user_info', 'period_display', 'is_overdue',
+            'created_at', 'updated_at'
+        ]
+    
+    def get_house_info(self, obj):
+        """获取房屋信息"""
+        if obj.house:
+            return {
+                'id': obj.house.id,
+                'building': obj.house.building.name,
+                'unit': obj.house.unit,
+                'room_number': obj.house.room_number,
+                'area': str(obj.house.area),
+                'address': str(obj.house)
+            }
+        return None
+    
+    def get_user_info(self, obj):
+        """获取用户信息"""
+        return {
+            'id': obj.user.id,
+            'name': obj.user.real_name or obj.user.nickname or f"用户{obj.user.id}",
+            'phone': obj.user.phone or ''
+        }
+
+
+class BillDetailSerializer(serializers.ModelSerializer):
+    """账单详情序列化器"""
+    fee_type_display = serializers.CharField(source='get_fee_type_display', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    payment_method_display = serializers.CharField(source='get_payment_method_display', read_only=True)
+    house_info = serializers.SerializerMethodField()
+    user_info = serializers.SerializerMethodField()
+    fee_standard_info = serializers.SerializerMethodField()
+    period_display = serializers.CharField(source='get_period_display', read_only=True)
+    is_overdue = serializers.BooleanField(read_only=True)
+    
+    class Meta:
+        model = Bill
+        fields = [
+            'id', 'bill_no', 'title', 'fee_type', 'fee_type_display',
+            'billing_period_start', 'billing_period_end', 'period_display',
+            'unit_price', 'quantity', 'amount', 'paid_amount',
+            'status', 'status_display', 'due_date',
+            'payment_method', 'payment_method_display', 'paid_at', 'payment_reference',
+            'description', 'admin_remark', 'is_overdue',
+            'house_info', 'user_info', 'fee_standard_info',
+            'created_at', 'updated_at'
+        ]
+    
+    def get_house_info(self, obj):
+        """获取房屋信息"""
+        if obj.house:
+            return {
+                'id': obj.house.id,
+                'building': obj.house.building.name,
+                'unit': obj.house.unit,
+                'room_number': obj.house.room_number,
+                'area': str(obj.house.area),
+                'floor': obj.house.floor,
+                'address': str(obj.house)
+            }
+        return None
+    
+    def get_user_info(self, obj):
+        """获取用户信息"""
+        return {
+            'id': obj.user.id,
+            'name': obj.user.real_name or obj.user.nickname or f"用户{obj.user.id}",
+            'phone': obj.user.phone or '',
+            'avatar': obj.user.avatar.url if obj.user.avatar else ''
+        }
+    
+    def get_fee_standard_info(self, obj):
+        """获取收费标准信息"""
+        if obj.fee_standard:
+            return {
+                'id': obj.fee_standard.id,
+                'name': obj.fee_standard.name,
+                'billing_unit': obj.fee_standard.get_billing_unit_display()
+            }
+        return None
+
+
+class BillPaymentSerializer(serializers.Serializer):
+    """账单支付序列化器"""
+    payment_method = serializers.ChoiceField(choices=Bill.PAYMENT_METHOD_CHOICES, default='wechat')
+    payment_reference = serializers.CharField(max_length=100, required=False, allow_blank=True, help_text="支付流水号")
+    
+    def validate_payment_method(self, value):
+        if not value:
+            raise serializers.ValidationError("请选择支付方式")
+        return value
+
+
+class ReminderBatchSerializer(serializers.Serializer):
+    """批量催缴序列化器"""
+    bill_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        help_text="要催缴的账单ID列表",
+        allow_empty=False
+    )
+    message_template = serializers.CharField(
+        required=False,
+        default="您有未缴费的账单，请及时缴费。",
+        help_text="催缴消息模板"
+    )
+    
+    def validate_bill_ids(self, value):
+        if not value:
+            raise serializers.ValidationError("请选择要催缴的账单")
+        
+        # 验证账单是否存在且为未支付状态
+        valid_bills = Bill.objects.filter(id__in=value, status='unpaid')
+        if valid_bills.count() != len(value):
+            raise serializers.ValidationError("部分账单不存在或已支付")
+        
+        return value

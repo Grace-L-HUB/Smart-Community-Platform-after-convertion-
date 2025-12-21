@@ -543,3 +543,160 @@ class RepairEmployee(models.Model):
     
     def __str__(self):
         return f"{self.name} - {self.speciality}"
+
+
+# ===== 在线缴费系统模型 =====
+
+class FeeStandard(models.Model):
+    """收费标准模型"""
+    FEE_TYPE_CHOICES = (
+        ('property', '物业费'),
+        ('parking', '停车费'),
+        ('water', '水费'),
+        ('electric', '电费'),
+        ('gas', '燃气费'),
+        ('heating', '供暖费'),
+    )
+    
+    BILLING_UNIT_CHOICES = (
+        ('per_sqm_month', '元/平米/月'),
+        ('per_month', '元/月'),
+        ('per_unit', '元/单位'),
+        ('per_degree', '元/度'),
+    )
+    
+    # 基本信息
+    name = models.CharField(max_length=100, verbose_name="收费项目名称")
+    fee_type = models.CharField(max_length=20, choices=FEE_TYPE_CHOICES, verbose_name="费用类型")
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="单价")
+    billing_unit = models.CharField(max_length=20, choices=BILLING_UNIT_CHOICES, default='per_sqm_month', verbose_name="计费单位")
+    
+    # 状态和时间
+    is_active = models.BooleanField(default=True, verbose_name="是否启用")
+    description = models.TextField(blank=True, verbose_name="收费说明")
+    
+    # 适用范围
+    target_buildings = models.JSONField(blank=True, null=True, verbose_name="适用楼栋")  # 如果为空则适用于所有楼栋
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="更新时间")
+    
+    class Meta:
+        verbose_name = "收费标准"
+        verbose_name_plural = "收费标准"
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.name} - {self.unit_price}{self.get_billing_unit_display()}"
+
+
+class Bill(models.Model):
+    """账单模型"""
+    FEE_TYPE_CHOICES = (
+        ('property', '物业费'),
+        ('parking', '停车费'),
+        ('water', '水费'),
+        ('electric', '电费'),
+        ('gas', '燃气费'),
+        ('heating', '供暖费'),
+    )
+    
+    STATUS_CHOICES = (
+        ('unpaid', '待支付'),
+        ('paid', '已支付'),
+        ('overdue', '已逾期'),
+        ('cancelled', '已取消'),
+    )
+    
+    PAYMENT_METHOD_CHOICES = (
+        ('wechat', '微信支付'),
+        ('alipay', '支付宝'),
+        ('cash', '现金'),
+        ('transfer', '转账'),
+    )
+    
+    # 基本信息
+    bill_no = models.CharField(max_length=32, unique=True, verbose_name="账单号")
+    title = models.CharField(max_length=200, verbose_name="账单标题")  # 如"2024年12月物业费"
+    fee_type = models.CharField(max_length=20, choices=FEE_TYPE_CHOICES, verbose_name="费用类型")
+    
+    # 关联信息
+    house = models.ForeignKey('House', on_delete=models.CASCADE, related_name='bills', null=True, blank=True, verbose_name="关联房屋")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='bills', verbose_name="缴费人")
+    fee_standard = models.ForeignKey(FeeStandard, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="收费标准")
+    
+    # 计费信息
+    billing_period_start = models.DateField(verbose_name="计费周期开始")
+    billing_period_end = models.DateField(verbose_name="计费周期结束")
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="单价")
+    quantity = models.DecimalField(max_digits=10, decimal_places=2, default=1, verbose_name="计费数量")  # 面积、用量等
+    amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="应缴金额")
+    
+    # 状态信息
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='unpaid', verbose_name="账单状态")
+    due_date = models.DateField(verbose_name="缴费截止日期")
+    
+    # 支付信息
+    paid_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="已缴金额")
+    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES, null=True, blank=True, verbose_name="支付方式")
+    paid_at = models.DateTimeField(null=True, blank=True, verbose_name="支付时间")
+    payment_reference = models.CharField(max_length=100, blank=True, verbose_name="支付流水号")
+    
+    # 备注信息
+    description = models.TextField(blank=True, verbose_name="账单说明")
+    admin_remark = models.TextField(blank=True, verbose_name="管理员备注")
+    
+    # 时间戳
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="更新时间")
+    
+    class Meta:
+        verbose_name = "账单"
+        verbose_name_plural = "账单"
+        ordering = ['-created_at']
+        # 确保同一房屋同一类型同一周期不重复生成账单
+        unique_together = ('house', 'fee_type', 'billing_period_start', 'billing_period_end')
+    
+    def __str__(self):
+        house_info = f"{self.house}" if self.house else "无房屋"
+        return f"{self.bill_no} - {house_info} - {self.get_fee_type_display()}"
+    
+    def save(self, *args, **kwargs):
+        # 自动生成账单号
+        if not self.bill_no:
+            import datetime
+            import random
+            today = datetime.date.today()
+            date_str = today.strftime('%Y%m%d')
+            # 生成8位随机数
+            random_num = random.randint(10000000, 99999999)
+            self.bill_no = f'BILL{date_str}{random_num}'
+        
+        # 自动设置账单标题
+        if not self.title:
+            period_str = f"{self.billing_period_start.strftime('%Y年%m月')}"
+            self.title = f"{period_str}{self.get_fee_type_display()}"
+        
+        super().save(*args, **kwargs)
+    
+    def is_overdue(self):
+        """检查是否逾期"""
+        from django.utils import timezone
+        return self.status == 'unpaid' and self.due_date < timezone.now().date()
+    
+    def mark_as_paid(self, payment_method='wechat', payment_reference=''):
+        """标记为已支付"""
+        self.status = 'paid'
+        self.paid_amount = self.amount
+        self.payment_method = payment_method
+        self.payment_reference = payment_reference
+        self.paid_at = timezone.now()
+        self.save()
+    
+    def get_period_display(self):
+        """获取计费周期显示文本"""
+        if self.billing_period_start.year == self.billing_period_end.year and \
+           self.billing_period_start.month == self.billing_period_end.month:
+            return f"{self.billing_period_start.strftime('%Y年%m月')}"
+        else:
+            return f"{self.billing_period_start.strftime('%Y-%m-%d')} 至 {self.billing_period_end.strftime('%Y-%m-%d')}"

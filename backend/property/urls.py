@@ -13,7 +13,10 @@ from .views import (
     AnnouncementCategoryOptionsView,
     RepairOrderView, RepairOrderDetailView, RepairOrderAssignView,
     RepairOrderCompleteView, RepairOrderRejectView, RepairOrderRatingView,
-    RepairEmployeeView, RepairOrderOptionsView, DashboardStatsView
+    RepairEmployeeView, RepairOrderOptionsView, DashboardStatsView,
+    # 缴费管理相关视图
+    FeeStandardView, BillBatchGenerateView, BillListView, BillDetailView,
+    BillPaymentView, BillReminderView, BillReceiptView, BillStatsView
 )
 
 urlpatterns = [
@@ -118,4 +121,22 @@ urlpatterns = [
     
     # Dashboard统计数据
     path('property/dashboard/stats', DashboardStatsView.as_view(), name='dashboard_stats'),
+    
+    # ===== 缴费管理相关路由 =====
+    
+    # 收费标准管理
+    path('property/fee-standards', FeeStandardView.as_view(), name='fee_standards'),
+    
+    # 账单管理
+    path('property/bills/generate', BillBatchGenerateView.as_view(), name='bill_batch_generate'),
+    path('property/bills', BillListView.as_view(), name='bill_list'),
+    path('property/bills/<int:bill_id>', BillDetailView.as_view(), name='bill_detail'),
+    path('property/bills/<int:bill_id>/pay', BillPaymentView.as_view(), name='bill_payment'),
+    path('property/bills/<int:bill_id>/receipt', BillReceiptView.as_view(), name='bill_receipt'),
+    
+    # 催缴管理
+    path('property/bills/reminder', BillReminderView.as_view(), name='bill_reminder'),
+    
+    # 账单统计
+    path('property/bills/stats', BillStatsView.as_view(), name='bill_stats'),
 ]
