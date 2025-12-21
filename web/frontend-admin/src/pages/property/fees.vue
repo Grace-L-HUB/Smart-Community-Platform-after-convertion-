@@ -3,6 +3,26 @@
     <div class="d-flex align-center mb-6">
       <h1 class="text-h4 font-weight-bold">缴费管理</h1>
       <v-spacer />
+      <v-btn 
+        color="info" 
+        variant="outlined" 
+        prepend-icon="mdi-download" 
+        @click="loadAllBills" 
+        :loading="loading"
+        class="mr-3"
+      >
+        加载全部数据
+      </v-btn>
+      <v-btn 
+        color="secondary" 
+        variant="outlined" 
+        prepend-icon="mdi-refresh" 
+        @click="refreshData" 
+        :loading="loading"
+        class="mr-3"
+      >
+        刷新
+      </v-btn>
       <v-btn color="primary" prepend-icon="mdi-plus" @click="generateDialog = true">
         生成账单
       </v-btn>
@@ -51,7 +71,7 @@
           <v-col cols="12" sm="3">
             <v-select
               v-model="filterType"
-              :items="typeOptions"
+              :items="feeTypeOptions"
               label="收费类型"
               variant="outlined"
               density="compact"
@@ -81,17 +101,60 @@
               hide-details
             />
           </v-col>
+          <v-col cols="12" sm="3" class="d-flex align-center gap-3">
+            <v-btn 
+              variant="outlined" 
+              prepend-icon="mdi-filter-off" 
+              @click="clearFilters"
+              :disabled="!hasActiveFilters"
+            >
+              清除筛选
+            </v-btn>
+            <v-chip 
+              v-if="pagination.total > 0" 
+              size="small" 
+              color="info" 
+              variant="tonal"
+            >
+              数据库共{{ pagination.total }}条
+            </v-chip>
+          </v-col>
         </v-row>
       </v-card-text>
     </v-card>
 
     <!-- 账单列表 -->
     <v-card rounded="lg">
+      <v-card-title class="d-flex align-center">
+        <span>账单列表</span>
+        <v-spacer />
+        <div class="d-flex gap-2">
+          <v-chip 
+            size="small" 
+            variant="outlined"
+            :color="bills.length < pagination.total ? 'warning' : 'success'"
+          >
+            显示 {{ bills.length }} / {{ pagination.total || 0 }} 条
+          </v-chip>
+          <v-btn
+            v-if="bills.length < pagination.total"
+            size="small"
+            variant="outlined"
+            color="primary"
+            @click="loadMore"
+            :disabled="loading"
+          >
+            加载更多
+          </v-btn>
+        </div>
+      </v-card-title>
       <v-data-table
         :headers="headers"
         :items="filteredBills"
         :items-per-page="10"
         class="elevation-0"
+        :loading="loading"
+        loading-text="加载账单数据中..."
       >
         <template #item.house_info.address="{ item }">
           {{ item.house_info?.address || '-' }}
@@ -218,7 +281,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, reactive, onMounted } from 'vue'
+import { ref, computed, reactive, onMounted, watch } from 'vue'
 import dayjs from 'dayjs'
 
 // 定义数据接口
@@ -316,15 +379,34 @@ const unpaidCount = computed(() => stats.value.unpaid_bills)
 const totalPaid = computed(() => stats.value.paid_amount)
 const totalUnpaid = computed(() => stats.value.unpaid_amount)
 
-// 筛选后的账单
+// 筛选后的账单（现在直接使用后端筛选的结果）
 const filteredBills = computed(() => {
-  return bills.value.filter(bill => {
-    if (filterType.value && bill.fee_type !== filterType.value) return false
-    if (filterStatus.value && bill.status !== filterStatus.value) return false
-    if (filterPeriod.value && !bill.period_display.includes(filterPeriod.value)) return false
-    return true
-  })
+  return bills.value
 })
+
+// 监听筛选条件变化，重新加载数据
+watch([filterType, filterStatus, filterPeriod], () => {
+  // 如果有筛选条件，使用分页加载，否则加载所有数据
+  if (hasActiveFilters.value) {
+    loadBills(false) // 重新加载，不是加载更多
+  } else {
+    loadAllBills() // 没有筛选条件时加载所有数据
+  }
+}, { deep: true })
+
+// 检查是否有激活的筛选条件
+const hasActiveFilters = computed(() => {
+  return !!(filterType.value || filterStatus.value || filterPeriod.value)
+})
+
+// 清除所有筛选条件
+function clearFilters() {
+  filterType.value = null
+  filterStatus.value = null
+  filterPeriod.value = ''
+  // 清除筛选后直接加载所有数据
+  loadAllBills()
+}
 
 function getTypeColor(type: string) {
   const colors: Record<string, string> = {
@@ -342,20 +424,136 @@ function formatTime(time: string | null) {
   return time ? dayjs(time).format('MM-DD HH:mm') : '-'
 }
 
+// 分页相关状态
+const pagination = ref({
+  page: 1,
+  pageSize: 50,  // 增大页面大小
+  total: 0,
+  totalPages: 0
+})
+
 // 加载账单列表
-async function loadBills() {
+async function loadBills(loadMore = false) {
   try {
-    loading.value = true
-    const response = await fetch('http://localhost:8000/api/property/bills')
+    if (!loadMore) {
+      loading.value = true
+      pagination.value.page = 1  // 重置页码
+    }
+    
+    // 构建查询参数
+    const params = new URLSearchParams()
+    if (filterType.value) params.append('fee_type', filterType.value)
+    if (filterStatus.value) params.append('status', filterStatus.value)
+    if (filterPeriod.value) params.append('period', filterPeriod.value)
+    
+    // 添加分页参数
+    params.append('page', pagination.value.page.toString())
+    params.append('page_size', pagination.value.pageSize.toString())
+    
+    const url = `http://localhost:8000/api/property/bills?${params.toString()}`
+    
+    // 添加详细的调试日志
+    console.log('=== 账单API调用详情 ===')
+    console.log('请求URL:', url)
+    console.log('筛选条件:', {
+      fee_type: filterType.value,
+      status: filterStatus.value,
+      period: filterPeriod.value
+    })
+    
+    const response = await fetch(url)
     const result = await response.json()
     
+    console.log('API响应:', result)
+    
     if (result.code === 200) {
-      bills.value = result.data.list
+      if (loadMore && pagination.value.page > 1) {
+        // 加载更多时合并数据
+        bills.value = [...bills.value, ...result.data.list]
+      } else {
+        // 首次加载或刷新时替换数据
+        bills.value = result.data.list
+      }
+      
+      // 更新分页信息
+      pagination.value.total = result.data.total
+      pagination.value.totalPages = result.data.total_pages
+      
+      console.log(`✅ 加载账单成功: 当前${bills.value.length}条，总共${result.data.total}条`)
+      
+      // 如果筛选后没有数据，给出提示
+      if (result.data.total === 0 && (filterType.value || filterStatus.value || filterPeriod.value)) {
+        showSnackbar('warning', '当前筛选条件下没有找到账单')
+      }
     } else {
+      console.error('❌ API响应错误:', result)
       showSnackbar('error', result.message || '获取账单失败')
     }
   } catch (error) {
-    console.error('加载账单失败:', error)
+    console.error('❌ 加载账单失败:', error)
+    showSnackbar('error', '网络错误')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 加载更多数据
+async function loadMore() {
+  if (pagination.value.page < pagination.value.totalPages) {
+    pagination.value.page++
+    await loadBills(true)
+  }
+}
+
+// 加载所有数据
+async function loadAllBills() {
+  try {
+    loading.value = true
+    
+    // 构建查询参数
+    const params = new URLSearchParams()
+    if (filterType.value) params.append('fee_type', filterType.value)
+    if (filterStatus.value) params.append('status', filterStatus.value)
+    if (filterPeriod.value) params.append('period', filterPeriod.value)
+    
+    // 设置一个很大的page_size来获取所有数据
+    params.append('page_size', '1000')
+    
+    const url = `http://localhost:8000/api/property/bills?${params.toString()}`
+    
+    // 添加详细的调试日志
+    console.log('=== 加载所有账单 ===')
+    console.log('请求URL:', url)
+    console.log('筛选条件:', {
+      fee_type: filterType.value,
+      status: filterStatus.value,
+      period: filterPeriod.value
+    })
+    
+    const response = await fetch(url)
+    const result = await response.json()
+    
+    console.log('API响应:', result)
+    
+    if (result.code === 200) {
+      bills.value = result.data.list
+      pagination.value.total = result.data.total
+      console.log(`✅ 加载所有账单成功: ${result.data.total}条`)
+      
+      // 显示账单状态统计（调试用）
+      const statusCount = bills.value.reduce((acc, bill) => {
+        acc[bill.status] = (acc[bill.status] || 0) + 1
+        return acc
+      }, {})
+      console.log('账单状态统计:', statusCount)
+      
+      showSnackbar('success', `已加载全部${result.data.total}条账单`)
+    } else {
+      console.error('❌ API响应错误:', result)
+      showSnackbar('error', result.message || '获取账单失败')
+    }
+  } catch (error) {
+    console.error('❌ 加载所有账单失败:', error)
     showSnackbar('error', '网络错误')
   } finally {
     loading.value = false
@@ -410,6 +608,9 @@ async function sendReminder(bill: Bill) {
     const result = await response.json()
     if (result.code === 200) {
       showSnackbar('success', `已向 ${bill.user_info?.name} 发送催缴提醒`)
+      // 催缴成功后刷新数据，保持当前视图（所有数据或筛选后的数据）
+      await loadAllBills()
+      await loadStats()
     } else {
       showSnackbar('error', result.message || '发送催缴失败')
     }
@@ -451,8 +652,8 @@ async function handleGenerate() {
     if (result.code === 200) {
       showSnackbar('success', result.message)
       generateDialog.value = false
-      // 重新加载数据
-      await loadBills()
+      // 重新加载数据，包括新生成的账单
+      await loadAllBills()
       await loadStats()
     } else {
       showSnackbar('error', result.message || '生成账单失败')
@@ -463,6 +664,16 @@ async function handleGenerate() {
   } finally {
     generating.value = false
   }
+}
+
+// 刷新所有数据
+async function refreshData() {
+  await Promise.all([
+    loadAllBills(), // 刷新时加载所有数据
+    loadStats(),
+    loadFeeStandards()
+  ])
+  showSnackbar('success', '数据刷新成功')
 }
 
 // 查看账单详情
@@ -485,8 +696,9 @@ function showSnackbar(color: string, text: string) {
 }
 
 onMounted(async () => {
+  // 初始加载时直接加载所有数据，确保用户能看到完整的数据
   await Promise.all([
-    loadBills(),
+    loadAllBills(),
     loadStats(),
     loadFeeStandards()
   ])

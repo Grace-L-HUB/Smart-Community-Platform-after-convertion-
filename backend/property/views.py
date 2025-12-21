@@ -2479,24 +2479,46 @@ class BillListView(APIView):
             building = request.GET.get('building')
             is_overdue = request.GET.get('is_overdue')
             
+            # 添加调试日志
+            print(f"=== 账单筛选参数 ===")
+            print(f"fee_type: '{fee_type}'")
+            print(f"status_filter: '{status_filter}'")
+            print(f"user_id: {user_id}")
+            print(f"building: {building}")
+            print(f"is_overdue: {is_overdue}")
+            
             # 构建查询条件
             queryset = Bill.objects.select_related('house__building', 'user', 'fee_standard').all()
             
+            print(f"初始查询数量: {queryset.count()}")
+            
+            # 查看数据库中实际的fee_type值
+            all_fee_types = Bill.objects.values_list('fee_type', flat=True).distinct()
+            print(f"数据库中的所有fee_type值: {list(all_fee_types)}")
+            
             if fee_type:
                 queryset = queryset.filter(fee_type=fee_type)
+                print(f"fee_type='{fee_type}'筛选后数量: {queryset.count()}")
             
             if status_filter:
                 queryset = queryset.filter(status=status_filter)
+                print(f"status='{status_filter}'筛选后数量: {queryset.count()}")
+                # 调试：查看所有可能的status值
+                all_statuses = Bill.objects.values_list('status', flat=True).distinct()
+                print(f"数据库中的所有status值: {list(all_statuses)}")
             
             if user_id:
                 queryset = queryset.filter(user_id=user_id)
+                print(f"user_id筛选后数量: {queryset.count()}")
             
             if building:
                 queryset = queryset.filter(house__building__name=building)
+                print(f"building筛选后数量: {queryset.count()}")
             
             if is_overdue == 'true':
                 from django.utils import timezone
                 queryset = queryset.filter(status='unpaid', due_date__lt=timezone.now().date())
+                print(f"overdue筛选后数量: {queryset.count()}")
             
             # 分页
             page = int(request.GET.get('page', 1))
