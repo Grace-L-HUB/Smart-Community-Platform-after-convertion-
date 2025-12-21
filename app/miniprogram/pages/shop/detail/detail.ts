@@ -25,13 +25,13 @@ Page({
     // 获取商户详情
     loadShopDetail() {
         this.setData({ loading: true, error: '' });
-        
+
         wx.request({
             url: `http://127.0.0.1:8000/api/merchant/profile/${this.data.shopId}/`,
             method: 'GET',
             success: (res: any) => {
                 console.log('商户详情响应:', res.data);
-                
+
                 if (res.statusCode === 200 && res.data.success) {
                     const merchant = res.data.data;
                     this.setData({
@@ -77,13 +77,13 @@ Page({
     // 获取商户商品列表
     loadProducts() {
         this.setData({ productsLoading: true, productsError: '' });
-        
+
         wx.request({
             url: `http://127.0.0.1:8000/api/merchant/products/public/${this.data.shopId}/`,
             method: 'GET',
             success: (res: any) => {
                 console.log('商品列表响应:', res.data);
-                
+
                 if (res.statusCode === 200 && res.data.success) {
                     const products = res.data.data
                         .filter((product: any) => product.status === 'online') // 只显示上架商品
@@ -99,7 +99,7 @@ Page({
                             salesCount: product.sales_count,
                             serviceTimeSlots: product.service_time_slots
                         }));
-                    
+
                     this.setData({
                         products,
                         productsLoading: false
@@ -150,10 +150,10 @@ Page({
     loadFallbackProductsData() {
         this.setData({
             products: [
-                { 
-                    id: 1, 
-                    name: '智利车厘子 J级 250g', 
-                    price: '29.90', 
+                {
+                    id: 1,
+                    name: '智利车厘子 J级 250g',
+                    price: '29.90',
                     originalPrice: '35.90',
                     image: 'https://img.yzcdn.cn/vant/apple-1.jpg',
                     description: '新鲜车厘子，甜度高',
@@ -161,10 +161,10 @@ Page({
                     category: '水果',
                     salesCount: 256
                 },
-                { 
-                    id: 2, 
-                    name: '赣南脐橙 5kg', 
-                    price: '39.90', 
+                {
+                    id: 2,
+                    name: '赣南脐橙 5kg',
+                    price: '39.90',
                     originalPrice: '45.90',
                     image: 'https://img.yzcdn.cn/vant/apple-2.jpg',
                     description: '赣南特产脐橙，汁多味甜',
@@ -184,7 +184,7 @@ Page({
 
     callShop() {
         if (this.data.shop.phone) {
-            wx.makePhoneCall({ 
+            wx.makePhoneCall({
                 phoneNumber: this.data.shop.phone,
                 fail: () => {
                     wx.showToast({
@@ -205,7 +205,7 @@ Page({
     onAddToCart(event: any) {
         const productId = event.currentTarget.dataset.id;
         const product = this.data.products.find((p: any) => p.id === productId);
-        
+
         if (product) {
             if (product.stock <= 0) {
                 wx.showToast({
@@ -214,7 +214,7 @@ Page({
                 });
                 return;
             }
-            
+
             // 这里可以实现购物车逻辑
             wx.showToast({
                 title: '已添加到购物车',
@@ -227,7 +227,7 @@ Page({
     onBuyNow(event: any) {
         const productId = event.currentTarget.dataset.id;
         const product = this.data.products.find((p: any) => p.id === productId);
-        
+
         if (product) {
             if (product.stock <= 0) {
                 wx.showToast({
@@ -236,11 +236,19 @@ Page({
                 });
                 return;
             }
-            
+
             // 跳转到订单页面
             wx.navigateTo({
                 url: `/pages/order/create/create?productId=${productId}&shopId=${this.data.shopId}`
             });
         }
+    },
+
+    // 跳转商品详情
+    onProductClick(event: any) {
+        const productId = event.currentTarget.dataset.id;
+        wx.navigateTo({
+            url: `/pages/shop/product/product?id=${productId}&shopId=${this.data.shopId}`
+        });
     }
 });

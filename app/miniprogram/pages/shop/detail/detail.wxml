@@ -68,58 +68,60 @@
             
             <view wx:else>
               <block wx:for="{{ products }}" wx:key="id">
-                <van-card
-                  price="{{ item.price }}"
-                  origin-price="{{ item.originalPrice }}"
-                  title="{{ item.name }}"
-                  desc="{{ item.description }}"
-                  thumb="{{ item.image }}"
-                  lazy-load
-                >
-                  <view slot="tags">
-                    <van-tag plain type="primary" wx:if="{{ item.category }}">{{ item.category }}</van-tag>
-                    <van-tag plain type="success" wx:if="{{ item.salesCount > 0 }}">已售{{ item.salesCount }}</van-tag>
-                    <van-tag plain type="warning" wx:if="{{ item.stock <= 10 && item.stock > 0 }}">仅剩{{ item.stock }}件</van-tag>
-                    <van-tag plain type="danger" wx:if="{{ item.stock <= 0 }}">售罄</van-tag>
-                  </view>
-                  <view slot="footer" class="product-actions">
-                    <van-button 
-                      size="mini" 
-                      icon="cart-o" 
-                      type="warning"
-                      disabled="{{ item.stock <= 0 }}"
-                      data-id="{{ item.id }}"
-                      bindtap="onAddToCart"
-                    >
-                      加购物车
-                    </van-button>
-                    <van-button 
-                      size="mini" 
-                      type="primary"
-                      disabled="{{ item.stock <= 0 }}"
-                      data-id="{{ item.id }}"
-                      bindtap="onBuyNow"
-                    >
-                      立即购买
-                    </van-button>
-                  </view>
-                  
-                  <!-- 服务时段显示（适用于家政服务等） -->
-                  <view wx:if="{{ item.serviceTimeSlots && item.serviceTimeSlots.length > 0 }}" slot="bottom" class="service-slots">
-                    <text class="slots-label">可预约时段：</text>
-                    <van-tag 
-                      wx:for="{{ item.serviceTimeSlots }}" 
-                      wx:for-item="slot" 
-                      wx:key="*this" 
-                      size="mini" 
-                      plain 
-                      type="primary"
-                      class="slot-tag"
-                    >
-                      {{ slot }}
-                    </van-tag>
-                  </view>
-                </van-card>
+                <view class="product-card-wrapper" bindtap="onProductClick" data-id="{{ item.id }}">
+                  <van-card
+                    price="{{ item.price }}"
+                    origin-price="{{ item.originalPrice }}"
+                    title="{{ item.name }}"
+                    desc="{{ item.description }}"
+                    thumb="{{ item.image }}"
+                    lazy-load
+                  >
+                    <view slot="tags">
+                      <van-tag plain type="primary" wx:if="{{ item.category }}">{{ item.category }}</van-tag>
+                      <van-tag plain type="success" wx:if="{{ item.salesCount > 0 }}">已售{{ item.salesCount }}</van-tag>
+                      <van-tag plain type="warning" wx:if="{{ item.stock <= 10 && item.stock > 0 }}">仅剩{{ item.stock }}件</van-tag>
+                      <van-tag plain type="danger" wx:if="{{ item.stock <= 0 }}">售罄</van-tag>
+                    </view>
+                    <view slot="footer" class="product-actions">
+                      <van-button 
+                        size="mini" 
+                        icon="cart-o" 
+                        type="warning"
+                        disabled="{{ item.stock <= 0 }}"
+                        data-id="{{ item.id }}"
+                        catchtap="onAddToCart"
+                      >
+                        加购物车
+                      </van-button>
+                      <van-button 
+                        size="mini" 
+                        type="primary"
+                        disabled="{{ item.stock <= 0 }}"
+                        data-id="{{ item.id }}"
+                        catchtap="onBuyNow"
+                      >
+                        立即购买
+                      </van-button>
+                    </view>
+                    
+                    <!-- 服务时段显示（适用于家政服务等） -->
+                    <view wx:if="{{ item.serviceTimeSlots && item.serviceTimeSlots.length > 0 }}" slot="bottom" class="service-slots">
+                      <text class="slots-label">可预约时段：</text>
+                      <van-tag 
+                        wx:for="{{ item.serviceTimeSlots }}" 
+                        wx:for-item="slot" 
+                        wx:key="*this" 
+                        size="mini" 
+                        plain 
+                        type="primary"
+                        class="slot-tag"
+                      >
+                        {{ slot }}
+                      </van-tag>
+                    </view>
+                  </van-card>
+                </view>
               </block>
             </view>
           </view>
