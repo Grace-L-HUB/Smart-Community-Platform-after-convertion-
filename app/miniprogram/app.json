@@ -15,6 +15,7 @@
     "pages/payment/payment",
     "pages/market/market",
     "pages/shop/detail/detail",
+    "pages/shop/product/product",
     "pages/login/login",
     "pages/community/market-detail/market-detail",
     "pages/community/post-item/post-item",

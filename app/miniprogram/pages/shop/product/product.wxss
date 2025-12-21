@@ -1,0 +1,166 @@
+.product-container {
+  padding-bottom: 100px;
+  background-color: #f7f8fa;
+  min-height: 100vh;
+}
+
+.loading-container {
+  padding: 200rpx 0;
+  text-align: center;
+}
+
+.error-container {
+  padding: 100rpx 30rpx;
+}
+
+.product-image {
+  width: 100%;
+  height: 750rpx;
+  background-color: #fff;
+}
+
+.product-info-card {
+  background-color: #fff;
+  padding: 30rpx;
+  margin-bottom: 20rpx;
+}
+
+.product-price-row {
+  display: flex;
+  align-items: baseline;
+  margin-bottom: 20rpx;
+}
+
+.current-price {
+  color: #ee0a24;
+  font-size: 40rpx;
+  font-weight: bold;
+}
+
+.currency-symbol {
+  font-size: 28rpx;
+}
+
+.original-price {
+  color: #969799;
+  font-size: 26rpx;
+  text-decoration: line-through;
+  margin-left: 20rpx;
+}
+
+.product-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #323233;
+  line-height: 1.5;
+  margin-bottom: 16rpx;
+}
+
+.product-desc {
+  font-size: 26rpx;
+  color: #969799;
+  line-height: 1.5;
+  margin-bottom: 20rpx;
+}
+
+.product-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+  margin-bottom: 20rpx;
+}
+
+.service-slots {
+  padding: 20rpx;
+  background: #f8f9fa;
+  border-radius: 12rpx;
+  margin-top: 20rpx;
+}
+
+.slots-label {
+  font-size: 24rpx;
+  color: #666;
+  margin-right: 10rpx;
+}
+
+.slot-tag {
+  margin-right: 10rpx;
+  margin-bottom: 10rpx;
+}
+
+.section-title {
+  font-size: 30rpx;
+  font-weight: bold;
+  color: #323233;
+  margin-bottom: 20rpx;
+  padding: 30rpx 30rpx 0;
+  background-color: #fff;
+}
+
+.detail-content {
+  background-color: #fff;
+  padding: 30rpx;
+  font-size: 28rpx;
+  color: #646566;
+  line-height: 1.6;
+}
+
+/* 规格弹窗样式 */
+.sku-popup {
+  padding: 30rpx;
+  background-color: #fff;
+}
+
+.sku-header {
+  display: flex;
+  margin-bottom: 40rpx;
+}
+
+.sku-thumb {
+  width: 180rpx;
+  height: 180rpx;
+  border-radius: 8rpx;
+  margin-right: 20rpx;
+  flex-shrink: 0;
+}
+
+.sku-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.sku-price {
+  color: #ee0a24;
+  font-size: 36rpx;
+  font-weight: bold;
+  margin-bottom: 10rpx;
+}
+
+.sku-stock {
+  color: #969799;
+  font-size: 24rpx;
+}
+
+.sku-body {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.sku-section {
+  margin-bottom: 30rpx;
+}
+
+.sku-section-title {
+  font-size: 28rpx;
+  color: #323233;
+  margin-bottom: 20rpx;
+}
+
+.sku-stepper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 40rpx;
+  margin-bottom: 100rpx;
+}

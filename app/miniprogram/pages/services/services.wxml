@@ -30,24 +30,53 @@
     <!-- Tab 2: Life Services -->
     <van-tab title="街角好店">
       <view class="p-30">
-        <block wx:for="{{ shops }}" wx:key="id">
-          <van-card
-            price="{{ item.price }}"
-            desc="{{ item.desc }}"
-            title="{{ item.name }}"
-            thumb="{{ item.image }}"
-            lazy-load
-            data-id="{{ item.id }}"
-            bind:click="onShopClick"
-          >
-            <view slot="tags">
-               <van-tag plain type="danger" wx:if="{{item.discount}}">{{item.discount}}</van-tag>
-            </view>
-            <view slot="footer">
-              <van-button size="mini" round type="primary">进店</van-button>
-            </view>
-          </van-card>
-          <view style="height: 20rpx;"></view>
+        <!-- 加载状态 -->
+        <van-loading wx:if="{{ loading }}" type="spinner" color="#1989fa" vertical>
+          加载中...
+        </van-loading>
+        
+        <!-- 错误状态 -->
+        <view wx:elif="{{ error }}" class="error-container">
+          <van-empty description="{{ error }}">
+            <van-button round type="primary" class="bottom-button" bindtap="onRefresh">
+              重新加载
+            </van-button>
+          </van-empty>
+        </view>
+        
+        <!-- 商户列表 -->
+        <block wx:else>
+          <view wx:if="{{ shops.length === 0 }}" class="empty-container">
+            <van-empty description="暂无商户" />
+          </view>
+          
+          <view wx:else>
+            <block wx:for="{{ shops }}" wx:key="id">
+              <view class="shop-card" data-id="{{ item.id }}" bindtap="onShopClick">
+                <image class="shop-img" src="{{ item.image }}" mode="aspectFill" lazy-load />
+                <view class="shop-content">
+                  <view class="shop-main-info">
+                    <view class="shop-title-row">
+                      <text class="shop-title text-ellipsis">{{ item.name }}</text>
+                    </view>
+                    <view class="shop-tags">
+                      <text class="tag category-tag" wx:if="{{ item.category }}">{{ item.category }}</text>
+                      <text class="tag discount-tag" wx:if="{{ item.discount }}">{{ item.discount }}</text>
+                    </view>
+                    <view class="shop-desc text-ellipsis">{{ item.desc }}</view>
+                    <view class="shop-extra">
+                      <van-icon name="clock-o" size="12" color="#999" style="margin-right: 4rpx;" />
+                      <text>{{ item.price }}</text> <!-- price field holds business hours text -->
+                    </view>
+                  </view>
+                  <view class="shop-action">
+                    <button class="visit-btn">进店</button>
+                  </view>
+                </view>
+              </view>
+              <view style="height: 20rpx;"></view>
+            </block>
+          </view>
         </block>
       </view>
     </van-tab>

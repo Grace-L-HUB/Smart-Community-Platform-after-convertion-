@@ -175,3 +175,102 @@ export const merchantRegisterApi = {
     return response.json()
   }
 }
+
+// 商品管理接口
+export interface Product {
+  id?: number
+  name: string
+  description: string
+  image?: string
+  category: string
+  price: number
+  original_price?: number
+  stock: number
+  status: 'online' | 'offline'
+  sales_count?: number
+  service_time_slots?: string[]
+  created_at?: string
+  updated_at?: string
+}
+
+export const merchantProductApi = {
+  // 获取商品列表
+  async getProducts(params?: {
+    category?: string
+    status?: string
+    keyword?: string
+  }): Promise<ApiResponse<Product[]>> {
+    return apiClient.get('/merchant/products/', params)
+  },
+
+  // 创建商品
+  async createProduct(data: FormData): Promise<{
+    success: boolean
+    message: string
+    data?: Product
+  }> {
+    const response = await fetch(`${API_BASE_URL}/merchant/products/`, {
+      method: 'POST',
+      body: data,
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    })
+    return response.json()
+  },
+
+  // 获取商品详情
+  async getProduct(id: number): Promise<ApiResponse<Product>> {
+    return apiClient.get(`/merchant/products/${id}/`)
+  },
+
+  // 更新商品
+  async updateProduct(id: number, data: FormData): Promise<{
+    success: boolean
+    message: string
+    data?: Product
+  }> {
+    const response = await fetch(`${API_BASE_URL}/merchant/products/${id}/`, {
+      method: 'PUT',
+      body: data,
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    })
+    return response.json()
+  },
+
+  // 删除商品
+  async deleteProduct(id: number): Promise<{
+    success: boolean
+    message: string
+  }> {
+    const response = await fetch(`${API_BASE_URL}/merchant/products/${id}/`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    })
+    return response.json()
+  },
+
+  // 切换商品上下架状态
+  async toggleProductStatus(id: number): Promise<{
+    success: boolean
+    message: string
+    data?: {
+      id: number
+      status: 'online' | 'offline'
+      status_display: string
+    }
+  }> {
+    const response = await fetch(`${API_BASE_URL}/merchant/products/${id}/toggle-status/`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    return response.json()
+  }
+}

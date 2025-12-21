@@ -150,6 +150,55 @@
   margin-bottom: 8rpx;
 }
 
+.loading-container {
+  padding: 200rpx 0;
+  text-align: center;
+}
+
+.error-container {
+  padding: 100rpx 30rpx;
+}
+
+.products-loading {
+  padding: 100rpx 0;
+  text-align: center;
+}
+
+.products-error {
+  padding: 50rpx 30rpx;
+}
+
+.products-container {
+  padding: 20rpx 30rpx;
+}
+
+.empty-products {
+  padding: 100rpx 0;
+}
+
+.product-actions {
+  display: flex;
+  gap: 20rpx;
+}
+
+.service-slots {
+  padding: 20rpx 30rpx;
+  background: #f8f9fa;
+  margin-top: 20rpx;
+  border-radius: 12rpx;
+}
+
+.slots-label {
+  font-size: 24rpx;
+  color: #666;
+  margin-right: 10rpx;
+}
+
+.slot-tag {
+  margin-right: 10rpx;
+  margin-bottom: 10rpx;
+}
+
 .empty-comment {
   padding: 100rpx;
   text-align: center;

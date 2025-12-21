@@ -128,3 +128,63 @@ class MerchantProfile(models.Model):
     
     def __str__(self):
         return f"{self.shop_name} ({self.user.username})"
+
+
+class MerchantProduct(models.Model):
+    """商品/服务模型"""
+    
+    STATUS_CHOICES = [
+        ('online', '上架中'),
+        ('offline', '已下架'),
+    ]
+    
+    CATEGORY_CHOICES = [
+        ('饮品', '饮品'),
+        ('甜品', '甜品'),
+        ('烘焙', '烘焙'),
+        ('家政服务', '家政服务'),
+        ('便民服务', '便民服务'),
+        ('其他', '其他'),
+    ]
+    
+    # 关联商户
+    merchant = models.ForeignKey(MerchantProfile, on_delete=models.CASCADE, related_name='products', verbose_name="所属商户")
+    
+    # 基本信息
+    name = models.CharField(max_length=100, verbose_name="商品名称")
+    description = models.TextField(max_length=500, verbose_name="商品描述")
+    image = models.ImageField(upload_to='merchant/products/', null=True, blank=True, verbose_name="商品图片")
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, verbose_name="商品分类")
+    
+    # 价格和库存
+    price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="售价")
+    original_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="原价")
+    stock = models.PositiveIntegerField(default=0, verbose_name="库存")
+    
+    # 状态和统计
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='online', verbose_name="上架状态")
+    sales_count = models.PositiveIntegerField(default=0, verbose_name="销售数量")
+    
+    # 服务时段（JSON字段，用于家政服务等）
+    service_time_slots = models.JSONField(default=list, blank=True, verbose_name="服务时段")
+    
+    # 时间戳
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="更新时间")
+    
+    class Meta:
+        verbose_name = "商品/服务"
+        verbose_name_plural = "商品/服务"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['merchant', 'status']),
+            models.Index(fields=['category']),
+        ]
+    
+    def __str__(self):
+        return f"{self.name} ({self.merchant.shop_name})"
+    
+    def toggle_status(self):
+        """切换上下架状态"""
+        self.status = 'offline' if self.status == 'online' else 'online'
+        self.save()

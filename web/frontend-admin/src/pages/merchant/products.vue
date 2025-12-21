@@ -297,32 +297,42 @@ function openEditor(product: Product | null) {
   editorDialog.value = true
 }
 
-function saveProduct() {
-  const productData = {
-    name: form.name,
-    description: form.description,
-    image: form.image || `https://picsum.photos/seed/${Date.now()}/200/200`,
-    price: form.price,
-    originalPrice: form.originalPrice,
-    stock: form.stock,
-    category: form.category,
-    status: 'online' as const,
-    serviceTimeSlots: isServiceCategory.value ? form.serviceTimeSlots : undefined,
-  }
+async function saveProduct() {
+  try {
+    const productData = {
+      name: form.name,
+      description: form.description,
+      image: form.image || `https://picsum.photos/seed/${Date.now()}/200/200`,
+      price: form.price,
+      originalPrice: form.originalPrice,
+      stock: form.stock,
+      category: form.category,
+      status: 'online' as const,
+      serviceTimeSlots: isServiceCategory.value ? form.serviceTimeSlots : undefined,
+    }
 
-  if (editingProduct.value) {
-    merchantStore.updateProduct(editingProduct.value.id, productData)
-    showSnackbar('success', '商品已更新')
-  } else {
-    merchantStore.addProduct(productData)
-    showSnackbar('success', '商品已添加')
+    if (editingProduct.value) {
+      await merchantStore.updateProduct(editingProduct.value.id, productData)
+      showSnackbar('success', '商品已更新')
+    } else {
+      await merchantStore.addProduct(productData)
+      showSnackbar('success', '商品已添加')
+    }
+    editorDialog.value = false
+  } catch (error) {
+    console.error('保存商品失败:', error)
+    showSnackbar('error', error instanceof Error ? error.message : '保存失败，请重试')
   }
-  editorDialog.value = false
 }
 
-function toggleStatus(product: Product) {
-  merchantStore.toggleProductStatus(product.id)
-  showSnackbar('success', product.status === 'online' ? '商品已下架' : '商品已上架')
+async function toggleStatus(product: Product) {
+  try {
+    await merchantStore.toggleProductStatus(product.id)
+    showSnackbar('success', product.status === 'online' ? '商品已下架' : '商品已上架')
+  } catch (error) {
+    console.error('切换状态失败:', error)
+    showSnackbar('error', error instanceof Error ? error.message : '操作失败，请重试')
+  }
 }
 
 // 删除
@@ -334,12 +344,17 @@ function confirmDelete(product: Product) {
   deleteDialog.value = true
 }
 
-function executeDelete() {
+async function executeDelete() {
   if (deletingProduct.value) {
-    merchantStore.deleteProduct(deletingProduct.value.id)
-    showSnackbar('success', '商品已删除')
+    try {
+      await merchantStore.deleteProduct(deletingProduct.value.id)
+      showSnackbar('success', '商品已删除')
+      deleteDialog.value = false
+    } catch (error) {
+      console.error('删除商品失败:', error)
+      showSnackbar('error', error instanceof Error ? error.message : '删除失败，请重试')
+    }
   }
-  deleteDialog.value = false
 }
 
 // 提示

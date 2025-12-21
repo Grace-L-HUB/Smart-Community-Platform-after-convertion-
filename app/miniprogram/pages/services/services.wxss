@@ -8,6 +8,7 @@
   border-radius: 16rpx;
   padding: 24rpx;
   box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.03);
+  margin-bottom: 20rpx;
 }
 
 .card-title {
@@ -16,9 +17,133 @@
   color: #333;
   margin-bottom: 20rpx;
   padding-left: 10rpx;
-  border-left: 8rpx solid var(--primary-color);
+  border-left: 8rpx solid #07c160;
 }
 
 .mt-20 {
   margin-top: 20rpx;
+}
+
+.error-container, .empty-container {
+  padding: 100rpx 30rpx;
+  text-align: center;
+}
+
+/* Shop Card Styles */
+.shop-card {
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 24rpx;
+  margin-bottom: 24rpx;
+  display: flex;
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.shop-card:active {
+  background-color: #f9f9f9;
+}
+
+.shop-img {
+  width: 180rpx;
+  height: 180rpx;
+  border-radius: 12rpx;
+  margin-right: 24rpx;
+  background-color: #f5f5f5;
+  flex-shrink: 0;
+}
+
+.shop-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+}
+
+.shop-main-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.shop-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8rpx;
+}
+
+.shop-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+.shop-tags {
+  display: flex;
+  flex-wrap: wrap;
+  margin-bottom: 12rpx;
+}
+
+.tag {
+  font-size: 20rpx;
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
+  margin-right: 12rpx;
+  margin-bottom: 4rpx;
+}
+
+.category-tag {
+  color: #07c160;
+  background: rgba(7, 193, 96, 0.1);
+}
+
+.discount-tag {
+  color: #ee0a24;
+  background: rgba(238, 10, 36, 0.1);
+}
+
+.shop-desc {
+  font-size: 26rpx;
+  color: #666;
+  margin-bottom: 12rpx;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.shop-extra {
+  font-size: 24rpx;
+  color: #999;
+  display: flex;
+  align-items: center;
+  padding-right: 220rpx;
+}
+
+.shop-action {
+  position: absolute;
+  right: 24rpx;
+  bottom: 24rpx;
+}
+
+.visit-btn {
+  font-size: 24rpx;
+  color: #fff;
+  background: linear-gradient(135deg, #07c160, #36d585);
+  border-radius: 28rpx;
+  padding: 0 24rpx;
+  height: 52rpx;
+  line-height: 52rpx;
+  border: none;
+  box-shadow: 0 4rpx 10rpx rgba(7, 193, 96, 0.3);
+  width: auto !important;
+  min-width: 120rpx;
+  font-weight: normal;
+}
+
+.text-ellipsis {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

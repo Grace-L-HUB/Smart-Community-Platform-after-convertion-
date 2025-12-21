@@ -5,11 +5,12 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.db import transaction
-from .models import MerchantApplication, MerchantProfile
+from .models import MerchantApplication, MerchantProfile, MerchantProduct
 from .serializers import (
     MerchantApplicationSerializer, MerchantApplicationCreateSerializer,
     MerchantApplicationReviewSerializer, MerchantProfileSerializer,
-    MerchantProfileUpdateSerializer
+    MerchantProfileUpdateSerializer, MerchantProductSerializer,
+    MerchantProductCreateUpdateSerializer
 )
 import logging
 from django.contrib.auth.hashers import make_password
@@ -503,4 +504,430 @@ class MerchantLoginView(APIView):
             return Response({
                 'success': False,
                 'message': '登录失败，请重试'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class MerchantProductListView(APIView):
+    """商品列表接口"""
+    
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+    
+    def get(self, request):
+        """获取商户的商品列表"""
+        try:
+            # 检查用户是否为商户
+            if request.user.role != 2:
+                return Response({
+                    'success': False,
+                    'message': '权限不足'
+                }, status=status.HTTP_403_FORBIDDEN)
+            
+            # 获取商户档案
+            try:
+                merchant_profile = MerchantProfile.objects.get(user=request.user)
+            except MerchantProfile.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'message': '商户档案不存在'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # 获取查询参数
+            category = request.GET.get('category', '')
+            product_status = request.GET.get('status', '')
+            keyword = request.GET.get('keyword', '')
+            
+            # 构建查询
+            queryset = MerchantProduct.objects.filter(merchant=merchant_profile)
+            
+            if category:
+                queryset = queryset.filter(category=category)
+            if product_status:
+                queryset = queryset.filter(status=product_status)
+            if keyword:
+                queryset = queryset.filter(name__icontains=keyword)
+            
+            products = queryset.order_by('-created_at')
+            serializer = MerchantProductSerializer(
+                products, 
+                many=True,
+                context={'request': request}
+            )
+            
+            return Response({
+                'success': True,
+                'data': serializer.data
+            })
+            
+        except Exception as e:
+            logger.error(f"获取商品列表失败: {str(e)}")
+            return Response({
+                'success': False,
+                'message': '获取商品列表失败'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    def post(self, request):
+        """创建新商品"""
+        try:
+            # 检查用户是否为商户
+            if request.user.role != 2:
+                return Response({
+                    'success': False,
+                    'message': '权限不足'
+                }, status=status.HTTP_403_FORBIDDEN)
+            
+            # 获取商户档案
+            try:
+                merchant_profile = MerchantProfile.objects.get(user=request.user)
+            except MerchantProfile.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'message': '商户档案不存在'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # 验证数据
+            serializer = MerchantProductCreateUpdateSerializer(
+                data=request.data,
+                context={'request': request}
+            )
+            
+            if serializer.is_valid():
+                product = serializer.save(merchant=merchant_profile)
+                
+                return Response({
+                    'success': True,
+                    'message': '商品创建成功',
+                    'data': MerchantProductSerializer(product, context={'request': request}).data
+                }, status=status.HTTP_201_CREATED)
+            
+            return Response({
+                'success': False,
+                'message': '数据验证失败',
+                'errors': serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+        except Exception as e:
+            logger.error(f"创建商品失败: {str(e)}")
+            return Response({
+                'success': False,
+                'message': '创建商品失败，请重试'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class MerchantProductDetailView(APIView):
+    """商品详情接口"""
+    
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+    
+    def get_object(self, request, product_id):
+        """获取商品对象"""
+        try:
+            merchant_profile = MerchantProfile.objects.get(user=request.user)
+            return MerchantProduct.objects.get(id=product_id, merchant=merchant_profile)
+        except (MerchantProfile.DoesNotExist, MerchantProduct.DoesNotExist):
+            return None
+    
+    def get(self, request, product_id):
+        """获取商品详情"""
+        try:
+            # 检查用户是否为商户
+            if request.user.role != 2:
+                return Response({
+                    'success': False,
+                    'message': '权限不足'
+                }, status=status.HTTP_403_FORBIDDEN)
+            
+            product = self.get_object(request, product_id)
+            if not product:
+                return Response({
+                    'success': False,
+                    'message': '商品不存在'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            serializer = MerchantProductSerializer(product, context={'request': request})
+            return Response({
+                'success': True,
+                'data': serializer.data
+            })
+            
+        except Exception as e:
+            logger.error(f"获取商品详情失败: {str(e)}")
+            return Response({
+                'success': False,
+                'message': '获取商品详情失败'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    def put(self, request, product_id):
+        """更新商品信息"""
+        try:
+            # 检查用户是否为商户
+            if request.user.role != 2:
+                return Response({
+                    'success': False,
+                    'message': '权限不足'
+                }, status=status.HTTP_403_FORBIDDEN)
+            
+            product = self.get_object(request, product_id)
+            if not product:
+                return Response({
+                    'success': False,
+                    'message': '商品不存在'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            serializer = MerchantProductCreateUpdateSerializer(
+                product, 
+                data=request.data, 
+                partial=True,
+                context={'request': request}
+            )
+            
+            if serializer.is_valid():
+                product = serializer.save()
+                
+                return Response({
+                    'success': True,
+                    'message': '商品更新成功',
+                    'data': MerchantProductSerializer(product, context={'request': request}).data
+                })
+            
+            return Response({
+                'success': False,
+                'message': '数据验证失败',
+                'errors': serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+        except Exception as e:
+            logger.error(f"更新商品失败: {str(e)}")
+            return Response({
+                'success': False,
+                'message': '更新商品失败，请重试'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    def delete(self, request, product_id):
+        """删除商品"""
+        try:
+            # 检查用户是否为商户
+            if request.user.role != 2:
+                return Response({
+                    'success': False,
+                    'message': '权限不足'
+                }, status=status.HTTP_403_FORBIDDEN)
+            
+            product = self.get_object(request, product_id)
+            if not product:
+                return Response({
+                    'success': False,
+                    'message': '商品不存在'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            product_name = product.name
+            product.delete()
+            
+            return Response({
+                'success': True,
+                'message': f'商品 "{product_name}" 已删除'
+            })
+            
+        except Exception as e:
+            logger.error(f"删除商品失败: {str(e)}")
+            return Response({
+                'success': False,
+                'message': '删除商品失败，请重试'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class MerchantProductStatusView(APIView):
+    """商品上下架接口"""
+    
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def post(self, request, product_id):
+        """切换商品上下架状态"""
+        try:
+            # 检查用户是否为商户
+            if request.user.role != 2:
+                return Response({
+                    'success': False,
+                    'message': '权限不足'
+                }, status=status.HTTP_403_FORBIDDEN)
+            
+            # 获取商品
+            try:
+                merchant_profile = MerchantProfile.objects.get(user=request.user)
+                product = MerchantProduct.objects.get(id=product_id, merchant=merchant_profile)
+            except (MerchantProfile.DoesNotExist, MerchantProduct.DoesNotExist):
+                return Response({
+                    'success': False,
+                    'message': '商品不存在'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # 切换状态
+            old_status = product.status
+            product.toggle_status()
+            
+            status_text = '上架' if product.status == 'online' else '下架'
+            
+            return Response({
+                'success': True,
+                'message': f'商品已{status_text}',
+                'data': {
+                    'id': product.id,
+                    'status': product.status,
+                    'status_display': product.get_status_display()
+                }
+            })
+            
+        except Exception as e:
+            logger.error(f"切换商品状态失败: {str(e)}")
+            return Response({
+                'success': False,
+                'message': '操作失败，请重试'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class PublicMerchantListView(APIView):
+    """公开的商户列表接口（供小程序使用）"""
+    
+    permission_classes = []  # 不需要登录
+    
+    def get(self, request):
+        """获取所有启用的商户列表"""
+        try:
+            # 获取查询参数
+            category = request.GET.get('category', '')
+            
+            # 构建查询 - 只返回启用的商户
+            queryset = MerchantProfile.objects.filter(is_active=True)
+            
+            if category:
+                queryset = queryset.filter(shop_category=category)
+            
+            merchants = queryset.order_by('-created_at')
+            serializer = MerchantProfileSerializer(merchants, many=True, context={'request': request})
+            
+            return Response({
+                'success': True,
+                'data': serializer.data
+            })
+            
+        except Exception as e:
+            logger.error(f"获取公开商户列表失败: {str(e)}")
+            return Response({
+                'success': False,
+                'message': '获取商户列表失败'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class PublicMerchantDetailView(APIView):
+    """公开的商户详情接口（供小程序使用）"""
+    
+    permission_classes = []  # 不需要登录
+    
+    def get(self, request, merchant_id):
+        """获取商户详情"""
+        try:
+            try:
+                merchant = MerchantProfile.objects.get(id=merchant_id, is_active=True)
+            except MerchantProfile.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'message': '商户不存在或已停用'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            serializer = MerchantProfileSerializer(merchant, context={'request': request})
+            return Response({
+                'success': True,
+                'data': serializer.data
+            })
+            
+        except Exception as e:
+            logger.error(f"获取公开商户详情失败: {str(e)}")
+            return Response({
+                'success': False,
+                'message': '获取商户详情失败'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class PublicProductListView(APIView):
+    """公开的商品列表接口（供小程序使用）"""
+    
+    permission_classes = []  # 不需要登录
+    
+    def get(self, request, merchant_id):
+        """获取指定商户的商品列表"""
+        try:
+            # 验证商户是否存在且启用
+            try:
+                merchant = MerchantProfile.objects.get(id=merchant_id, is_active=True)
+            except MerchantProfile.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'message': '商户不存在或已停用'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # 获取查询参数
+            category = request.GET.get('category', '')
+            status_filter = request.GET.get('status', 'online')  # 默认只显示上架商品
+            
+            # 构建查询
+            queryset = MerchantProduct.objects.filter(merchant=merchant)
+            
+            if category:
+                queryset = queryset.filter(category=category)
+            if status_filter:
+                queryset = queryset.filter(status=status_filter)
+            
+            products = queryset.order_by('-created_at')
+            serializer = MerchantProductSerializer(
+                products, 
+                many=True,
+                context={'request': request}
+            )
+            
+            return Response({
+                'success': True,
+                'data': serializer.data
+            })
+            
+        except Exception as e:
+            logger.error(f"获取公开商品列表失败: {str(e)}")
+            return Response({
+                'success': False,
+                'message': '获取商品列表失败'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class PublicProductDetailView(APIView):
+    """公开的商品详情接口（供小程序使用）"""
+    
+    permission_classes = []  # 不需要登录
+    
+    def get(self, request, product_id):
+        """获取商品详情"""
+        try:
+            try:
+                # 只返回上架的商品
+                product = MerchantProduct.objects.get(
+                    id=product_id, 
+                    status='online',
+                    merchant__is_active=True  # 商户也必须是启用状态
+                )
+            except MerchantProduct.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'message': '商品不存在或已下架'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            serializer = MerchantProductSerializer(product, context={'request': request})
+            return Response({
+                'success': True,
+                'data': serializer.data
+            })
+            
+        except Exception as e:
+            logger.error(f"获取公开商品详情失败: {str(e)}")
+            return Response({
+                'success': False,
+                'message': '获取商品详情失败'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -1,80 +1,152 @@
 <view class="container">
-  <!-- Shop Header -->
-  <view class="shop-header">
-    <image class="shop-bg" src="{{ shop.bgImage }}" mode="aspectFill"></image>
-    <view class="shop-info-card">
-      <view class="shop-main">
-        <image class="shop-logo" src="{{ shop.logo }}" mode="aspectFill"></image>
-        <view class="shop-text">
-          <text class="shop-name">{{ shop.name }}</text>
-          <view class="shop-rate">
-            <van-icon name="star" color="#ff976a" />
-            <text class="rate-score">{{ shop.score }}</text>
-            <text class="rate-sales">月售 {{ shop.monthlySales }}+</text>
+  <!-- 加载状态 -->
+  <van-loading wx:if="{{ loading }}" type="spinner" color="#1989fa" vertical size="24px" class="loading-container">
+    加载商户信息中...
+  </van-loading>
+  
+  <!-- 错误状态 -->
+  <view wx:elif="{{ error }}" class="error-container">
+    <van-empty description="{{ error }}">
+      <van-button round type="primary" class="bottom-button" bindtap="onRefresh">
+        重新加载
+      </van-button>
+    </van-empty>
+  </view>
+  
+  <!-- 正常内容 -->
+  <view wx:else>
+    <!-- Shop Header -->
+    <view class="shop-header">
+      <image class="shop-bg" src="{{ shop.bgImage }}" mode="aspectFill"></image>
+      <view class="shop-info-card">
+        <view class="shop-main">
+          <image class="shop-logo" src="{{ shop.logo }}" mode="aspectFill"></image>
+          <view class="shop-text">
+            <text class="shop-name">{{ shop.name }}</text>
+            <view class="shop-rate">
+              <van-icon name="star" color="#ff976a" />
+              <text class="rate-score">{{ shop.score }}</text>
+              <text class="rate-sales">月售 {{ shop.monthlySales }}+</text>
+            </view>
           </view>
         </view>
-      </view>
-      <view class="shop-tags">
-        <van-tag plain type="danger" wx:for="{{ shop.tags }}" wx:key="*this">{{ item }}</van-tag>
-      </view>
-      <view class="shop-address">
-        <van-icon name="location-o" />
-        <text class="address-text">{{ shop.address }}</text>
-        <van-icon name="phone-circle-o" class="phone-icon" bindtap="callShop"/>
+        <view class="shop-tags">
+          <van-tag plain type="success" wx:if="{{ shop.category }}">{{ shop.category }}</van-tag>
+          <van-tag plain type="danger" wx:for="{{ shop.tags }}" wx:key="*this">{{ item }}</van-tag>
+        </view>
+        <view class="shop-address">
+          <van-icon name="location-o" />
+          <text class="address-text">{{ shop.address }}</text>
+          <van-icon name="phone-circle-o" class="phone-icon" bindtap="callShop"/>
+        </view>
       </view>
     </view>
-  </view>
 
-  <!-- Coupons -->
-  <view class="section coupon-section" wx:if="{{ coupons.length > 0 }}">
-    <view class="section-title">优惠券</view>
-    <scroll-view scroll-x class="coupon-scroll">
-      <view class="coupon-item" wx:for="{{ coupons }}" wx:key="id">
-        <view class="coupon-left">
-          <text class="symbol">¥</text>
-          <text class="amount">{{ item.amount }}</text>
-        </view>
-        <view class="coupon-right">
-          <text class="condition">{{ item.condition }}</text>
-          <van-button size="mini" round color="#ff976a">领取</van-button>
-        </view>
-      </view>
-    </scroll-view>
-  </view>
-
-  <!-- Products Tab -->
-  <view class="shop-tabs">
-    <van-tabs active="{{ active }}" sticky>
-      <van-tab title="全部商品">
-        <block wx:for="{{ products }}" wx:key="id">
-          <van-card
-            price="{{ item.price }}"
-            title="{{ item.name }}"
-            thumb="{{ item.image }}"
-          >
-            <view slot="footer">
-              <van-button size="mini" icon="cart-o" type="primary"></van-button>
+    <!-- Products Tab -->
+    <view class="shop-tabs">
+      <van-tabs active="{{ active }}" sticky>
+        <van-tab title="全部商品">
+          <!-- 商品加载状态 -->
+          <van-loading wx:if="{{ productsLoading }}" type="spinner" color="#1989fa" vertical class="products-loading">
+            加载商品中...
+          </van-loading>
+          
+          <!-- 商品错误状态 -->
+          <view wx:elif="{{ productsError }}" class="products-error">
+            <van-empty description="{{ productsError }}">
+              <van-button round type="primary" size="small" bindtap="loadProducts">
+                重新加载
+              </van-button>
+            </van-empty>
+          </view>
+          
+          <!-- 商品列表 -->
+          <view wx:else class="products-container">
+            <view wx:if="{{ products.length === 0 }}" class="empty-products">
+              <van-empty description="暂无商品" />
             </view>
-          </van-card>
-        </block>
-      </van-tab>
-      <van-tab title="商家评价">
-        <view class="empty-comment">暂无评价</view>
-      </van-tab>
-      <van-tab title="商家信息">
-        <van-cell-group>
-          <van-cell title="营业时间" value="09:00 - 22:00" />
-          <van-cell title="商家资质" is-link />
-        </van-cell-group>
-      </van-tab>
-    </van-tabs>
-  </view>
+            
+            <view wx:else>
+              <block wx:for="{{ products }}" wx:key="id">
+                <van-card
+                  price="{{ item.price }}"
+                  origin-price="{{ item.originalPrice }}"
+                  title="{{ item.name }}"
+                  desc="{{ item.description }}"
+                  thumb="{{ item.image }}"
+                  lazy-load
+                >
+                  <view slot="tags">
+                    <van-tag plain type="primary" wx:if="{{ item.category }}">{{ item.category }}</van-tag>
+                    <van-tag plain type="success" wx:if="{{ item.salesCount > 0 }}">已售{{ item.salesCount }}</van-tag>
+                    <van-tag plain type="warning" wx:if="{{ item.stock <= 10 && item.stock > 0 }}">仅剩{{ item.stock }}件</van-tag>
+                    <van-tag plain type="danger" wx:if="{{ item.stock <= 0 }}">售罄</van-tag>
+                  </view>
+                  <view slot="footer" class="product-actions">
+                    <van-button 
+                      size="mini" 
+                      icon="cart-o" 
+                      type="warning"
+                      disabled="{{ item.stock <= 0 }}"
+                      data-id="{{ item.id }}"
+                      bindtap="onAddToCart"
+                    >
+                      加购物车
+                    </van-button>
+                    <van-button 
+                      size="mini" 
+                      type="primary"
+                      disabled="{{ item.stock <= 0 }}"
+                      data-id="{{ item.id }}"
+                      bindtap="onBuyNow"
+                    >
+                      立即购买
+                    </van-button>
+                  </view>
+                  
+                  <!-- 服务时段显示（适用于家政服务等） -->
+                  <view wx:if="{{ item.serviceTimeSlots && item.serviceTimeSlots.length > 0 }}" slot="bottom" class="service-slots">
+                    <text class="slots-label">可预约时段：</text>
+                    <van-tag 
+                      wx:for="{{ item.serviceTimeSlots }}" 
+                      wx:for-item="slot" 
+                      wx:key="*this" 
+                      size="mini" 
+                      plain 
+                      type="primary"
+                      class="slot-tag"
+                    >
+                      {{ slot }}
+                    </van-tag>
+                  </view>
+                </van-card>
+              </block>
+            </view>
+          </view>
+        </van-tab>
+        
+        <van-tab title="商家评价">
+          <view class="empty-comment">暂无评价</view>
+        </van-tab>
+        
+        <van-tab title="商家信息">
+          <van-cell-group>
+            <van-cell title="营业时间" value="{{ shop.businessHours || '09:00 - 22:00' }}" />
+            <van-cell title="商家分类" value="{{ shop.category || '便民服务' }}" />
+            <van-cell title="联系电话" value="{{ shop.phone || '暂无' }}" />
+            <van-cell title="商家地址" value="{{ shop.address || '暂无' }}" />
+            <van-cell title="商家介绍" value="{{ shop.description || '暂无介绍' }}" />
+          </van-cell-group>
+        </van-tab>
+      </van-tabs>
+    </view>
 
-  <!-- Bottom Action -->
-  <van-goods-action>
-    <van-goods-action-icon icon="chat-o" text="客服" />
-    <van-goods-action-icon icon="cart-o" text="购物车" info="0" />
-    <van-goods-action-button text="加入购物车" type="warning" />
-    <van-goods-action-button text="立即购买" />
-  </van-goods-action>
+    <!-- Bottom Action -->
+    <van-goods-action>
+      <van-goods-action-icon icon="chat-o" text="客服" bindtap="callShop" />
+      <van-goods-action-icon icon="cart-o" text="购物车" info="0" />
+      <van-goods-action-button text="联系商家" type="warning" bindtap="callShop" />
+      <van-goods-action-button text="查看商品" />
+    </van-goods-action>
+  </view>
 </view>

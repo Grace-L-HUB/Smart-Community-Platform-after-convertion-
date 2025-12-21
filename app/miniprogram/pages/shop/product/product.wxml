@@ -1,0 +1,145 @@
+<view class="product-container">
+  <!-- 加载状态 -->
+  <van-loading wx:if="{{ loading }}" type="spinner" color="#1989fa" vertical size="24px" class="loading-container">
+    加载商品信息中...
+  </van-loading>
+  
+  <!-- 错误状态 -->
+  <view wx:elif="{{ error }}" class="error-container">
+    <van-empty description="{{ error }}">
+      <van-button round type="primary" class="bottom-button" bindtap="onRefresh">
+        重新加载
+      </van-button>
+    </van-empty>
+  </view>
+  
+  <!-- 正常内容 -->
+  <view wx:else>
+    <!-- 商品图片轮播 -->
+    <swiper indicator-dots autoplay circular class="product-image">
+      <block wx:for="{{ product.images }}" wx:key="*this">
+        <swiper-item>
+          <image src="{{ item }}" mode="aspectFill" class="product-image" />
+        </swiper-item>
+      </block>
+    </swiper>
+
+    <!-- 商品基本信息 -->
+    <view class="product-info-card">
+      <view class="product-price-row">
+        <text class="currency-symbol">¥</text>
+        <text class="current-price">{{ product.price }}</text>
+        <text class="original-price" wx:if="{{ product.originalPrice }}">¥{{ product.originalPrice }}</text>
+      </view>
+      <view class="product-title">{{ product.name }}</view>
+      <view class="product-desc">{{ product.description }}</view>
+      
+      <!-- 商品标签 -->
+      <view class="product-tags">
+        <van-tag plain type="primary" wx:if="{{ product.category }}">{{ product.category }}</van-tag>
+        <van-tag plain type="success" wx:if="{{ product.salesCount > 0 }}">已售{{ product.salesCount }}</van-tag>
+        <van-tag plain type="warning" wx:if="{{ product.stock <= 10 && product.stock > 0 }}">仅剩{{ product.stock }}件</van-tag>
+        <van-tag plain type="danger" wx:if="{{ product.stock <= 0 }}">售罄</van-tag>
+      </view>
+
+      <!-- 服务时段（适用于家政服务等） -->
+      <view wx:if="{{ product.serviceTimeSlots && product.serviceTimeSlots.length > 0 }}" class="service-slots">
+        <text class="slots-label">可预约时段：</text>
+        <van-tag 
+          wx:for="{{ product.serviceTimeSlots }}" 
+          wx:for-item="slot" 
+          wx:key="*this" 
+          size="small" 
+          plain 
+          type="primary"
+          class="slot-tag"
+        >
+          {{ slot }}
+        </van-tag>
+      </view>
+    </view>
+
+    <!-- 优惠券 -->
+    <van-cell-group inset class="mb-20">
+      <van-cell title="优惠券" is-link value="领取优惠" bind:click="showCouponPopup" />
+    </van-cell-group>
+    
+    <!-- 商品详情 -->
+    <view class="product-detail">
+      <view class="section-title">商品详情</view>
+      <view class="detail-content">
+        <text>{{ product.detail }}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 底部操作栏 -->
+  <van-goods-action wx:if="{{ !loading && !error }}">
+    <van-goods-action-icon icon="chat-o" text="客服" bind:click="onContact" />
+    <van-goods-action-icon icon="shop-o" text="店铺" bind:click="onGoShop" />
+    <van-goods-action-button 
+      text="加入购物车" 
+      type="warning" 
+      disabled="{{ product.stock <= 0 }}"
+      bind:click="onAddToCart" 
+    />
+    <van-goods-action-button 
+      text="{{ product.stock <= 0 ? '售罄' : '立即购买' }}" 
+      type="danger" 
+      disabled="{{ product.stock <= 0 }}"
+      bind:click="onBuyNow" 
+    />
+  </van-goods-action>
+
+  <!-- SKU 弹窗 -->
+  <van-popup
+    show="{{ showSku }}"
+    position="bottom"
+    round
+    closeable
+    bind:close="onCloseSku"
+  >
+    <view class="sku-popup">
+      <view class="sku-header">
+        <image src="{{ product.image }}" class="sku-thumb" mode="aspectFill" />
+        <view class="sku-info">
+          <view class="sku-price">¥{{ product.price }}</view>
+          <view class="sku-stock">剩余 {{ product.stock }} 件</view>
+        </view>
+      </view>
+
+      <view class="sku-body">
+        <view class="sku-stepper">
+          <view class="sku-section-title">购买数量</view>
+          <van-stepper value="{{ buyCount }}" min="1" max="{{ product.stock }}" integer />
+        </view>
+      </view>
+
+      <van-button block color="#ee0a24" round bind:click="onConfirmSku" style="margin-top: 20px;">
+        确定
+      </van-button>
+    </view>
+  </van-popup>
+
+  <!-- 优惠券弹窗 -->
+  <van-popup
+    show="{{ showCoupon }}"
+    position="bottom"
+    round
+    closeable
+    bind:close="onCloseCoupon"
+  >
+    <view class="sku-popup">
+       <view class="section-title text-center">优惠券</view>
+       <block wx:for="{{ coupons }}" wx:key="id">
+         <van-cell 
+           title="{{ item.amount }}元券 - {{ item.name }}" 
+           label="{{ item.condition }}"
+         >
+           <van-button size="small" type="danger" round data-id="{{ item.id }}" bind:click="onGetCoupon">领取</van-button>
+         </van-cell>
+       </block>
+       <view style="height: 50px;"></view>
+    </view>
+  </van-popup>
+</view>
