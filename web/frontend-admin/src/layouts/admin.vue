@@ -152,6 +152,7 @@ const propertyMenuItems: MenuItem[] = [
       { title: '社区活动', icon: 'mdi-party-popper', to: '/property/activities' },
     ],
   },
+  { title: '商户审核', icon: 'mdi-store-check', to: '/property/merchant-audit' },
   {
     title: '系统与安防',
     icon: 'mdi-shield-home',
@@ -193,6 +194,7 @@ const breadcrumbs = computed(() => {
     else if (path.includes('fees')) items.push({ title: '缴费管理', disabled: true })
     else if (path.includes('announcements')) items.push({ title: '公告发布', disabled: true })
     else if (path.includes('activities')) items.push({ title: '社区活动', disabled: true })
+    else if (path.includes('merchant-audit')) items.push({ title: '商户审核', disabled: true })
     else if (path.includes('access-logs')) items.push({ title: '门禁日志', disabled: true })
     else if (path.includes('employees')) items.push({ title: '员工管理', disabled: true })
   } else if (path.startsWith('/merchant')) {

@@ -30,36 +30,66 @@ export const useAuthStore = defineStore('auth', {
     },
 
     actions: {
-        login(username: string, _password: string, role: UserRole) {
-            // Mock 登录逻辑
-            const mockUsers: Record<UserRole, User> = {
-                property: {
+        async login(username: string, password: string, role: UserRole) {
+            if (role === 'property') {
+                // 物业端使用Mock登录
+                const user: User = {
                     id: 1,
                     username,
                     name: '物业管理员',
                     role: 'property',
                     avatar: 'https://picsum.photos/seed/admin/100/100',
-                },
-                merchant: {
-                    id: 2,
-                    username,
-                    name: '商户管理员',
-                    role: 'merchant',
-                    avatar: 'https://picsum.photos/seed/shop/100/100',
-                },
+                }
+                
+                const token = `mock-token-${Date.now()}`
+
+                this.token = token
+                this.user = user
+                this.isLoggedIn = true
+
+                localStorage.setItem('token', token)
+                localStorage.setItem('user', JSON.stringify(user))
+
+                return { success: true, user, token }
+            } else {
+                // 商户端使用真实API登录
+                try {
+                    const { merchantLoginApi } = await import('@/services/merchant')
+                    const response = await merchantLoginApi.login({ username, password })
+                    
+                    if (response.success && response.data) {
+                        const { token, user: userData } = response.data
+                        
+                        const user: User = {
+                            id: userData.id,
+                            username: userData.username,
+                            name: userData.name,
+                            role: 'merchant' as UserRole,
+                            avatar: userData.avatar,
+                        }
+
+                        this.token = token
+                        this.user = user
+                        this.isLoggedIn = true
+
+                        localStorage.setItem('token', token)
+                        localStorage.setItem('user', JSON.stringify(user))
+
+                        return { success: true, user, token }
+                    } else {
+                        return { 
+                            success: false, 
+                            message: response.message || '登录失败' 
+                        }
+                    }
+                } catch (error) {
+                    console.error('商户登录失败:', error)
+                    return { 
+                        success: false, 
+                        message: '登录失败，请检查网络连接' 
+                    }
+                }
             }
-
-            const user = mockUsers[role]
-            const token = `mock-token-${Date.now()}`
-
-            this.token = token
-            this.user = user
-            this.isLoggedIn = true
-
-            localStorage.setItem('token', token)
-            localStorage.setItem('user', JSON.stringify(user))
-
-            return { success: true, user, token }
         },
 
         logout() {

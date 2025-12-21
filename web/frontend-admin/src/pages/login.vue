@@ -69,6 +69,32 @@
                   </v-btn>
                 </v-form>
 
+                <!-- 错误提示 -->
+                <v-alert
+                  v-if="errorMessage"
+                  type="error"
+                  variant="tonal"
+                  density="compact"
+                  class="mt-4"
+                  closable
+                  @click:close="errorMessage = ''"
+                >
+                  {{ errorMessage }}
+                </v-alert>
+
+                <!-- 商户注册链接 -->
+                <div v-if="selectedRole === 'merchant'" class="text-center mt-4">
+                  <v-btn
+                    variant="text"
+                    color="primary"
+                    size="small"
+                    @click="$router.push('/merchant-register')"
+                  >
+                    <v-icon start icon="mdi-store-plus" />
+                    申请商户入驻
+                  </v-btn>
+                </div>
+
                 <!-- 提示信息 -->
                 <v-alert
                   type="info"
@@ -77,7 +103,13 @@
                   class="mt-6"
                   closable
                 >
-                  演示账号：任意用户名和密码即可登录
+                  <div v-if="selectedRole === 'property'">
+                    物业端：任意用户名和密码即可登录
+                  </div>
+                  <div v-else>
+                    商户端：只有审核通过的商户才能登录<br>
+                    如需入驻，请点击上方"申请商户入驻"
+                  </div>
                 </v-alert>
               </v-card-text>
             </v-card>
@@ -117,17 +149,23 @@ const rules = {
   required: (v: string) => !!v || '此字段为必填项',
 }
 
+// 错误提示状态
+const errorMessage = ref('')
+
 // 登录处理
 async function handleLogin() {
   if (!formValid.value) return
 
   loading.value = true
+  errorMessage.value = ''
 
   try {
-    // 模拟网络延迟
-    await new Promise(resolve => setTimeout(resolve, 800))
+    // 模拟网络延迟（仅物业端）
+    if (selectedRole.value === 'property') {
+      await new Promise(resolve => setTimeout(resolve, 800))
+    }
 
-    const result = authStore.login(form.username, form.password, selectedRole.value)
+    const result = await authStore.login(form.username, form.password, selectedRole.value)
 
     if (result.success) {
       // 根据角色跳转到对应首页
@@ -136,7 +174,13 @@ async function handleLogin() {
         : '/merchant/dashboard'
 
       router.push(targetPath)
+    } else {
+      // 显示错误信息
+      errorMessage.value = result.message || '登录失败'
     }
+  } catch (error) {
+    console.error('登录失败:', error)
+    errorMessage.value = '登录失败，请重试'
   } finally {
     loading.value = false
   }

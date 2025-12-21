@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'property',
     'community',
     'common',
+    'merchant',
 ]
 
 MIDDLEWARE = [
@@ -166,6 +167,10 @@ WECHAT_APP_SECRET = os.getenv('WECHAT_APP_SECRET', 'e8d2cd917739c6c4d20116fbd5c7
 
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
+
+# 文件上传设置
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
 
 # CORS settings for miniprogram
 CORS_ALLOWED_ORIGINS = [

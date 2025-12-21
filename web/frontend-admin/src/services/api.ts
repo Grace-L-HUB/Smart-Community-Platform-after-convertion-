@@ -3,7 +3,7 @@ const API_BASE_URL = 'http://127.0.0.1:8000/api'
 
 // 请求响应接口
 interface ApiResponse<T = any> {
-  code: number
+  success: boolean
   message: string
   data?: T
 }
@@ -22,9 +22,13 @@ class ApiClient {
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`
     
+    // 获取认证token
+    const token = localStorage.getItem('token')
+    
     const config: RequestInit = {
       headers: {
         'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` }),
         ...options.headers
       },
       ...options

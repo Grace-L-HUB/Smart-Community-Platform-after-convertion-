@@ -12,13 +12,23 @@
                 <!-- 头像上传 -->
                 <v-col cols="12" class="d-flex align-center mb-4">
                   <v-avatar size="80" class="mr-4">
-                    <v-img :src="form.logo" />
+                    <v-img :src="getLogoUrl()" />
                   </v-avatar>
                   <div>
-                    <v-btn variant="outlined" size="small" prepend-icon="mdi-camera">
-                      更换头像
-                    </v-btn>
-                    <div class="text-caption text-grey mt-1">建议尺寸 200x200px</div>
+                    <v-file-input
+                      v-model="form.logo"
+                      accept="image/*"
+                      show-size
+                      variant="outlined"
+                      density="compact"
+                      prepend-icon=""
+                      prepend-inner-icon="mdi-camera"
+                      label="更换Logo"
+                      hide-details
+                      class="mb-2"
+                      style="max-width: 200px;"
+                    />
+                    <div class="text-caption text-grey">建议尺寸 200x200px</div>
                   </div>
                 </v-col>
 
@@ -37,6 +47,17 @@
                     :items="categoryOptions"
                     label="店铺分类"
                     variant="outlined"
+                  />
+                </v-col>
+
+                <v-col cols="12">
+                  <v-textarea
+                    v-model="form.description"
+                    label="店铺介绍"
+                    variant="outlined"
+                    rows="3"
+                    hint="简要介绍您的店铺特色和服务"
+                    persistent-hint
                   />
                 </v-col>
 
@@ -106,11 +127,11 @@
           <v-card-title>店铺预览</v-card-title>
           <v-card-text class="text-center">
             <v-avatar size="80" class="mb-3">
-              <v-img :src="form.logo" />
+              <v-img :src="getLogoUrl()" />
             </v-avatar>
             <h3 class="text-h6 font-weight-bold">{{ form.name }}</h3>
             <v-chip size="small" color="primary" variant="tonal" class="mt-2">
-              {{ form.category }}
+              {{ getCategoryLabel(form.category) }}
             </v-chip>
             <div class="text-body-2 text-grey mt-3">{{ form.announcement }}</div>
 
@@ -144,18 +165,29 @@
 <script lang="ts" setup>
 import { ref, reactive, onMounted } from 'vue'
 import { useMerchantStore } from '@/stores'
+import { merchantProfileApi, type MerchantProfile } from '@/services/merchant'
 
 const merchantStore = useMerchantStore()
 
 const formRef = ref()
 const formValid = ref(false)
 const saving = ref(false)
+const loading = ref(false)
+const profile = ref<MerchantProfile | null>(null)
 
-const categoryOptions = ['便利店', '餐饮', '美容美发', '家政服务', '维修服务', '其他']
+const categoryOptions = [
+  { title: '便利店', value: 'convenience' },
+  { title: '餐饮', value: 'catering' },
+  { title: '美容美发', value: 'beauty' },
+  { title: '家政服务', value: 'housekeeping' },
+  { title: '维修服务', value: 'repair' },
+  { title: '烘焙', value: 'bakery' },
+  { title: '其他', value: 'other' },
+]
 
 const form = reactive({
   name: '',
-  logo: '',
+  logo: null as File[] | null,
   announcement: '',
   businessHours: {
     start: '08:00',
@@ -163,18 +195,52 @@ const form = reactive({
   },
   phone: '',
   address: '',
-  category: '便利店',
+  category: 'convenience',
+  description: '',
 })
 
+async function loadProfile() {
+  loading.value = true
+  try {
+    const response = await merchantProfileApi.getProfile()
+    if (response.success) {
+      profile.value = response.data
+      loadFormFromProfile(response.data)
+    } else {
+      showSnackbar('error', response.message || '加载档案信息失败')
+    }
+  } catch (error) {
+    console.error('加载商户档案失败:', error)
+    showSnackbar('error', '加载档案信息失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+function loadFormFromProfile(profileData: MerchantProfile) {
+  form.name = profileData.shop_name
+  form.announcement = profileData.shop_announcement
+  form.businessHours.start = profileData.business_hours_start
+  form.businessHours.end = profileData.business_hours_end
+  form.phone = profileData.shop_phone
+  form.address = profileData.shop_address
+  form.category = profileData.shop_category
+  form.description = profileData.shop_description
+}
+
 function loadSettings() {
-  const settings = merchantStore.shopSettings
-  form.name = settings.name
-  form.logo = settings.logo
-  form.announcement = settings.announcement
-  form.businessHours = { ...settings.businessHours }
-  form.phone = settings.phone
-  form.address = settings.address
-  form.category = settings.category
+  if (profile.value) {
+    loadFormFromProfile(profile.value)
+  } else {
+    // 如果没有档案数据，使用store中的mock数据
+    const settings = merchantStore.shopSettings
+    form.name = settings.name
+    form.announcement = settings.announcement
+    form.businessHours = { ...settings.businessHours }
+    form.phone = settings.phone
+    form.address = settings.address
+    form.category = settings.category
+  }
 }
 
 function resetForm() {
@@ -186,22 +252,49 @@ async function saveSettings() {
 
   saving.value = true
   try {
-    await new Promise(resolve => setTimeout(resolve, 500))
+    // 创建FormData对象
+    const formData = new FormData()
+    formData.append('shop_name', form.name)
+    formData.append('shop_announcement', form.announcement)
+    formData.append('business_hours_start', form.businessHours.start)
+    formData.append('business_hours_end', form.businessHours.end)
+    formData.append('shop_phone', form.phone)
+    formData.append('shop_address', form.address)
+    formData.append('shop_description', form.description)
+    
+    // 如果有新的logo文件
+    if (form.logo && form.logo.length > 0) {
+      formData.append('shop_logo', form.logo[0])
+    }
 
-    merchantStore.updateShopSettings({
-      name: form.name,
-      logo: form.logo,
-      announcement: form.announcement,
-      businessHours: form.businessHours,
-      phone: form.phone,
-      address: form.address,
-      category: form.category,
-    })
-
-    showSnackbar('success', '设置已保存')
+    const response = await merchantProfileApi.updateProfile(formData)
+    
+    if (response.success) {
+      profile.value = response.data
+      showSnackbar('success', '设置已保存')
+    } else {
+      showSnackbar('error', response.message || '保存失败')
+    }
+  } catch (error) {
+    console.error('保存设置失败:', error)
+    showSnackbar('error', '保存设置失败，请重试')
   } finally {
     saving.value = false
   }
+}
+
+function getCategoryLabel(value: string) {
+  const option = categoryOptions.find(opt => opt.value === value)
+  return option?.title || value
+}
+
+function getLogoUrl() {
+  // 如果有新选择的文件，显示预览
+  if (form.logo && form.logo.length > 0) {
+    return URL.createObjectURL(form.logo[0])
+  }
+  // 否则显示现有的logo
+  return profile.value?.shop_logo || 'https://picsum.photos/seed/shop/100/100'
 }
 
 // 提示
@@ -215,9 +308,13 @@ function showSnackbar(color: string, text: string) {
   snackbar.value = true
 }
 
-onMounted(() => {
-  merchantStore.loadAll()
-  loadSettings()
+onMounted(async () => {
+  await loadProfile()
+  // 如果没有档案数据，回退到使用store数据
+  if (!profile.value) {
+    merchantStore.loadAll()
+    loadSettings()
+  }
 })
 
 defineOptions({

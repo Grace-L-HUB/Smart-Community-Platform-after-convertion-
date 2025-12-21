@@ -34,6 +34,7 @@ urlpatterns = [
     path('api/', include('users.urls')),
     path('api/', include('property.urls')),
     path('api/community/', include('community.urls')),
+    path('api/merchant/', include('merchant.urls')),
 ]
 
 if settings.DEBUG:
