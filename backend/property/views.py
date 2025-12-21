@@ -2401,6 +2401,8 @@ class BillBatchGenerateView(APIView):
 
             # 批量创建账单
             bills_to_create = []
+            generated_bill_nos = set()  # 用于确保账单号不重复
+            
             for house in houses:
                 # 获取该房屋的业主
                 binding = house.user_bindings.filter(status=1, identity=1).first()
@@ -2421,7 +2423,34 @@ class BillBatchGenerateView(APIView):
                     quantity = Decimal('1')
                     amount = fee_standard.unit_price
 
+                # 生成账单号（因为bulk_create不会调用save方法）
+                import datetime
+                import random
+                today = datetime.date.today()
+                date_str = today.strftime('%Y%m%d')
+                
+                # 生成唯一账单号
+                bill_no = None
+                max_attempts = 100  # 防止无限循环
+                attempts = 0
+                
+                while attempts < max_attempts:
+                    random_num = random.randint(10000000, 99999999)
+                    bill_no = f'BILL{date_str}{random_num}'
+                    
+                    # 检查数据库和当前批次中是否重复
+                    if (not Bill.objects.filter(bill_no=bill_no).exists() and 
+                        bill_no not in generated_bill_nos):
+                        generated_bill_nos.add(bill_no)
+                        break
+                    attempts += 1
+                
+                if attempts >= max_attempts:
+                    logger.error(f"生成账单号失败，超过最大尝试次数")
+                    continue
+
                 bill = Bill(
+                    bill_no=bill_no,
                     title=f"{billing_year}年{billing_month}月{fee_standard.get_fee_type_display()}",
                     fee_type=fee_type,
                     house=house,
@@ -2439,6 +2468,19 @@ class BillBatchGenerateView(APIView):
 
             # 批量创建
             if bills_to_create:
+                print(f"准备批量创建{len(bills_to_create)}张账单")
+                
+                # 验证所有账单号都不为空且唯一
+                bill_nos = [bill.bill_no for bill in bills_to_create]
+                print(f"生成的账单号样例: {bill_nos[:5]}")
+                
+                if '' in bill_nos or None in bill_nos:
+                    logger.error("发现空账单号，取消批量创建")
+                    return Response({
+                        "code": 500,
+                        "message": "账单号生成失败"
+                    }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                
                 Bill.objects.bulk_create(bills_to_create)
                 logger.info(f"成功生成{len(bills_to_create)}张{fee_standard.get_fee_type_display()}账单")
                 
