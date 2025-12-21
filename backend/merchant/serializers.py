@@ -1,6 +1,9 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import MerchantApplication, MerchantProfile, MerchantProduct
+from .models import (
+    MerchantApplication, MerchantProfile, MerchantProduct,
+    MerchantCoupon, UserCoupon, MerchantOrder, MerchantOrderItem
+)
 
 User = get_user_model()
 
@@ -186,3 +189,191 @@ class MerchantProductCreateUpdateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("原价应该大于售价")
         
         return data
+
+
+class MerchantOrderItemSerializer(serializers.ModelSerializer):
+    """订单商品序列化器"""
+    
+    class Meta:
+        model = MerchantOrderItem
+        fields = [
+            'id', 'product', 'product_name', 'product_price', 
+            'quantity', 'subtotal', 'specifications'
+        ]
+
+
+class MerchantOrderSerializer(serializers.ModelSerializer):
+    """商户订单序列化器"""
+    
+    items = MerchantOrderItemSerializer(many=True, read_only=True)
+    merchant_name = serializers.CharField(source='merchant.shop_name', read_only=True)
+    user_info = serializers.SerializerMethodField()
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    pickup_type_display = serializers.CharField(source='get_pickup_type_display', read_only=True)
+    used_coupon_info = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = MerchantOrder
+        fields = [
+            'id', 'order_no', 'merchant', 'merchant_name', 'user', 'user_info',
+            'total_amount', 'actual_amount', 'status', 'status_display',
+            'pickup_type', 'pickup_type_display', 'contact_name', 'contact_phone',
+            'address', 'pickup_code', 'used_coupon', 'used_coupon_info',
+            'discount_amount', 'note', 'reject_reason', 'items',
+            'created_at', 'accepted_at', 'completed_at'
+        ]
+        read_only_fields = ['merchant', 'order_no', 'pickup_code', 'created_at']
+    
+    def get_user_info(self, obj):
+        """获取用户信息"""
+        return {
+            'id': obj.user.id,
+            'username': obj.user.username,
+            'display_name': getattr(obj.user, 'display_name', obj.user.username),
+            'phone': getattr(obj.user, 'phone', ''),
+        }
+    
+    def get_used_coupon_info(self, obj):
+        """获取使用的优惠券信息"""
+        if obj.used_coupon:
+            return {
+                'id': obj.used_coupon.id,
+                'name': obj.used_coupon.coupon.name,
+                'amount': obj.used_coupon.coupon.amount,
+                'verification_code': obj.used_coupon.verification_code
+            }
+        return None
+
+
+class MerchantCouponSerializer(serializers.ModelSerializer):
+    """商户优惠券序列化器"""
+    
+    merchant_name = serializers.CharField(source='merchant.shop_name', read_only=True)
+    type_display = serializers.CharField(source='get_coupon_type_display', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    remaining_count = serializers.ReadOnlyField()
+    is_valid = serializers.ReadOnlyField()
+    
+    class Meta:
+        model = MerchantCoupon
+        fields = [
+            'id', 'merchant', 'merchant_name', 'name', 'description',
+            'coupon_type', 'type_display', 'amount', 'min_amount',
+            'total_count', 'used_count', 'remaining_count', 'per_user_limit',
+            'start_date', 'end_date', 'status', 'status_display',
+            'is_valid', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['merchant', 'used_count', 'created_at', 'updated_at']
+    
+    def validate(self, data):
+        """验证数据"""
+        if data.get('start_date') and data.get('end_date'):
+            if data['start_date'] >= data['end_date']:
+                raise serializers.ValidationError("开始时间必须早于结束时间")
+        
+        if data.get('amount') and data.get('min_amount'):
+            if data['amount'] > data['min_amount']:
+                raise serializers.ValidationError("优惠金额不能大于最低消费金额")
+        
+        return data
+
+
+class UserCouponSerializer(serializers.ModelSerializer):
+    """用户优惠券序列化器"""
+    
+    coupon_info = serializers.SerializerMethodField()
+    merchant_info = serializers.SerializerMethodField()
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    is_expired = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = UserCoupon
+        fields = [
+            'id', 'coupon', 'coupon_info', 'merchant_info', 
+            'status', 'status_display', 'verification_code',
+            'is_expired', 'used_at', 'received_at'
+        ]
+        read_only_fields = ['verification_code', 'used_at', 'received_at']
+    
+    def get_coupon_info(self, obj):
+        """获取优惠券信息"""
+        return {
+            'id': obj.coupon.id,
+            'name': obj.coupon.name,
+            'description': obj.coupon.description,
+            'type': obj.coupon.coupon_type,
+            'type_display': obj.coupon.get_coupon_type_display(),
+            'amount': obj.coupon.amount,
+            'min_amount': obj.coupon.min_amount,
+            'start_date': obj.coupon.start_date,
+            'end_date': obj.coupon.end_date,
+        }
+    
+    def get_merchant_info(self, obj):
+        """获取商户信息"""
+        return {
+            'id': obj.coupon.merchant.id,
+            'name': obj.coupon.merchant.shop_name,
+            'logo': obj.coupon.merchant.shop_logo.url if obj.coupon.merchant.shop_logo else None,
+        }
+    
+    def get_is_expired(self, obj):
+        """是否已过期"""
+        from django.utils import timezone
+        return obj.coupon.end_date < timezone.now()
+
+
+class CouponReceiveSerializer(serializers.Serializer):
+    """优惠券领取序列化器"""
+    
+    coupon_id = serializers.IntegerField()
+    
+    def validate_coupon_id(self, value):
+        """验证优惠券ID"""
+        try:
+            coupon = MerchantCoupon.objects.get(id=value)
+            if not coupon.is_valid:
+                raise serializers.ValidationError("优惠券已失效或数量不足")
+            return value
+        except MerchantCoupon.DoesNotExist:
+            raise serializers.ValidationError("优惠券不存在")
+
+
+class CouponVerifySerializer(serializers.Serializer):
+    """优惠券核销序列化器"""
+    
+    verification_code = serializers.CharField(max_length=32)
+    order_id = serializers.IntegerField(required=False)
+    
+    def validate_verification_code(self, value):
+        """验证核销码"""
+        try:
+            user_coupon = UserCoupon.objects.get(verification_code=value, status='unused')
+            return value
+        except UserCoupon.DoesNotExist:
+            raise serializers.ValidationError("核销码无效或已使用")
+
+
+class OrderStatusUpdateSerializer(serializers.Serializer):
+    """订单状态更新序列化器"""
+    
+    status = serializers.ChoiceField(choices=MerchantOrder.STATUS_CHOICES)
+    reject_reason = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    
+    def validate(self, data):
+        """验证数据"""
+        if data.get('status') == 'cancelled' and not data.get('reject_reason'):
+            raise serializers.ValidationError("取消订单必须提供原因")
+        return data
+
+
+class PickupCodeVerifySerializer(serializers.Serializer):
+    """取餐码验证序列化器"""
+    
+    pickup_code = serializers.CharField(max_length=6)
+    
+    def validate_pickup_code(self, value):
+        """验证取餐码"""
+        if len(value) != 6 or not value.isdigit():
+            raise serializers.ValidationError("取餐码必须是6位数字")
+        return value

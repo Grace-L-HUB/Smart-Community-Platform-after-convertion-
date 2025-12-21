@@ -188,3 +188,250 @@ class MerchantProduct(models.Model):
         """切换上下架状态"""
         self.status = 'offline' if self.status == 'online' else 'online'
         self.save()
+
+
+class MerchantCoupon(models.Model):
+    """商户优惠券模型"""
+    
+    TYPE_CHOICES = [
+        ('discount', '减价券'),
+        ('deduction', '满减券'),
+        ('gift', '赠品券'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('active', '生效中'),
+        ('inactive', '已停用'),
+        ('expired', '已过期'),
+    ]
+    
+    # 关联商户
+    merchant = models.ForeignKey(MerchantProfile, on_delete=models.CASCADE, related_name='coupons', verbose_name="所属商户")
+    
+    # 基本信息
+    name = models.CharField(max_length=100, verbose_name="优惠券名称")
+    description = models.TextField(max_length=300, verbose_name="使用说明")
+    coupon_type = models.CharField(max_length=20, choices=TYPE_CHOICES, verbose_name="券类型")
+    
+    # 优惠规则
+    amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="优惠金额")
+    min_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="最低消费金额")
+    
+    # 数量和使用限制
+    total_count = models.PositiveIntegerField(verbose_name="发行数量")
+    used_count = models.PositiveIntegerField(default=0, verbose_name="已使用数量")
+    per_user_limit = models.PositiveIntegerField(default=1, verbose_name="每用户限领数量")
+    
+    # 时间设置
+    start_date = models.DateTimeField(verbose_name="开始时间")
+    end_date = models.DateTimeField(verbose_name="结束时间")
+    
+    # 状态
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active', verbose_name="状态")
+    
+    # 时间戳
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="更新时间")
+    
+    class Meta:
+        verbose_name = "商户优惠券"
+        verbose_name_plural = "商户优惠券"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['merchant', 'status']),
+            models.Index(fields=['start_date', 'end_date']),
+        ]
+    
+    def __str__(self):
+        return f"{self.name} - {self.merchant.shop_name}"
+    
+    @property
+    def remaining_count(self):
+        """剩余数量"""
+        return max(0, self.total_count - self.used_count)
+    
+    @property
+    def is_valid(self):
+        """是否有效"""
+        from django.utils import timezone
+        now = timezone.now()
+        return (
+            self.status == 'active' and
+            self.start_date <= now <= self.end_date and
+            self.remaining_count > 0
+        )
+
+
+class UserCoupon(models.Model):
+    """用户优惠券（领取记录）"""
+    
+    STATUS_CHOICES = [
+        ('unused', '未使用'),
+        ('used', '已使用'),
+        ('expired', '已过期'),
+    ]
+    
+    # 关联
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="用户")
+    coupon = models.ForeignKey(MerchantCoupon, on_delete=models.CASCADE, verbose_name="优惠券")
+    
+    # 状态和码
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='unused', verbose_name="使用状态")
+    verification_code = models.CharField(max_length=32, unique=True, verbose_name="核销码")
+    
+    # 使用信息
+    used_at = models.DateTimeField(null=True, blank=True, verbose_name="使用时间")
+    used_order = models.ForeignKey('MerchantOrder', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="使用订单")
+    
+    # 时间戳
+    received_at = models.DateTimeField(auto_now_add=True, verbose_name="领取时间")
+    
+    class Meta:
+        verbose_name = "用户优惠券"
+        verbose_name_plural = "用户优惠券"
+        unique_together = ['user', 'coupon']
+        ordering = ['-received_at']
+        indexes = [
+            models.Index(fields=['user', 'status']),
+            models.Index(fields=['verification_code']),
+        ]
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.coupon.name}"
+    
+    def save(self, *args, **kwargs):
+        if not self.verification_code:
+            import uuid
+            self.verification_code = uuid.uuid4().hex[:12].upper()
+        super().save(*args, **kwargs)
+    
+    def use_coupon(self, order=None):
+        """使用优惠券"""
+        from django.utils import timezone
+        self.status = 'used'
+        self.used_at = timezone.now()
+        if order:
+            self.used_order = order
+        self.save()
+
+
+class MerchantOrder(models.Model):
+    """商户订单模型"""
+    
+    STATUS_CHOICES = [
+        ('new', '新订单'),
+        ('accepted', '已接单'),
+        ('preparing', '准备中'),
+        ('ready', '待取餐'),
+        ('completed', '已完成'),
+        ('cancelled', '已取消'),
+        ('refunded', '已退款'),
+    ]
+    
+    PICKUP_TYPE_CHOICES = [
+        ('pickup', '到店自取'),
+        ('delivery', '外送'),
+    ]
+    
+    # 关联信息
+    merchant = models.ForeignKey(MerchantProfile, on_delete=models.CASCADE, related_name='orders', verbose_name="商户")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="下单用户")
+    
+    # 订单基本信息
+    order_no = models.CharField(max_length=32, unique=True, verbose_name="订单号")
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="订单总金额")
+    actual_amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="实付金额")
+    
+    # 订单状态
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='new', verbose_name="订单状态")
+    pickup_type = models.CharField(max_length=20, choices=PICKUP_TYPE_CHOICES, default='pickup', verbose_name="取餐方式")
+    
+    # 联系信息
+    contact_name = models.CharField(max_length=50, verbose_name="联系人")
+    contact_phone = models.CharField(max_length=15, verbose_name="联系电话")
+    address = models.CharField(max_length=200, blank=True, verbose_name="送餐地址")
+    
+    # 核销信息
+    pickup_code = models.CharField(max_length=6, blank=True, verbose_name="取餐码")
+    
+    # 优惠信息
+    used_coupon = models.ForeignKey(UserCoupon, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="使用的优惠券")
+    discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="优惠金额")
+    
+    # 备注
+    note = models.TextField(max_length=500, blank=True, verbose_name="订单备注")
+    reject_reason = models.TextField(max_length=200, blank=True, verbose_name="拒单原因")
+    
+    # 时间戳
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="下单时间")
+    accepted_at = models.DateTimeField(null=True, blank=True, verbose_name="接单时间")
+    completed_at = models.DateTimeField(null=True, blank=True, verbose_name="完成时间")
+    
+    class Meta:
+        verbose_name = "商户订单"
+        verbose_name_plural = "商户订单"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['merchant', 'status']),
+            models.Index(fields=['user', 'status']),
+            models.Index(fields=['pickup_code']),
+            models.Index(fields=['order_no']),
+        ]
+    
+    def __str__(self):
+        return f"{self.order_no} - {self.merchant.shop_name}"
+    
+    def save(self, *args, **kwargs):
+        if not self.order_no:
+            import time, random
+            timestamp = str(int(time.time()))[-8:]
+            random_num = str(random.randint(100, 999))
+            self.order_no = f"ORD{timestamp}{random_num}"
+        
+        if not self.pickup_code and self.status in ['accepted', 'preparing']:
+            self.pickup_code = str(random.randint(100000, 999999))
+            
+        super().save(*args, **kwargs)
+    
+    def accept_order(self):
+        """接单"""
+        from django.utils import timezone
+        self.status = 'accepted'
+        self.accepted_at = timezone.now()
+        self.save()
+    
+    def complete_order(self):
+        """完成订单"""
+        from django.utils import timezone
+        self.status = 'completed'
+        self.completed_at = timezone.now()
+        self.save()
+
+
+class MerchantOrderItem(models.Model):
+    """订单商品明细"""
+    
+    # 关联
+    order = models.ForeignKey(MerchantOrder, on_delete=models.CASCADE, related_name='items', verbose_name="订单")
+    product = models.ForeignKey(MerchantProduct, on_delete=models.CASCADE, verbose_name="商品")
+    
+    # 商品信息快照（防止商品信息变化影响历史订单）
+    product_name = models.CharField(max_length=100, verbose_name="商品名称")
+    product_price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="商品单价")
+    quantity = models.PositiveIntegerField(verbose_name="购买数量")
+    subtotal = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="小计金额")
+    
+    # 规格信息（JSON存储）
+    specifications = models.JSONField(default=dict, blank=True, verbose_name="商品规格")
+    
+    class Meta:
+        verbose_name = "订单商品"
+        verbose_name_plural = "订单商品"
+    
+    def __str__(self):
+        return f"{self.order.order_no} - {self.product_name}"
+    
+    def save(self, *args, **kwargs):
+        # 自动计算小计
+        self.subtotal = self.product_price * self.quantity
+        super().save(*args, **kwargs)

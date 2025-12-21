@@ -1,0 +1,123 @@
+<view class="container">
+  <!-- 加载状态 -->
+  <van-loading wx:if="{{ loading }}" type="spinner" color="#1989fa" vertical class="loading-container">
+    加载中...
+  </van-loading>
+  
+  <!-- 错误状态 -->
+  <view wx:elif="{{ error }}" class="error-container">
+    <van-empty description="{{ error }}">
+      <van-button round type="primary" class="bottom-button" bindtap="onRefresh">
+        重新加载
+      </van-button>
+    </van-empty>
+  </view>
+  
+  <!-- 正常内容 -->
+  <view wx:else class="qrcode-container">
+    <!-- 优惠券信息卡片 -->
+    <view class="coupon-card">
+      <view class="coupon-header">
+        <view class="merchant-info">
+          <image 
+            wx:if="{{ coupon.merchantLogo }}" 
+            src="{{ coupon.merchantLogo }}" 
+            class="merchant-logo"
+            mode="aspectFill"
+          />
+          <view wx:else class="merchant-logo-placeholder">
+            <van-icon name="shop-o" size="24px" />
+          </view>
+          <text class="merchant-name">{{ coupon.merchantName }}</text>
+        </view>
+        <van-tag type="primary" size="medium">{{ coupon.typeDisplay }}</van-tag>
+      </view>
+      
+      <view class="coupon-content">
+        <view class="coupon-amount-section">
+          <text class="amount-symbol">¥</text>
+          <text class="amount-value">{{ coupon.amount }}</text>
+          <text class="amount-condition">满{{ coupon.minAmount }}可用</text>
+        </view>
+        
+        <view class="coupon-details">
+          <view class="coupon-name">{{ coupon.name }}</view>
+          <view class="coupon-desc">{{ coupon.description }}</view>
+          <view class="coupon-validity">
+            有效期：{{ coupon.startDate.split('T')[0] }} 至 {{ coupon.endDate.split('T')[0] }}
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 二维码区域 -->
+    <view class="qrcode-section">
+      <view class="qrcode-wrapper">
+        <canvas 
+          canvas-id="{{ canvasId }}" 
+          id="{{ canvasId }}"
+          class="qrcode-canvas"
+          type="2d"
+        ></canvas>
+      </view>
+      
+      <view class="qrcode-info">
+        <text class="qrcode-title">请向商户出示此码</text>
+        <text class="qrcode-desc">商户扫码即可核销优惠券</text>
+        <view class="verification-code">
+          <text class="code-label">核销码：</text>
+          <text class="code-value">{{ coupon.verificationCode }}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 操作按钮 -->
+    <view class="action-buttons">
+      <van-button 
+        type="primary" 
+        size="large" 
+        round
+        bindtap="onGoToMerchant"
+        class="action-button"
+      >
+        去商户使用
+      </van-button>
+      
+      <view class="secondary-actions">
+        <van-button 
+          plain 
+          size="small"
+          bindtap="onSaveQRCode"
+          class="secondary-button"
+        >
+          <van-icon name="photo-o" />
+          保存二维码
+        </van-button>
+        
+        <van-button 
+          plain 
+          size="small"
+          open-type="share"
+          class="secondary-button"
+        >
+          <van-icon name="share-o" />
+          分享优惠券
+        </van-button>
+      </view>
+    </view>
+
+    <!-- 使用说明 -->
+    <view class="usage-tips">
+      <view class="tips-title">
+        <van-icon name="info-o" size="16px" />
+        <text>使用说明</text>
+      </view>
+      <view class="tips-content">
+        <text class="tip-item">• 请在有效期内使用，过期自动失效</text>
+        <text class="tip-item">• 每张优惠券仅限使用一次</text>
+        <text class="tip-item">• 优惠券不可转让，不可兑换现金</text>
+        <text class="tip-item">• 使用时需满足最低消费金额要求</text>
+      </view>
+    </view>
+  </view>
+</view>

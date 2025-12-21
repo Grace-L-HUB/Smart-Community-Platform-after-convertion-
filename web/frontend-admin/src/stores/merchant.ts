@@ -7,7 +7,10 @@ import {
     type Order,
     type ShopSettings,
 } from '@/mocks/merchant'
-import { merchantProductApi, type Product as ApiProduct } from '@/services/merchant'
+import { 
+    merchantProductApi, merchantOrderApi, merchantCouponApi,
+    type Product as ApiProduct, type Order as ApiOrder, type Coupon as ApiCoupon 
+} from '@/services/merchant'
 
 // 转换API产品到前端产品接口
 export interface Product {
@@ -25,12 +28,33 @@ export interface Product {
     createdAt: string
 }
 
+export interface Order {
+    id: number
+    orderNo: string
+    customerName: string
+    customerPhone: string
+    products: Array<{
+        name: string
+        quantity: number
+        price: number
+    }>
+    totalAmount: number
+    status: 'new' | 'accepted' | 'preparing' | 'ready' | 'completed' | 'cancelled' | 'refunded'
+    pickupCode?: string
+    pickupType: 'delivery' | 'pickup'
+    address?: string
+    note?: string
+    createdAt: string
+    completedAt?: string
+}
+
 interface MerchantState {
     products: Product[]
     orders: Order[]
     shopSettings: ShopSettings
     stats: typeof mockMerchantStats
     loading: boolean
+    ordersLoading: boolean
 }
 
 export const useMerchantStore = defineStore('merchant', {
@@ -40,6 +64,7 @@ export const useMerchantStore = defineStore('merchant', {
         shopSettings: mockShopSettings,
         stats: mockMerchantStats,
         loading: false,
+        ordersLoading: false,
     }),
 
     getters: {
@@ -88,19 +113,49 @@ export const useMerchantStore = defineStore('merchant', {
             return formData
         },
 
+        // 转换API订单数据到前端格式
+        convertApiOrderToOrder(apiOrder: ApiOrder): Order {
+            return {
+                id: apiOrder.id,
+                orderNo: apiOrder.order_no,
+                customerName: apiOrder.contact_name,
+                customerPhone: apiOrder.contact_phone,
+                products: apiOrder.items.map(item => ({
+                    name: item.product_name,
+                    quantity: item.quantity,
+                    price: Number(item.product_price)
+                })),
+                totalAmount: Number(apiOrder.total_amount),
+                status: apiOrder.status,
+                pickupCode: apiOrder.pickup_code,
+                pickupType: apiOrder.pickup_type,
+                address: apiOrder.address,
+                note: apiOrder.note,
+                createdAt: apiOrder.created_at?.replace('T', ' ').slice(0, 19) || '',
+                completedAt: apiOrder.completed_at?.replace('T', ' ').slice(0, 19) || '',
+            }
+        },
+
         // 加载所有数据
         async loadAll() {
             this.loading = true
             
             try {
-                // 加载商品数据
-                const productResponse = await merchantProductApi.getProducts()
+                // 并行加载商品和订单数据
+                const [productResponse, orderResponse] = await Promise.all([
+                    merchantProductApi.getProducts(),
+                    merchantOrderApi.getOrders({ page_size: 50 })
+                ])
+                
                 if (productResponse.success && productResponse.data) {
                     this.products = productResponse.data.map(this.convertApiProductToProduct)
                 }
                 
+                if (orderResponse.success && orderResponse.data) {
+                    this.orders = orderResponse.data.items.map(this.convertApiOrderToOrder)
+                }
+                
                 // 暂时还使用mock数据的其他部分
-                this.orders = [...mockOrders]
                 this.shopSettings = { ...mockShopSettings }
                 this.stats = { ...mockMerchantStats }
                 
@@ -108,12 +163,32 @@ export const useMerchantStore = defineStore('merchant', {
                 console.error('加载数据失败:', error)
                 // 如果API调用失败，使用空数组
                 this.products = []
-                this.orders = [...mockOrders]
+                this.orders = []
                 this.shopSettings = { ...mockShopSettings }
                 this.stats = { ...mockMerchantStats }
             }
             
             this.loading = false
+        },
+
+        // 加载订单数据
+        async loadOrders(status?: string) {
+            this.ordersLoading = true
+            
+            try {
+                const response = await merchantOrderApi.getOrders({ 
+                    status, 
+                    page_size: 100 
+                })
+                
+                if (response.success && response.data) {
+                    this.orders = response.data.items.map(this.convertApiOrderToOrder)
+                }
+            } catch (error) {
+                console.error('加载订单失败:', error)
+            }
+            
+            this.ordersLoading = false
         },
 
         // 商品操作
@@ -192,39 +267,88 @@ export const useMerchantStore = defineStore('merchant', {
         },
 
         // 订单操作
-        acceptOrder(id: number) {
-            const order = this.orders.find(o => o.id === id)
-            if (order) {
-                order.status = 'accepted'
-            }
-        },
-
-        rejectOrder(id: number, _reason: string) {
-            const order = this.orders.find(o => o.id === id)
-            if (order) {
-                order.status = 'cancelled'
-            }
-        },
-
-        updateOrderStatus(id: number, status: Order['status']) {
-            const order = this.orders.find(o => o.id === id)
-            if (order) {
-                order.status = status
-                if (status === 'completed') {
-                    order.completedAt = new Date().toISOString().replace('T', ' ').slice(0, 19)
+        async acceptOrder(id: number) {
+            try {
+                const response = await merchantOrderApi.updateOrderStatus(id, { status: 'accepted' })
+                if (response.success && response.data) {
+                    const updatedOrder = this.convertApiOrderToOrder(response.data)
+                    const index = this.orders.findIndex(o => o.id === id)
+                    if (index > -1) {
+                        this.orders[index] = updatedOrder
+                    }
+                } else {
+                    throw new Error(response.message || '接单失败')
                 }
+            } catch (error) {
+                console.error('接单失败:', error)
+                throw error
+            }
+        },
+
+        async rejectOrder(id: number, reason: string) {
+            try {
+                const response = await merchantOrderApi.updateOrderStatus(id, { 
+                    status: 'cancelled', 
+                    reject_reason: reason 
+                })
+                if (response.success && response.data) {
+                    const updatedOrder = this.convertApiOrderToOrder(response.data)
+                    const index = this.orders.findIndex(o => o.id === id)
+                    if (index > -1) {
+                        this.orders[index] = updatedOrder
+                    }
+                } else {
+                    throw new Error(response.message || '拒单失败')
+                }
+            } catch (error) {
+                console.error('拒单失败:', error)
+                throw error
+            }
+        },
+
+        async updateOrderStatus(id: number, status: Order['status']) {
+            try {
+                const response = await merchantOrderApi.updateOrderStatus(id, { status })
+                if (response.success && response.data) {
+                    const updatedOrder = this.convertApiOrderToOrder(response.data)
+                    const index = this.orders.findIndex(o => o.id === id)
+                    if (index > -1) {
+                        this.orders[index] = updatedOrder
+                    }
+                } else {
+                    throw new Error(response.message || '状态更新失败')
+                }
+            } catch (error) {
+                console.error('状态更新失败:', error)
+                throw error
             }
         },
 
         // 核销码验证
-        verifyPickupCode(code: string) {
-            const order = this.orders.find(o => o.pickupCode === code && o.status !== 'completed')
-            if (order) {
-                order.status = 'completed'
-                order.completedAt = new Date().toISOString().replace('T', ' ').slice(0, 19)
-                return { success: true, order }
+        async verifyPickupCode(code: string) {
+            try {
+                const response = await merchantOrderApi.verifyPickupCode(code)
+                if (response.success) {
+                    // 重新加载订单列表以获取最新状态
+                    await this.loadOrders()
+                    return { 
+                        success: true, 
+                        message: response.message,
+                        order: response.data 
+                    }
+                } else {
+                    return { 
+                        success: false, 
+                        message: response.message || '核销码无效或订单已完成' 
+                    }
+                }
+            } catch (error) {
+                console.error('核销码验证失败:', error)
+                return { 
+                    success: false, 
+                    message: '验证失败，请重试' 
+                }
             }
-            return { success: false, message: '核销码无效或订单已完成' }
         },
 
         // 店铺设置

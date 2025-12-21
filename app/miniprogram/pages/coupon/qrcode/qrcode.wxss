@@ -1,0 +1,248 @@
+/* pages/coupon/qrcode/qrcode.wxss */
+.container {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  padding: 40rpx 30rpx;
+}
+
+.loading-container {
+  padding: 200rpx 0;
+  text-align: center;
+  color: #fff;
+}
+
+.error-container {
+  padding: 100rpx 30rpx;
+}
+
+.qrcode-container {
+  display: flex;
+  flex-direction: column;
+  gap: 40rpx;
+}
+
+/* 优惠券信息卡片 */
+.coupon-card {
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 40rpx;
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.1);
+}
+
+.coupon-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30rpx;
+}
+
+.merchant-info {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+}
+
+.merchant-logo {
+  width: 60rpx;
+  height: 60rpx;
+  border-radius: 12rpx;
+}
+
+.merchant-logo-placeholder {
+  width: 60rpx;
+  height: 60rpx;
+  border-radius: 12rpx;
+  background: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.merchant-name {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.coupon-content {
+  display: flex;
+  gap: 30rpx;
+}
+
+.coupon-amount-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+  color: #fff;
+  border-radius: 16rpx;
+  padding: 30rpx 20rpx;
+  min-width: 160rpx;
+}
+
+.amount-symbol {
+  font-size: 24rpx;
+  line-height: 1;
+}
+
+.amount-value {
+  font-size: 56rpx;
+  font-weight: bold;
+  line-height: 1;
+  margin: 8rpx 0;
+}
+
+.amount-condition {
+  font-size: 22rpx;
+  opacity: 0.9;
+  text-align: center;
+}
+
+.coupon-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.coupon-name {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 15rpx;
+}
+
+.coupon-desc {
+  font-size: 26rpx;
+  color: #666;
+  line-height: 1.4;
+  margin-bottom: 20rpx;
+}
+
+.coupon-validity {
+  font-size: 24rpx;
+  color: #999;
+}
+
+/* 二维码区域 */
+.qrcode-section {
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 50rpx 40rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.1);
+}
+
+.qrcode-wrapper {
+  width: 400rpx;
+  height: 400rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8f9fa;
+  border-radius: 16rpx;
+  margin-bottom: 40rpx;
+}
+
+.qrcode-canvas {
+  width: 360rpx;
+  height: 360rpx;
+}
+
+.qrcode-info {
+  text-align: center;
+}
+
+.qrcode-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+  display: block;
+  margin-bottom: 10rpx;
+}
+
+.qrcode-desc {
+  font-size: 26rpx;
+  color: #666;
+  display: block;
+  margin-bottom: 30rpx;
+}
+
+.verification-code {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10rpx;
+  padding: 20rpx 30rpx;
+  background: #f0f9ff;
+  border-radius: 12rpx;
+}
+
+.code-label {
+  font-size: 26rpx;
+  color: #666;
+}
+
+.code-value {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #1890ff;
+  font-family: monospace;
+}
+
+/* 操作按钮 */
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 30rpx;
+}
+
+.action-button {
+  width: 100%;
+}
+
+.secondary-actions {
+  display: flex;
+  gap: 20rpx;
+  justify-content: center;
+}
+
+.secondary-button {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  color: #fff !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* 使用说明 */
+.usage-tips {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 16rpx;
+  padding: 30rpx;
+}
+
+.tips-title {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 20rpx;
+}
+
+.tips-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.tip-item {
+  font-size: 24rpx;
+  color: #666;
+  line-height: 1.4;
+}

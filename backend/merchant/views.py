@@ -4,13 +4,18 @@ from rest_framework import status, permissions
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from django.db import transaction
-from .models import MerchantApplication, MerchantProfile, MerchantProduct
+from django.db import transaction, models
+from .models import (
+    MerchantApplication, MerchantProfile, MerchantProduct,
+    MerchantOrder, MerchantOrderItem, MerchantCoupon, UserCoupon
+)
 from .serializers import (
     MerchantApplicationSerializer, MerchantApplicationCreateSerializer,
     MerchantApplicationReviewSerializer, MerchantProfileSerializer,
     MerchantProfileUpdateSerializer, MerchantProductSerializer,
-    MerchantProductCreateUpdateSerializer
+    MerchantProductCreateUpdateSerializer, MerchantOrderSerializer,
+    MerchantCouponSerializer, UserCouponSerializer, CouponReceiveSerializer,
+    CouponVerifySerializer, OrderStatusUpdateSerializer, PickupCodeVerifySerializer
 )
 import logging
 from django.contrib.auth.hashers import make_password
@@ -930,4 +935,601 @@ class PublicProductDetailView(APIView):
             return Response({
                 'success': False,
                 'message': '获取商品详情失败'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class MerchantOrderListView(APIView):
+    """商户订单列表接口"""
+    
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request):
+        """获取商户订单列表"""
+        try:
+            # 检查用户是否为商户
+            if request.user.role != 2:
+                return Response({
+                    'success': False,
+                    'message': '权限不足'
+                }, status=status.HTTP_403_FORBIDDEN)
+            
+            # 获取商户档案
+            try:
+                merchant_profile = MerchantProfile.objects.get(user=request.user)
+            except MerchantProfile.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'message': '商户档案不存在'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # 获取查询参数
+            status_filter = request.GET.get('status', '')
+            page = int(request.GET.get('page', 1))
+            page_size = int(request.GET.get('page_size', 20))
+            
+            # 构建查询
+            queryset = MerchantOrder.objects.filter(merchant=merchant_profile).select_related('user', 'used_coupon').prefetch_related('items')
+            
+            if status_filter:
+                queryset = queryset.filter(status=status_filter)
+            
+            # 分页
+            start = (page - 1) * page_size
+            end = start + page_size
+            orders = queryset[start:end]
+            total = queryset.count()
+            
+            serializer = MerchantOrderSerializer(orders, many=True, context={'request': request})
+            
+            return Response({
+                'success': True,
+                'data': {
+                    'items': serializer.data,
+                    'total': total,
+                    'page': page,
+                    'page_size': page_size,
+                    'total_pages': (total + page_size - 1) // page_size
+                }
+            })
+            
+        except Exception as e:
+            logger.error(f"获取订单列表失败: {str(e)}")
+            return Response({
+                'success': False,
+                'message': '获取订单列表失败'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class MerchantOrderDetailView(APIView):
+    """商户订单详情接口"""
+    
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_object(self, request, order_id):
+        """获取订单对象"""
+        try:
+            merchant_profile = MerchantProfile.objects.get(user=request.user)
+            return MerchantOrder.objects.select_related('user', 'used_coupon').prefetch_related('items').get(
+                id=order_id, merchant=merchant_profile
+            )
+        except (MerchantProfile.DoesNotExist, MerchantOrder.DoesNotExist):
+            return None
+    
+    def get(self, request, order_id):
+        """获取订单详情"""
+        try:
+            # 检查用户是否为商户
+            if request.user.role != 2:
+                return Response({
+                    'success': False,
+                    'message': '权限不足'
+                }, status=status.HTTP_403_FORBIDDEN)
+            
+            order = self.get_object(request, order_id)
+            if not order:
+                return Response({
+                    'success': False,
+                    'message': '订单不存在'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            serializer = MerchantOrderSerializer(order, context={'request': request})
+            return Response({
+                'success': True,
+                'data': serializer.data
+            })
+            
+        except Exception as e:
+            logger.error(f"获取订单详情失败: {str(e)}")
+            return Response({
+                'success': False,
+                'message': '获取订单详情失败'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class OrderStatusUpdateView(APIView):
+    """订单状态更新接口"""
+    
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def post(self, request, order_id):
+        """更新订单状态"""
+        try:
+            # 检查用户是否为商户
+            if request.user.role != 2:
+                return Response({
+                    'success': False,
+                    'message': '权限不足'
+                }, status=status.HTTP_403_FORBIDDEN)
+            
+            # 获取订单
+            try:
+                merchant_profile = MerchantProfile.objects.get(user=request.user)
+                order = MerchantOrder.objects.get(id=order_id, merchant=merchant_profile)
+            except (MerchantProfile.DoesNotExist, MerchantOrder.DoesNotExist):
+                return Response({
+                    'success': False,
+                    'message': '订单不存在'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # 验证数据
+            serializer = OrderStatusUpdateSerializer(data=request.data)
+            if not serializer.is_valid():
+                return Response({
+                    'success': False,
+                    'message': '数据验证失败',
+                    'errors': serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            new_status = serializer.validated_data['status']
+            reject_reason = serializer.validated_data.get('reject_reason', '')
+            
+            # 状态流转检查
+            valid_transitions = {
+                'new': ['accepted', 'cancelled'],
+                'accepted': ['preparing', 'cancelled'],
+                'preparing': ['ready', 'cancelled'],
+                'ready': ['completed', 'cancelled'],
+            }
+            
+            current_status = order.status
+            if current_status not in valid_transitions or new_status not in valid_transitions[current_status]:
+                return Response({
+                    'success': False,
+                    'message': f'不能从{order.get_status_display()}状态变更为{dict(MerchantOrder.STATUS_CHOICES)[new_status]}'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # 更新状态
+            from django.utils import timezone
+            order.status = new_status
+            
+            if new_status == 'accepted':
+                order.accepted_at = timezone.now()
+            elif new_status == 'completed':
+                order.completed_at = timezone.now()
+            elif new_status == 'cancelled':
+                order.reject_reason = reject_reason
+            
+            order.save()
+            
+            return Response({
+                'success': True,
+                'message': '订单状态更新成功',
+                'data': MerchantOrderSerializer(order, context={'request': request}).data
+            })
+            
+        except Exception as e:
+            logger.error(f"更新订单状态失败: {str(e)}")
+            return Response({
+                'success': False,
+                'message': '更新订单状态失败'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class PickupCodeVerifyView(APIView):
+    """取餐码验证接口"""
+    
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def post(self, request):
+        """验证取餐码"""
+        try:
+            # 检查用户是否为商户
+            if request.user.role != 2:
+                return Response({
+                    'success': False,
+                    'message': '权限不足'
+                }, status=status.HTTP_403_FORBIDDEN)
+            
+            # 获取商户档案
+            try:
+                merchant_profile = MerchantProfile.objects.get(user=request.user)
+            except MerchantProfile.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'message': '商户档案不存在'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # 验证数据
+            serializer = PickupCodeVerifySerializer(data=request.data)
+            if not serializer.is_valid():
+                return Response({
+                    'success': False,
+                    'message': '数据验证失败',
+                    'errors': serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            pickup_code = serializer.validated_data['pickup_code']
+            
+            # 查找订单
+            try:
+                order = MerchantOrder.objects.get(
+                    pickup_code=pickup_code,
+                    merchant=merchant_profile,
+                    status__in=['accepted', 'preparing', 'ready']
+                )
+            except MerchantOrder.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'message': '取餐码无效或订单已完成'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # 完成订单
+            order.complete_order()
+            
+            return Response({
+                'success': True,
+                'message': f'订单 {order.order_no} 核销成功',
+                'data': {
+                    'order_id': order.id,
+                    'order_no': order.order_no,
+                    'customer_name': order.contact_name,
+                    'total_amount': order.total_amount
+                }
+            })
+            
+        except Exception as e:
+            logger.error(f"取餐码验证失败: {str(e)}")
+            return Response({
+                'success': False,
+                'message': '验证失败，请重试'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class MerchantCouponListView(APIView):
+    """商户优惠券列表接口"""
+    
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request):
+        """获取商户优惠券列表"""
+        try:
+            # 检查用户是否为商户
+            if request.user.role != 2:
+                return Response({
+                    'success': False,
+                    'message': '权限不足'
+                }, status=status.HTTP_403_FORBIDDEN)
+            
+            # 获取商户档案
+            try:
+                merchant_profile = MerchantProfile.objects.get(user=request.user)
+            except MerchantProfile.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'message': '商户档案不存在'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # 获取查询参数
+            status_filter = request.GET.get('status', '')
+            coupon_type = request.GET.get('type', '')
+            
+            # 构建查询
+            queryset = MerchantCoupon.objects.filter(merchant=merchant_profile)
+            
+            if status_filter:
+                queryset = queryset.filter(status=status_filter)
+            if coupon_type:
+                queryset = queryset.filter(coupon_type=coupon_type)
+            
+            coupons = queryset.order_by('-created_at')
+            serializer = MerchantCouponSerializer(coupons, many=True, context={'request': request})
+            
+            return Response({
+                'success': True,
+                'data': serializer.data
+            })
+            
+        except Exception as e:
+            logger.error(f"获取优惠券列表失败: {str(e)}")
+            return Response({
+                'success': False,
+                'message': '获取优惠券列表失败'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    def post(self, request):
+        """创建优惠券"""
+        try:
+            # 检查用户是否为商户
+            if request.user.role != 2:
+                return Response({
+                    'success': False,
+                    'message': '权限不足'
+                }, status=status.HTTP_403_FORBIDDEN)
+            
+            # 获取商户档案
+            try:
+                merchant_profile = MerchantProfile.objects.get(user=request.user)
+            except MerchantProfile.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'message': '商户档案不存在'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # 验证数据
+            serializer = MerchantCouponSerializer(data=request.data, context={'request': request})
+            if serializer.is_valid():
+                coupon = serializer.save(merchant=merchant_profile)
+                
+                return Response({
+                    'success': True,
+                    'message': '优惠券创建成功',
+                    'data': MerchantCouponSerializer(coupon, context={'request': request}).data
+                }, status=status.HTTP_201_CREATED)
+            
+            return Response({
+                'success': False,
+                'message': '数据验证失败',
+                'errors': serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+        except Exception as e:
+            logger.error(f"创建优惠券失败: {str(e)}")
+            return Response({
+                'success': False,
+                'message': '创建优惠券失败'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class PublicCouponListView(APIView):
+    """公开优惠券列表接口（供小程序使用）"""
+    
+    permission_classes = []
+    
+    def get(self, request, merchant_id=None):
+        """获取优惠券列表"""
+        try:
+            # 构建查询
+            queryset = MerchantCoupon.objects.filter(
+                status='active',
+                merchant__is_active=True
+            )
+            
+            if merchant_id:
+                queryset = queryset.filter(merchant_id=merchant_id)
+            
+            # 只返回有效期内且有剩余数量的优惠券
+            from django.utils import timezone
+            now = timezone.now()
+            queryset = queryset.filter(
+                start_date__lte=now,
+                end_date__gte=now,
+                total_count__gt=models.F('used_count')
+            )
+            
+            coupons = queryset.select_related('merchant').order_by('-created_at')
+            serializer = MerchantCouponSerializer(coupons, many=True, context={'request': request})
+            
+            return Response({
+                'success': True,
+                'data': serializer.data
+            })
+            
+        except Exception as e:
+            logger.error(f"获取公开优惠券列表失败: {str(e)}")
+            return Response({
+                'success': False,
+                'message': '获取优惠券列表失败'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class CouponReceiveView(APIView):
+    """优惠券领取接口"""
+    
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def post(self, request):
+        """领取优惠券"""
+        try:
+            # 验证数据
+            serializer = CouponReceiveSerializer(data=request.data)
+            if not serializer.is_valid():
+                return Response({
+                    'success': False,
+                    'message': '数据验证失败',
+                    'errors': serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            coupon_id = serializer.validated_data['coupon_id']
+            
+            try:
+                coupon = MerchantCoupon.objects.get(id=coupon_id)
+            except MerchantCoupon.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'message': '优惠券不存在'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # 检查优惠券是否有效
+            if not coupon.is_valid:
+                return Response({
+                    'success': False,
+                    'message': '优惠券已失效或数量不足'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # 检查用户是否已经领取过
+            if UserCoupon.objects.filter(user=request.user, coupon=coupon).exists():
+                return Response({
+                    'success': False,
+                    'message': '您已经领取过该优惠券'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # 检查用户领取数量限制
+            user_received_count = UserCoupon.objects.filter(user=request.user, coupon=coupon).count()
+            if user_received_count >= coupon.per_user_limit:
+                return Response({
+                    'success': False,
+                    'message': f'您已达到该优惠券的领取上限（{coupon.per_user_limit}张）'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # 使用事务确保数据一致性
+            with transaction.atomic():
+                # 创建用户优惠券记录
+                user_coupon = UserCoupon.objects.create(
+                    user=request.user,
+                    coupon=coupon
+                )
+                
+                # 更新优惠券使用数量
+                coupon.used_count += 1
+                coupon.save()
+            
+            return Response({
+                'success': True,
+                'message': '优惠券领取成功',
+                'data': UserCouponSerializer(user_coupon, context={'request': request}).data
+            })
+            
+        except Exception as e:
+            logger.error(f"领取优惠券失败: {str(e)}")
+            return Response({
+                'success': False,
+                'message': '领取优惠券失败'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class UserCouponListView(APIView):
+    """用户优惠券列表接口"""
+    
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request):
+        """获取用户的优惠券列表"""
+        try:
+            # 获取查询参数
+            status_filter = request.GET.get('status', '')
+            merchant_id = request.GET.get('merchant_id', '')
+            
+            # 构建查询
+            queryset = UserCoupon.objects.filter(user=request.user).select_related('coupon', 'coupon__merchant')
+            
+            if status_filter:
+                queryset = queryset.filter(status=status_filter)
+            if merchant_id:
+                queryset = queryset.filter(coupon__merchant_id=merchant_id)
+            
+            user_coupons = queryset.order_by('-received_at')
+            serializer = UserCouponSerializer(user_coupons, many=True, context={'request': request})
+            
+            return Response({
+                'success': True,
+                'data': serializer.data
+            })
+            
+        except Exception as e:
+            logger.error(f"获取用户优惠券列表失败: {str(e)}")
+            return Response({
+                'success': False,
+                'message': '获取优惠券列表失败'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class CouponVerifyView(APIView):
+    """优惠券核销接口（商户端使用）"""
+    
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def post(self, request):
+        """核销优惠券"""
+        try:
+            # 检查用户是否为商户
+            if request.user.role != 2:
+                return Response({
+                    'success': False,
+                    'message': '权限不足'
+                }, status=status.HTTP_403_FORBIDDEN)
+            
+            # 获取商户档案
+            try:
+                merchant_profile = MerchantProfile.objects.get(user=request.user)
+            except MerchantProfile.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'message': '商户档案不存在'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # 验证数据
+            serializer = CouponVerifySerializer(data=request.data)
+            if not serializer.is_valid():
+                return Response({
+                    'success': False,
+                    'message': '数据验证失败',
+                    'errors': serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            verification_code = serializer.validated_data['verification_code']
+            order_id = serializer.validated_data.get('order_id')
+            
+            # 查找用户优惠券
+            try:
+                user_coupon = UserCoupon.objects.select_related('coupon', 'coupon__merchant').get(
+                    verification_code=verification_code,
+                    status='unused',
+                    coupon__merchant=merchant_profile
+                )
+            except UserCoupon.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'message': '核销码无效、已使用或不属于本商户'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # 检查优惠券是否在有效期内
+            from django.utils import timezone
+            if user_coupon.coupon.end_date < timezone.now():
+                return Response({
+                    'success': False,
+                    'message': '优惠券已过期'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # 获取关联订单（如果提供）
+            order = None
+            if order_id:
+                try:
+                    order = MerchantOrder.objects.get(id=order_id, merchant=merchant_profile)
+                except MerchantOrder.DoesNotExist:
+                    return Response({
+                        'success': False,
+                        'message': '关联订单不存在'
+                    }, status=status.HTTP_404_NOT_FOUND)
+            
+            # 核销优惠券
+            user_coupon.use_coupon(order)
+            
+            return Response({
+                'success': True,
+                'message': f'优惠券"{user_coupon.coupon.name}"核销成功',
+                'data': {
+                    'coupon_id': user_coupon.coupon.id,
+                    'coupon_name': user_coupon.coupon.name,
+                    'amount': user_coupon.coupon.amount,
+                    'user_name': user_coupon.user.username,
+                    'verification_code': verification_code,
+                    'used_at': user_coupon.used_at
+                }
+            })
+            
+        except Exception as e:
+            logger.error(f"优惠券核销失败: {str(e)}")
+            return Response({
+                'success': False,
+                'message': '核销失败，请重试'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

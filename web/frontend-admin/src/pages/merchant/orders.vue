@@ -229,14 +229,24 @@ function formatTime(time: string) {
 }
 
 // 订单操作
-function acceptOrder(order: Order) {
-  merchantStore.acceptOrder(order.id)
-  showSnackbar('success', '已接单')
+async function acceptOrder(order: Order) {
+  try {
+    await merchantStore.acceptOrder(order.id)
+    showSnackbar('success', '已接单')
+  } catch (error) {
+    console.error('接单失败:', error)
+    showSnackbar('error', error instanceof Error ? error.message : '接单失败，请重试')
+  }
 }
 
-function updateStatus(order: Order, status: Order['status']) {
-  merchantStore.updateOrderStatus(order.id, status)
-  showSnackbar('success', '状态已更新')
+async function updateStatus(order: Order, status: Order['status']) {
+  try {
+    await merchantStore.updateOrderStatus(order.id, status)
+    showSnackbar('success', '状态已更新')
+  } catch (error) {
+    console.error('状态更新失败:', error)
+    showSnackbar('error', error instanceof Error ? error.message : '状态更新失败，请重试')
+  }
 }
 
 // 拒单
@@ -250,26 +260,36 @@ function rejectOrder(order: Order) {
   rejectDialog.value = true
 }
 
-function confirmReject() {
+async function confirmReject() {
   if (rejectingOrder.value) {
-    merchantStore.rejectOrder(rejectingOrder.value.id, rejectReason.value)
-    showSnackbar('warning', '订单已拒绝')
+    try {
+      await merchantStore.rejectOrder(rejectingOrder.value.id, rejectReason.value)
+      showSnackbar('warning', '订单已拒绝')
+      rejectDialog.value = false
+    } catch (error) {
+      console.error('拒单失败:', error)
+      showSnackbar('error', error instanceof Error ? error.message : '拒单失败，请重试')
+    }
   }
-  rejectDialog.value = false
 }
 
 // 核销
 const verifyDialog = ref(false)
 const pickupCode = ref('')
 
-function verifyCode() {
-  const result = merchantStore.verifyPickupCode(pickupCode.value)
-  if (result.success) {
-    showSnackbar('success', `订单 ${result.order?.orderNo} 核销成功`)
-    verifyDialog.value = false
-    pickupCode.value = ''
-  } else {
-    showSnackbar('error', result.message || '核销失败')
+async function verifyCode() {
+  try {
+    const result = await merchantStore.verifyPickupCode(pickupCode.value)
+    if (result.success) {
+      showSnackbar('success', result.message || '核销成功')
+      verifyDialog.value = false
+      pickupCode.value = ''
+    } else {
+      showSnackbar('error', result.message || '核销失败')
+    }
+  } catch (error) {
+    console.error('核销失败:', error)
+    showSnackbar('error', '核销失败，请重试')
   }
 }
 

@@ -1,0 +1,192 @@
+/* pages/coupon/market/market.wxss */
+.container {
+  background-color: #f7f8fa;
+  min-height: 100vh;
+  padding-bottom: 100rpx;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 30rpx;
+  background: #fff;
+  border-bottom: 1rpx solid #eee;
+}
+
+.title {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.loading-container {
+  padding: 200rpx 0;
+  text-align: center;
+}
+
+.error-container {
+  padding: 100rpx 30rpx;
+}
+
+.empty-container {
+  padding: 100rpx 30rpx;
+}
+
+.coupon-list {
+  padding: 20rpx;
+}
+
+.coupon-card {
+  background: #fff;
+  border-radius: 16rpx;
+  margin-bottom: 20rpx;
+  overflow: hidden;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.05);
+  position: relative;
+}
+
+.coupon-main {
+  display: flex;
+  padding: 30rpx;
+  position: relative;
+}
+
+/* 左侧金额区域 */
+.coupon-amount {
+  width: 160rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #07c160, #00d4aa);
+  color: #fff;
+  border-radius: 12rpx;
+  padding: 20rpx 10rpx;
+  margin-right: 20rpx;
+}
+
+.amount-symbol {
+  font-size: 24rpx;
+  line-height: 1;
+}
+
+.amount-value {
+  font-size: 48rpx;
+  font-weight: bold;
+  line-height: 1;
+  margin: 5rpx 0;
+}
+
+.amount-condition {
+  font-size: 20rpx;
+  opacity: 0.9;
+  text-align: center;
+}
+
+/* 中间信息区域 */
+.coupon-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  margin-right: 20rpx;
+}
+
+.coupon-name {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 10rpx;
+}
+
+.coupon-desc {
+  font-size: 24rpx;
+  color: #666;
+  margin-bottom: 15rpx;
+  line-height: 1.4;
+}
+
+.coupon-merchant {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10rpx;
+  padding: 8rpx 12rpx;
+  background: #f0f9ff;
+  border-radius: 8rpx;
+  width: fit-content;
+}
+
+.merchant-name {
+  font-size: 24rpx;
+  color: #1890ff;
+  margin: 0 8rpx;
+}
+
+.coupon-time {
+  font-size: 22rpx;
+  color: #999;
+}
+
+/* 右侧操作区域 */
+.coupon-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 底部区域 */
+.coupon-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20rpx 30rpx;
+  background: #f8f9fa;
+  border-top: 1rpx solid #eee;
+}
+
+.coupon-stats {
+  display: flex;
+  gap: 20rpx;
+}
+
+.stats-item {
+  font-size: 22rpx;
+  color: #999;
+}
+
+.coupon-type {
+  display: flex;
+  align-items: center;
+}
+
+/* 底部提示 */
+.footer-tip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 30rpx;
+  gap: 10rpx;
+}
+
+.tip-text {
+  font-size: 24rpx;
+  color: #999;
+}
+
+/* 优惠券卡片装饰 */
+.coupon-card::before {
+  content: '';
+  position: absolute;
+  left: 190rpx;
+  top: 0;
+  bottom: 0;
+  width: 2rpx;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 8rpx,
+    #ddd 8rpx,
+    #ddd 16rpx
+  );
+}

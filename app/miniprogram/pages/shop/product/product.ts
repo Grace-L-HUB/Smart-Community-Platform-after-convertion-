@@ -11,10 +11,7 @@ Page({
         buyCount: 1,
 
         // 优惠券
-        coupons: [
-            { id: 1, amount: 5, condition: '满30可用', name: '店铺新人券' },
-            { id: 2, amount: 10, condition: '满99可用', name: '满减优惠券' }
-        ],
+        coupons: [] as any[],
         showCoupon: false
     },
 
@@ -25,6 +22,7 @@ Page({
         if (productId > 0) {
             this.setData({ productId, shopId });
             this.loadProductDetail();
+            this.loadMerchantCoupons();
         } else {
             this.setData({ error: '商品ID无效' });
         }
@@ -127,14 +125,88 @@ Page({
         this.setData({ showCoupon: false });
     },
 
-    onGetCoupon(event: any) {
-        const id = event.currentTarget.dataset.id;
-        console.log('Claim coupon:', id);
-        wx.showToast({
-            title: '领取成功',
-            icon: 'success'
+    // 从后端获取商户优惠券
+    loadMerchantCoupons() {
+        if (!this.data.shopId) return;
+        
+        wx.request({
+            url: `http://127.0.0.1:8000/api/merchant/coupons/public/${this.data.shopId}/`,
+            method: 'GET',
+            success: (res: any) => {
+                if (res.statusCode === 200 && res.data.success) {
+                    const coupons = res.data.data.map((coupon: any) => ({
+                        id: coupon.id,
+                        amount: coupon.amount,
+                        condition: `满${coupon.min_amount}可用`,
+                        name: coupon.name,
+                        description: coupon.description,
+                        minAmount: coupon.min_amount,
+                        remainingCount: coupon.remaining_count,
+                        isValid: coupon.is_valid
+                    })).filter((c: any) => c.isValid && c.remainingCount > 0);
+                    
+                    this.setData({ coupons });
+                }
+            },
+            fail: (err) => {
+                console.error('获取商户优惠券失败:', err);
+            }
         });
-        this.setData({ showCoupon: false });
+    },
+
+    onGetCoupon(event: any) {
+        const couponId = event.currentTarget.dataset.id;
+        
+        const userInfo = wx.getStorageSync('userInfo');
+        if (!userInfo || !userInfo.user_id) {
+            wx.showModal({
+                title: '提示',
+                content: '请先登录后再领取优惠券',
+                showCancel: false,
+                success: () => {
+                    wx.reLaunch({
+                        url: '/pages/login/login'
+                    });
+                }
+            });
+            return;
+        }
+
+        wx.request({
+            url: 'http://127.0.0.1:8000/api/merchant/coupons/receive/',
+            method: 'POST',
+            data: {
+                coupon_id: couponId
+            },
+            header: {
+                'Authorization': `Bearer ${wx.getStorageSync('token') || ''}`,
+                'content-type': 'application/json'
+            },
+            success: (res: any) => {
+                if (res.statusCode === 200 && res.data.success) {
+                    wx.showToast({
+                        title: '领取成功',
+                        icon: 'success'
+                    });
+                    
+                    // 更新优惠券列表
+                    this.loadMerchantCoupons();
+                    this.setData({ showCoupon: false });
+                } else {
+                    wx.showToast({
+                        title: res.data.message || '领取失败',
+                        icon: 'none'
+                    });
+                }
+            },
+            fail: (err) => {
+                console.error('领取优惠券失败:', err);
+                wx.showToast({
+                    title: '网络请求失败',
+                    icon: 'none'
+                });
+            }
+        });
     },
 
     // 购买/购物车相关

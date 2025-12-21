@@ -274,3 +274,221 @@ export const merchantProductApi = {
     return response.json()
   }
 }
+
+// 订单管理接口
+export interface OrderItem {
+  id: number
+  product: number
+  product_name: string
+  product_price: number
+  quantity: number
+  subtotal: number
+  specifications?: any
+}
+
+export interface Order {
+  id: number
+  order_no: string
+  merchant: number
+  merchant_name: string
+  user: number
+  user_info: {
+    id: number
+    username: string
+    display_name: string
+    phone: string
+  }
+  total_amount: number
+  actual_amount: number
+  status: 'new' | 'accepted' | 'preparing' | 'ready' | 'completed' | 'cancelled' | 'refunded'
+  status_display: string
+  pickup_type: 'pickup' | 'delivery'
+  pickup_type_display: string
+  contact_name: string
+  contact_phone: string
+  address?: string
+  pickup_code?: string
+  used_coupon?: number
+  used_coupon_info?: {
+    id: number
+    name: string
+    amount: number
+    verification_code: string
+  }
+  discount_amount: number
+  note?: string
+  reject_reason?: string
+  items: OrderItem[]
+  created_at: string
+  accepted_at?: string
+  completed_at?: string
+}
+
+export const merchantOrderApi = {
+  // 获取订单列表
+  async getOrders(params?: {
+    status?: string
+    page?: number
+    page_size?: number
+  }): Promise<ApiResponse<{
+    items: Order[]
+    total: number
+    page: number
+    page_size: number
+    total_pages: number
+  }>> {
+    return apiClient.get('/merchant/orders/', params)
+  },
+
+  // 获取订单详情
+  async getOrder(id: number): Promise<ApiResponse<Order>> {
+    return apiClient.get(`/merchant/orders/${id}/`)
+  },
+
+  // 更新订单状态
+  async updateOrderStatus(id: number, data: {
+    status: string
+    reject_reason?: string
+  }): Promise<ApiResponse<Order>> {
+    return apiClient.post(`/merchant/orders/${id}/status/`, data)
+  },
+
+  // 验证取餐码
+  async verifyPickupCode(pickup_code: string): Promise<{
+    success: boolean
+    message: string
+    data?: {
+      order_id: number
+      order_no: string
+      customer_name: string
+      total_amount: number
+    }
+  }> {
+    const response = await fetch(`${API_BASE_URL}/merchant/orders/verify-pickup/`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ pickup_code })
+    })
+    return response.json()
+  }
+}
+
+// 优惠券管理接口
+export interface Coupon {
+  id: number
+  merchant: number
+  merchant_name: string
+  name: string
+  description: string
+  coupon_type: 'discount' | 'deduction' | 'gift'
+  type_display: string
+  amount: number
+  min_amount: number
+  total_count: number
+  used_count: number
+  remaining_count: number
+  per_user_limit: number
+  start_date: string
+  end_date: string
+  status: 'active' | 'inactive' | 'expired'
+  status_display: string
+  is_valid: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface UserCoupon {
+  id: number
+  coupon: number
+  coupon_info: {
+    id: number
+    name: string
+    description: string
+    type: string
+    type_display: string
+    amount: number
+    min_amount: number
+    start_date: string
+    end_date: string
+  }
+  merchant_info: {
+    id: number
+    name: string
+    logo?: string
+  }
+  status: 'unused' | 'used' | 'expired'
+  status_display: string
+  verification_code: string
+  is_expired: boolean
+  used_at?: string
+  received_at: string
+}
+
+export const merchantCouponApi = {
+  // 获取商户优惠券列表
+  async getCoupons(params?: {
+    status?: string
+    type?: string
+  }): Promise<ApiResponse<Coupon[]>> {
+    return apiClient.get('/merchant/coupons/', params)
+  },
+
+  // 创建优惠券
+  async createCoupon(data: Partial<Coupon>): Promise<ApiResponse<Coupon>> {
+    return apiClient.post('/merchant/coupons/', data)
+  },
+
+  // 核销优惠券
+  async verifyCoupon(data: {
+    verification_code: string
+    order_id?: number
+  }): Promise<{
+    success: boolean
+    message: string
+    data?: {
+      coupon_id: number
+      coupon_name: string
+      amount: number
+      user_name: string
+      verification_code: string
+      used_at: string
+    }
+  }> {
+    const response = await fetch(`${API_BASE_URL}/merchant/coupons/verify/`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data)
+    })
+    return response.json()
+  }
+}
+
+// 小程序端优惠券接口
+export const publicCouponApi = {
+  // 获取公开优惠券列表
+  async getCoupons(merchant_id?: number): Promise<ApiResponse<Coupon[]>> {
+    const url = merchant_id 
+      ? `/merchant/coupons/public/${merchant_id}/`
+      : '/merchant/coupons/public/'
+    return apiClient.get(url)
+  },
+
+  // 领取优惠券
+  async receiveCoupon(coupon_id: number): Promise<ApiResponse<UserCoupon>> {
+    return apiClient.post('/merchant/coupons/receive/', { coupon_id })
+  },
+
+  // 获取用户优惠券列表
+  async getUserCoupons(params?: {
+    status?: string
+    merchant_id?: number
+  }): Promise<ApiResponse<UserCoupon[]>> {
+    return apiClient.get('/merchant/user/coupons/', params)
+  }
+}
