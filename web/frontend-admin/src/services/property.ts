@@ -421,7 +421,7 @@ class PropertyAPI {
     page_size: number
     total_pages: number
   }>> {
-    return apiClient.get('/property/repair-orders', { params })
+    return apiClient.get('/property/repair-orders', params)
   }
 
   /**
@@ -478,19 +478,110 @@ class PropertyAPI {
   }
 }
 
-// 创建并导出 API 实例
-export const propertyAPI = new PropertyAPI()
+// ===== 门禁日志相关 API =====
 
-// 导出类型
-export type {
-  HouseBindingApplication,
-  ParkingBindingApplication, 
-  HouseUserBinding,
-  ParkingUserBinding,
-  AnnouncementAPI,
-  AnnouncementCreateData,
-  RepairOrderAPI,
-  RepairOrderImageAPI,
-  RepairEmployeeAPI,
-  RepairOrderCreateData
+export interface AccessLog {
+  id: number
+  personName: string
+  method: string
+  method_display: string
+  location: string
+  direction: string
+  timestamp: string
 }
+
+export interface AccessLogOptions {
+  methods: Array<{ label: string; value: string }>
+  locations: Array<{ label: string; value: string }>
+  person_types: Array<{ label: string; value: string }>
+}
+
+export interface AccessLogStatistics {
+  today_count: number
+  total_count: number
+  date_range: string
+  method_distribution: Array<{
+    method: string
+    count: number
+    percentage: number
+  }>
+  location_distribution: Array<{
+    location: string
+    count: number
+    percentage: number
+  }>
+  person_type_distribution: Array<{
+    type: string
+    count: number
+    percentage: number
+  }>
+  daily_trend: Array<{
+    date: string
+    count: number
+  }>
+  hourly_distribution: Array<{
+    hour: string
+    count: number
+  }>
+}
+
+// 在 PropertyAPI 类中添加门禁日志方法
+class PropertyAPIWithAccessLogs extends PropertyAPI {
+  /**
+   * 获取门禁日志列表
+   */
+  async getAccessLogs(params?: {
+    page?: number
+    page_size?: number
+    method?: string
+    location?: string
+    keyword?: string
+    start_date?: string
+    end_date?: string
+    person_type?: string
+  }): Promise<ApiResponse<{
+    list: AccessLog[]
+    total: number
+    page: number
+    page_size: number
+    total_pages: number
+  }>> {
+    return apiClient.get('/property/access-logs', params)
+  }
+
+  /**
+   * 获取门禁日志统计数据
+   */
+  async getAccessLogStatistics(params?: {
+    days?: number
+    start_date?: string
+    end_date?: string
+  }): Promise<ApiResponse<AccessLogStatistics>> {
+    return apiClient.get('/property/access-logs/statistics', params)
+  }
+
+  /**
+   * 获取门禁日志选项数据
+   */
+  async getAccessLogOptions(): Promise<ApiResponse<AccessLogOptions>> {
+    return apiClient.get('/property/access-logs/options')
+  }
+
+  /**
+   * 创建门禁日志记录（设备上报）
+   */
+  async createAccessLog(data: {
+    person_name: string
+    method: string
+    direction: string
+    location: string
+    person_type?: string
+    device_id?: string
+    success?: boolean
+  }): Promise<ApiResponse<AccessLog>> {
+    return apiClient.post('/property/access-logs', data)
+  }
+}
+
+// 创建并导出 API 实例
+export const propertyAPI = new PropertyAPIWithAccessLogs()

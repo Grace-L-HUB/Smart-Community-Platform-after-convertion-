@@ -2,7 +2,7 @@ from rest_framework import serializers
 from .models import (
     HouseBindingApplication, HouseUserBinding, House, Building, Visitor,
     ParkingBindingApplication, ParkingUserBinding, ParkingSpace, Announcement,
-    RepairOrder, RepairOrderImage, RepairEmployee, FeeStandard, Bill
+    RepairOrder, RepairOrderImage, RepairEmployee, FeeStandard, Bill, AccessLog
 )
 from django.utils import timezone
 
@@ -709,6 +709,107 @@ class BillPaymentSerializer(serializers.Serializer):
         if not value:
             raise serializers.ValidationError("请选择支付方式")
         return value
+
+
+# ===== 门禁日志相关序列化器 =====
+
+class AccessLogSerializer(serializers.ModelSerializer):
+    """门禁日志序列化器"""
+    method_display = serializers.CharField(source='get_method_display', read_only=True)
+    method_display_short = serializers.CharField(source='get_method_display_short', read_only=True)
+    direction_display = serializers.CharField(source='get_direction_display', read_only=True)
+    direction_display_short = serializers.CharField(source='get_direction_display_short', read_only=True)
+    person_type_display = serializers.CharField(source='get_person_type_display', read_only=True)
+    person_type_display_short = serializers.CharField(source='get_person_type_display_short', read_only=True)
+
+    # 格式化时间显示
+    timestamp = serializers.DateTimeField(format='%Y-%m-%d %H:%M:%S', read_only=True)
+
+    class Meta:
+        model = AccessLog
+        fields = [
+            'id', 'person_name', 'method', 'method_display', 'method_display_short',
+            'direction', 'direction_display', 'direction_display_short',
+            'location', 'person_type', 'person_type_display', 'person_type_display_short',
+            'timestamp', 'success', 'device_id'
+        ]
+
+
+class AccessLogListSerializer(serializers.ModelSerializer):
+    """门禁日志列表序列化器（前端使用）"""
+    # 直接返回前端期望的格式，与mock数据一致
+    method_display = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AccessLog
+        fields = [
+            'id', 'person_name', 'method', 'method_display',
+            'location', 'direction', 'timestamp'
+        ]
+
+    def get_method_display(self, obj):
+        """获取开门方式显示文本（前端期望的格式）"""
+        method_map = {
+            'face': '人脸',
+            'qrcode': '二维码',
+            'card': '刷卡',
+            'password': '密码',
+        }
+        return method_map.get(obj.method, obj.method)
+
+
+class AccessLogCreateSerializer(serializers.ModelSerializer):
+    """门禁日志创建序列化器（用于设备上报）"""
+
+    class Meta:
+        model = AccessLog
+        fields = [
+            'person_name', 'method', 'direction', 'location',
+            'person_type', 'device_id', 'success'
+        ]
+
+    def validate_person_name(self, value):
+        """验证人员姓名"""
+        if not value or len(value.strip()) == 0:
+            raise serializers.ValidationError("人员姓名不能为空")
+        return value.strip()
+
+    def validate_method(self, value):
+        """验证开门方式"""
+        valid_methods = [choice[0] for choice in AccessLog.METHOD_CHOICES]
+        if value not in valid_methods:
+            raise serializers.ValidationError(f"无效的开门方式，可选值: {valid_methods}")
+        return value
+
+    def validate_direction(self, value):
+        """验证进出方向"""
+        valid_directions = [choice[0] for choice in AccessLog.DIRECTION_CHOICES]
+        if value not in valid_directions:
+            raise serializers.ValidationError(f"无效的进出方向，可选值: {valid_directions}")
+        return value
+
+    def validate_location(self, value):
+        """验证位置"""
+        if not value or len(value.strip()) == 0:
+            raise serializers.ValidationError("位置不能为空")
+        return value.strip()
+
+
+class AccessLogStatisticsSerializer(serializers.Serializer):
+    """门禁日志统计序列化器"""
+    # 按时间段统计的参数
+    start_date = serializers.DateField(required=False, help_text="开始日期 YYYY-MM-DD")
+    end_date = serializers.DateField(required=False, help_text="结束日期 YYYY-MM-DD")
+
+    def validate(self, data):
+        """验证日期范围"""
+        start_date = data.get('start_date')
+        end_date = data.get('end_date')
+
+        if start_date and end_date and start_date > end_date:
+            raise serializers.ValidationError("开始日期不能晚于结束日期")
+
+        return data
 
 
 class ReminderBatchSerializer(serializers.Serializer):

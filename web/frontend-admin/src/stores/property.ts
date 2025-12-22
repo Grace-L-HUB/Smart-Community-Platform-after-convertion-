@@ -328,7 +328,9 @@ export const usePropertyStore = defineStore('property', {
                 // 保持mock数据用于其他功能
                 this.bills = [...mockBills]
                 this.activities = [...mockActivities]
-                this.accessLogs = [...mockAccessLogs]
+
+                // 加载门禁日志数据
+                await this.loadAccessLogs()
 
             } catch (error) {
                 console.error('加载数据失败:', error)
@@ -802,6 +804,133 @@ export const usePropertyStore = defineStore('property', {
             const index = this.employees.findIndex(e => e.id === id)
             if (index > -1) {
                 this.employees.splice(index, 1)
+            }
+        },
+
+        // ===== 门禁日志操作 =====
+
+        /**
+         * 加载门禁日志数据
+         */
+        async loadAccessLogs(params?: {
+            page?: number
+            page_size?: number
+            method?: string
+            location?: string
+            keyword?: string
+            start_date?: string
+            end_date?: string
+            person_type?: string
+        }) {
+            try {
+                const response = await propertyAPI.getAccessLogs(params)
+                if (response.code === 200 && response.data) {
+                    // 转换后端数据格式为前端需要的格式
+                    this.accessLogs = response.data.list.map(log => ({
+                        id: log.id,
+                        personName: log.person_name,
+                        method: log.method,
+                        method_display: log.method_display,
+                        location: log.location,
+                        direction: log.direction,
+                        timestamp: log.timestamp,
+                        avatar_url: '',
+                        status: log.direction === 'in' ? '进入' : '离开',
+                        statusColor: log.direction === 'in' ? 'success' : 'warning'
+                    }))
+
+                    // 存储分页信息（如果需要的话）
+                    this.accessLogsPagination = {
+                        currentPage: response.data.page,
+                        pageSize: response.data.page_size,
+                        total: response.data.total,
+                        totalPages: response.data.total_pages
+                    }
+                } else {
+                    // 失败时使用mock数据作为fallback
+                    this.accessLogs = [...mockAccessLogs]
+                    console.warn('加载门禁日志失败，使用mock数据')
+                }
+            } catch (error) {
+                console.error('加载门禁日志失败:', error)
+                // 失败时使用mock数据作为fallback
+                this.accessLogs = [...mockAccessLogs]
+            }
+        },
+
+        /**
+         * 刷新门禁日志
+         */
+        async refreshAccessLogs() {
+            await this.loadAccessLogs()
+        },
+
+        /**
+         * 根据筛选条件加载门禁日志
+         */
+        async filterAccessLogs(filters: {
+            method?: string
+            location?: string
+            keyword?: string
+            start_date?: string
+            end_date?: string
+            person_type?: string
+        }) {
+            await this.loadAccessLogs(filters)
+        },
+
+        /**
+         * 获取门禁日志统计数据
+         */
+        async getAccessLogStatistics(params?: {
+            days?: number
+            start_date?: string
+            end_date?: string
+        }) {
+            try {
+                const response = await propertyAPI.getAccessLogStatistics(params)
+                return response.data
+            } catch (error) {
+                console.error('获取门禁日志统计数据失败:', error)
+                throw error
+            }
+        },
+
+        /**
+         * 获取门禁日志选项数据
+         */
+        async getAccessLogOptions() {
+            try {
+                const response = await propertyAPI.getAccessLogOptions()
+                return response.data
+            } catch (error) {
+                console.error('获取门禁日志选项失败:', error)
+                throw error
+            }
+        },
+
+        /**
+         * 创建门禁日志记录（设备上报）
+         */
+        async createAccessLog(data: {
+            person_name: string
+            method: string
+            direction: string
+            location: string
+            person_type?: string
+            device_id?: string
+            success?: boolean
+        }) {
+            try {
+                const response = await propertyAPI.createAccessLog(data)
+                if (response.code === 200) {
+                    // 重新加载数据
+                    await this.loadAccessLogs()
+                }
+                return response
+            } catch (error) {
+                console.error('创建门禁日志失败:', error)
+                throw error
             }
         },
     },

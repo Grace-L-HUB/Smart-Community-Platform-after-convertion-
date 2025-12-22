@@ -7,7 +7,7 @@ from django.db import models
 from .models import (
     HouseBindingApplication, HouseUserBinding, Visitor,
     ParkingBindingApplication, ParkingUserBinding, Announcement,
-    RepairOrder, RepairOrderImage, RepairEmployee, FeeStandard, Bill
+    RepairOrder, RepairOrderImage, RepairEmployee, FeeStandard, Bill, AccessLog
 )
 from .serializers import (
     HouseBindingApplicationSerializer, HouseUserBindingSerializer,
@@ -2898,4 +2898,345 @@ class BillStatsView(APIView):
             return Response({
                 "code": 500,
                 "message": f"获取账单统计数据失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ===== 门禁日志相关视图 =====
+
+class AccessLogView(APIView):
+    """门禁日志接口"""
+    permission_classes = []  # 暂时不需要权限认证
+
+    def get(self, request):
+        """获取门禁日志列表"""
+        try:
+            # 获取筛选参数
+            method_filter = request.GET.get('method')  # 开门方式筛选
+            location_filter = request.GET.get('location')  # 位置筛选
+            keyword = request.GET.get('keyword', '').strip()  # 人员姓名搜索
+            start_date = request.GET.get('start_date')  # 开始日期
+            end_date = request.GET.get('end_date')  # 结束日期
+            person_type = request.GET.get('person_type')  # 人员类型
+
+            # 构建查询条件
+            queryset = AccessLog.objects.all()
+
+            # 开门方式筛选
+            if method_filter:
+                queryset = queryset.filter(method=method_filter)
+
+            # 位置筛选
+            if location_filter:
+                queryset = queryset.filter(location=location_filter)
+
+            # 人员姓名搜索
+            if keyword:
+                queryset = queryset.filter(person_name__icontains=keyword)
+
+            # 日期范围筛选
+            if start_date:
+                queryset = queryset.filter(timestamp__date__gte=start_date)
+
+            if end_date:
+                queryset = queryset.filter(timestamp__date__lte=end_date)
+
+            # 人员类型筛选
+            if person_type:
+                queryset = queryset.filter(person_type=person_type)
+
+            # 只显示成功的记录
+            queryset = queryset.filter(success=True)
+
+            # 排序（最新的在前）
+            queryset = queryset.order_by('-timestamp')
+
+            # 分页
+            page = int(request.GET.get('page', 1))
+            page_size = int(request.GET.get('page_size', 50))
+            start = (page - 1) * page_size
+            end = start + page_size
+
+            total = queryset.count()
+            logs = queryset[start:end]
+
+            # 使用前端期望的序列化器
+            from .serializers import AccessLogListSerializer
+            serializer = AccessLogListSerializer(logs, many=True)
+
+            return Response({
+                "code": 200,
+                "message": "获取成功",
+                "data": {
+                    "list": serializer.data,
+                    "total": total,
+                    "page": page,
+                    "page_size": page_size,
+                    "total_pages": (total + page_size - 1) // page_size
+                }
+            })
+
+        except Exception as e:
+            logger.error(f"获取门禁日志列表失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"获取门禁日志列表失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def post(self, request):
+        """创建门禁日志记录（设备上报）"""
+        try:
+            from .serializers import AccessLogCreateSerializer
+            serializer = AccessLogCreateSerializer(data=request.data)
+
+            if serializer.is_valid():
+                access_log = serializer.save()
+
+                # 返回创建成功的日志信息
+                from .serializers import AccessLogListSerializer
+                response_serializer = AccessLogListSerializer(access_log)
+
+                logger.info(f"门禁日志记录创建成功: {access_log.person_name} - {access_log.location}")
+
+                return Response({
+                    "code": 200,
+                    "message": "记录创建成功",
+                    "data": response_serializer.data
+                })
+            else:
+                return Response({
+                    "code": 400,
+                    "message": "数据验证失败",
+                    "errors": serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            logger.error(f"创建门禁日志失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"创建门禁日志失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class AccessLogStatisticsView(APIView):
+    """门禁日志统计接口"""
+    permission_classes = []
+
+    def get(self, request):
+        """获取门禁日志统计数据"""
+        try:
+            from datetime import datetime, timedelta
+            from django.db.models import Count
+            from django.utils import timezone
+
+            # 获取统计参数
+            days = int(request.GET.get('days', 7))  # 默认统计最近7天
+            start_date = request.GET.get('start_date')
+            end_date = request.GET.get('end_date')
+
+            # 确定统计时间范围
+            if start_date and end_date:
+                # 使用指定日期范围
+                start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+                end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+            else:
+                # 使用最近N天
+                end_date = timezone.now().date()
+                start_date = end_date - timedelta(days=days-1)
+
+            # 1. 今日记录数
+            today = timezone.now().date()
+            today_count = AccessLog.objects.filter(
+                timestamp__date=today,
+                success=True
+            ).count()
+
+            # 2. 总记录数（在统计范围内）
+            total_count = AccessLog.objects.filter(
+                timestamp__date__gte=start_date,
+                timestamp__date__lte=end_date,
+                success=True
+            ).count()
+
+            # 3. 按开门方式统计
+            method_stats = AccessLog.objects.filter(
+                timestamp__date__gte=start_date,
+                timestamp__date__lte=end_date,
+                success=True
+            ).values('method').annotate(count=Count('id')).order_by('-count')
+
+            method_distribution = []
+            method_names = {
+                'face': '人脸识别',
+                'qrcode': '二维码',
+                'card': '刷卡',
+                'password': '密码'
+            }
+
+            for stat in method_stats:
+                method_distribution.append({
+                    'method': method_names.get(stat['method'], stat['method']),
+                    'count': stat['count'],
+                    'percentage': round(stat['count'] / total_count * 100, 2) if total_count > 0 else 0
+                })
+
+            # 4. 按位置统计
+            location_stats = AccessLog.objects.filter(
+                timestamp__date__gte=start_date,
+                timestamp__date__lte=end_date,
+                success=True
+            ).values('location').annotate(count=Count('id')).order_by('-count')[:10]  # 只取前10个位置
+
+            location_distribution = []
+            for stat in location_stats:
+                location_distribution.append({
+                    'location': stat['location'],
+                    'count': stat['count'],
+                    'percentage': round(stat['count'] / total_count * 100, 2) if total_count > 0 else 0
+                })
+
+            # 5. 按人员类型统计
+            person_type_stats = AccessLog.objects.filter(
+                timestamp__date__gte=start_date,
+                timestamp__date__lte=end_date,
+                success=True
+            ).values('person_type').annotate(count=Count('id')).order_by('-count')
+
+            person_type_distribution = []
+            person_type_names = {
+                'resident': '业主',
+                'visitor': '访客',
+                'delivery': '配送员',
+                'staff': '工作人员',
+                'other': '其他'
+            }
+
+            for stat in person_type_stats:
+                person_type_distribution.append({
+                    'type': person_type_names.get(stat['person_type'], stat['person_type']),
+                    'count': stat['count'],
+                    'percentage': round(stat['count'] / total_count * 100, 2) if total_count > 0 else 0
+                })
+
+            # 6. 每日统计趋势
+            daily_trend = []
+            current_date = start_date
+            while current_date <= end_date:
+                count = AccessLog.objects.filter(
+                    timestamp__date=current_date,
+                    success=True
+                ).count()
+
+                daily_trend.append({
+                    'date': current_date.strftime('%m-%d'),
+                    'count': count
+                })
+                current_date += timedelta(days=1)
+
+            # 7. 高峰时段统计（小时）
+            hourly_stats = AccessLog.objects.filter(
+                timestamp__date__gte=start_date,
+                timestamp__date__lte=end_date,
+                success=True
+            ).extra(
+                select={'hour': 'timestamp_hour'}
+            ).values('hour').annotate(count=Count('id')).order_by('hour')
+
+            hourly_distribution = []
+            for hour in range(24):
+                count = 0
+                for stat in hourly_stats:
+                    if stat['hour'] == hour:
+                        count = stat['count']
+                        break
+
+                hourly_distribution.append({
+                    'hour': f"{hour:02d}:00",
+                    'count': count
+                })
+
+            stats_data = {
+                'today_count': today_count,
+                'total_count': total_count,
+                'date_range': f"{start_date.strftime('%Y-%m-%d')} 至 {end_date.strftime('%Y-%m-%d')}",
+                'method_distribution': method_distribution,
+                'location_distribution': location_distribution,
+                'person_type_distribution': person_type_distribution,
+                'daily_trend': daily_trend,
+                'hourly_distribution': hourly_distribution
+            }
+
+            return Response({
+                "code": 200,
+                "message": "获取成功",
+                "data": stats_data
+            })
+
+        except Exception as e:
+            logger.error(f"获取门禁日志统计数据失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"获取门禁日志统计数据失败: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class AccessLogOptionsView(APIView):
+    """门禁日志选项接口"""
+    permission_classes = []
+
+    def get(self, request):
+        """获取门禁日志相关的选项数据"""
+        try:
+            # 开门方式选项
+            method_options = [
+                {"label": label, "value": value}
+                for value, label in AccessLog.METHOD_CHOICES
+            ]
+
+            # 位置选项（从现有数据中获取最常用的位置）
+            from django.db.models import Count
+            popular_locations = AccessLog.objects.values('location').annotate(
+                count=Count('id')
+            ).order_by('-count')[:20]  # 取前20个常用位置
+
+            location_options = []
+            if popular_locations.exists():
+                location_options = [
+                    {"label": item['location'], "value": item['location']}
+                    for item in popular_locations
+                ]
+            else:
+                # 如果没有数据，提供一些默认位置
+                location_options = [
+                    {"label": "1栋东门", "value": "1栋东门"},
+                    {"label": "1栋西门", "value": "1栋西门"},
+                    {"label": "2栋东门", "value": "2栋东门"},
+                    {"label": "2栋西门", "value": "2栋西门"},
+                    {"label": "南大门", "value": "南大门"},
+                    {"label": "北大门", "value": "北大门"},
+                ]
+
+            # 人员类型选项
+            person_type_options = [
+                {"label": "业主", "value": "resident"},
+                {"label": "访客", "value": "visitor"},
+                {"label": "配送员", "value": "delivery"},
+                {"label": "工作人员", "value": "staff"},
+                {"label": "其他", "value": "other"},
+            ]
+
+            return Response({
+                "code": 200,
+                "message": "获取成功",
+                "data": {
+                    "methods": method_options,
+                    "locations": location_options,
+                    "person_types": person_type_options
+                }
+            })
+
+        except Exception as e:
+            logger.error(f"获取门禁日志选项失败: {e}")
+            return Response({
+                "code": 500,
+                "message": f"获取门禁日志选项失败: {str(e)}"
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

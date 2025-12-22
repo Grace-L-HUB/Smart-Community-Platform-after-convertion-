@@ -16,7 +16,9 @@ from .views import (
     RepairEmployeeView, RepairOrderOptionsView, DashboardStatsView,
     # 缴费管理相关视图
     FeeStandardView, BillBatchGenerateView, BillListView, BillDetailView,
-    BillPaymentView, BillReminderView, BillReceiptView, BillStatsView
+    BillPaymentView, BillReminderView, BillReceiptView, BillStatsView,
+    # 门禁日志相关视图
+    AccessLogView, AccessLogStatisticsView, AccessLogOptionsView
 )
 
 urlpatterns = [
@@ -139,4 +141,15 @@ urlpatterns = [
     
     # 账单统计
     path('property/bills/stats', BillStatsView.as_view(), name='bill_stats'),
+
+    # ===== 门禁日志相关路由 =====
+
+    # 门禁日志基本操作（列表查看和记录创建）
+    path('property/access-logs', AccessLogView.as_view(), name='access_log_list_create'),
+
+    # 门禁日志统计
+    path('property/access-logs/statistics', AccessLogStatisticsView.as_view(), name='access_log_statistics'),
+
+    # 门禁日志选项数据
+    path('property/access-logs/options', AccessLogOptionsView.as_view(), name='access_log_options'),
 ]
