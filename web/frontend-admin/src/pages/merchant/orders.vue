@@ -3,10 +3,6 @@
     <div class="d-flex align-center mb-6">
       <h1 class="text-h4 font-weight-bold">订单管理</h1>
       <v-spacer />
-      <!-- 核销入口 -->
-      <v-btn color="warning" prepend-icon="mdi-qrcode-scan" @click="verifyDialog = true">
-        核销码验证
-      </v-btn>
     </div>
 
     <!-- 状态 Tabs -->
@@ -62,9 +58,6 @@
             </div>
             <div v-else class="text-body-2 mb-1">
               <v-icon icon="mdi-store" size="14" /> 到店自提
-              <v-chip v-if="order.pickupCode" size="x-small" color="warning" class="ml-1">
-                取餐码: {{ order.pickupCode }}
-              </v-chip>
             </div>
             <div v-if="order.note" class="text-body-2 text-grey">
               <v-icon icon="mdi-note" size="14" /> {{ order.note }}
@@ -101,7 +94,7 @@
 
           <v-card-actions v-else-if="order.status === 'ready'">
             <v-spacer />
-            <v-btn color="success" variant="flat" @click="updateStatus(order, 'completed')">
+            <v-btn color="success" variant="flat" @click="showCompleteDialog(order)">
               确认完成
             </v-btn>
           </v-card-actions>
@@ -113,28 +106,34 @@
       暂无{{ tabTitles[activeTab] }}订单
     </v-alert>
 
-    <!-- 核销弹窗 -->
-    <v-dialog v-model="verifyDialog" max-width="400">
+    <!-- 订单完成验证弹窗 -->
+    <v-dialog v-model="completeDialog" max-width="400">
       <v-card>
         <v-card-title>
           <v-icon icon="mdi-qrcode-scan" class="mr-2" />
-          核销码验证
+          确认订单完成
         </v-card-title>
         <v-card-text>
+          <p class="mb-4">订单号：<strong>{{ completingOrder?.orderNo }}</strong></p>
           <v-text-field
             v-model="pickupCode"
-            label="请输入6位取餐码"
+            label="请输入取餐码"
             variant="outlined"
             maxlength="6"
             counter
             autofocus
-            @keyup.enter="verifyCode"
+            @keyup.enter="confirmComplete"
           />
+          <v-alert type="info" variant="tonal" class="mt-2">
+            请验证取餐码以确认订单完成
+          </v-alert>
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn variant="text" @click="verifyDialog = false">取消</v-btn>
-          <v-btn color="success" variant="flat" @click="verifyCode">验证</v-btn>
+          <v-btn variant="text" @click="completeDialog = false">取消</v-btn>
+          <v-btn color="success" variant="flat" @click="confirmComplete" :loading="verifying">
+            验证完成
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -159,6 +158,7 @@
       </v-card>
     </v-dialog>
 
+    
     <v-snackbar v-model="snackbar" :color="snackbarColor" location="top">
       {{ snackbarText }}
     </v-snackbar>
@@ -273,23 +273,50 @@ async function confirmReject() {
   }
 }
 
-// 核销
-const verifyDialog = ref(false)
+// 订单完成验证
+const completeDialog = ref(false)
+const completingOrder = ref<Order | null>(null)
 const pickupCode = ref('')
+const verifying = ref(false)
 
-async function verifyCode() {
+function showCompleteDialog(order: Order) {
+  completingOrder.value = order
+  pickupCode.value = ''
+  completeDialog.value = true
+}
+
+async function confirmComplete() {
+  if (!completingOrder.value || !pickupCode.value) {
+    showSnackbar('error', '请输入取餐码')
+    return
+  }
+
+  verifying.value = true
   try {
+    // 验证取餐码是否匹配当前订单
     const result = await merchantStore.verifyPickupCode(pickupCode.value)
+
     if (result.success) {
-      showSnackbar('success', result.message || '核销成功')
-      verifyDialog.value = false
-      pickupCode.value = ''
+      // 检查验证的订单是否是当前要完成的订单
+      if (result.order && result.order.order_id === completingOrder.value!.id) {
+        // 验证成功，后端已经自动完成订单并重新加载了数据
+        showSnackbar('success', '订单已完成')
+        completeDialog.value = false
+        pickupCode.value = ''
+        completingOrder.value = null
+
+        // 不需要再次加载，因为 verifyPickupCode 已经重新加载了
+      } else {
+        showSnackbar('error', '取餐码与当前订单不匹配')
+      }
     } else {
-      showSnackbar('error', result.message || '核销失败')
+      showSnackbar('error', result.message || '取餐码验证失败')
     }
   } catch (error) {
-    console.error('核销失败:', error)
-    showSnackbar('error', '核销失败，请重试')
+    console.error('验证完成失败:', error)
+    showSnackbar('error', '验证失败，请重试')
+  } finally {
+    verifying.value = false
   }
 }
 

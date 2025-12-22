@@ -34,7 +34,10 @@
     "pages/profile/settings/settings",
     "pages/express/express",
     "pages/qrcode/qrcode",
-    "pages/message/chat/chat"
+    "pages/message/chat/chat",
+    "pages/coupon/list/list",
+    "pages/coupon/market/market",
+    "pages/order/create/create"
   ],
   "window": {
     "navigationBarTextStyle": "black",

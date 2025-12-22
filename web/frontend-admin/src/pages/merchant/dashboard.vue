@@ -22,7 +22,6 @@
           suffix="单"
           icon="mdi-receipt"
           color="primary"
-          :trend="{ value: 15, type: 'up' }"
         />
       </v-col>
       <v-col cols="12" sm="4">
@@ -31,7 +30,6 @@
           :value="'¥' + stats.todayRevenue.toFixed(0)"
           icon="mdi-cash"
           color="success"
-          :trend="{ value: 8.5, type: 'up' }"
         />
       </v-col>
       <v-col cols="12" sm="4">
@@ -126,7 +124,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, onActivated } from 'vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart } from 'echarts/charts'
@@ -243,6 +241,12 @@ const lineChartOption = computed(() => ({
 
 onMounted(() => {
   merchantStore.loadAll()
+  merchantStore.loadStats()
+})
+
+onActivated(() => {
+  // 页面激活时重新加载统计数据
+  merchantStore.loadStats()
 })
 
 defineOptions({

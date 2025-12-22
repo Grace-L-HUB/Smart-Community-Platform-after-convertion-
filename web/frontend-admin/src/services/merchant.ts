@@ -38,6 +38,7 @@ export interface MerchantProfile {
   }
   shop_name: string
   shop_logo?: string
+  shop_logo_url?: string
   shop_category: string
   category_display: string
   shop_phone: string
@@ -466,6 +467,29 @@ export const merchantCouponApi = {
       body: JSON.stringify(data)
     })
     return response.json()
+  },
+
+  // 获取商户统计数据
+  async getStats(): Promise<ApiResponse<{
+    todayOrders: number
+    todayRevenue: number
+    pendingOrders: number
+    salesTrend: Array<{ date: string, amount: number }>
+  }>> {
+    return apiClient.get('/merchant/stats/')
+  }
+}
+
+// 商户统计API
+export const merchantStatsApi = {
+  // 获取商户统计数据
+  async getStats(): Promise<ApiResponse<{
+    todayOrders: number
+    todayRevenue: number
+    pendingOrders: number
+    salesTrend: Array<{ date: string, amount: number }>
+  }>> {
+    return apiClient.get('/merchant/stats/')
   }
 }
 

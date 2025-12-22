@@ -227,12 +227,24 @@ Page({
             user_id: storedUserInfo.user_id,
             nickname: this.data.nickname.trim(),
             gender: this.data.gender,
-            real_name: this.data.realName.trim() || null,
-            province: this.data.province.trim() || null,
-            city: this.data.city.trim() || null,
-            district: this.data.district.trim() || null,
-            address: this.data.address.trim() || null,
         };
+
+        // 只添加有值的可选字段
+        if (this.data.realName.trim()) {
+            updateData.real_name = this.data.realName.trim();
+        }
+        if (this.data.province.trim()) {
+            updateData.province = this.data.province.trim();
+        }
+        if (this.data.city.trim()) {
+            updateData.city = this.data.city.trim();
+        }
+        if (this.data.district.trim()) {
+            updateData.district = this.data.district.trim();
+        }
+        if (this.data.address.trim()) {
+            updateData.address = this.data.address.trim();
+        }
 
         // 如果有上传新头像，添加头像URL
         if (this.data.uploadedAvatarUrl) {

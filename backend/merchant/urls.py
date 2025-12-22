@@ -10,7 +10,9 @@ from .views import (
     MerchantOrderDetailView, OrderStatusUpdateView,
     PickupCodeVerifyView, MerchantCouponListView,
     PublicCouponListView, CouponReceiveView,
-    UserCouponListView, CouponVerifyView
+    UserCouponListView, CouponVerifyView, OrderCreateView,
+    UserOrderListView, UserOrderDetailView, MerchantStatsView,
+    MerchantLogoUploadView
 )
 
 urlpatterns = [
@@ -25,6 +27,7 @@ urlpatterns = [
     
     # 商户档案相关
     path('profile/', MerchantProfileView.as_view(), name='merchant_profile'),
+    path('upload/logo/', MerchantLogoUploadView.as_view(), name='merchant_logo_upload'),
     
     # 商品管理相关
     path('products/', MerchantProductListView.as_view(), name='merchant_products'),
@@ -36,6 +39,9 @@ urlpatterns = [
     path('orders/<int:order_id>/', MerchantOrderDetailView.as_view(), name='merchant_order_detail'),
     path('orders/<int:order_id>/status/', OrderStatusUpdateView.as_view(), name='order_status_update'),
     path('orders/verify-pickup/', PickupCodeVerifyView.as_view(), name='pickup_code_verify'),
+
+    # 统计数据相关
+    path('stats/', MerchantStatsView.as_view(), name='merchant_stats'),
     
     # 优惠券管理相关
     path('coupons/', MerchantCouponListView.as_view(), name='merchant_coupons'),
@@ -52,4 +58,10 @@ urlpatterns = [
     path('coupons/public/<int:merchant_id>/', PublicCouponListView.as_view(), name='public_merchant_coupons'),
     path('coupons/receive/', CouponReceiveView.as_view(), name='coupon_receive'),
     path('user/coupons/', UserCouponListView.as_view(), name='user_coupons'),
+
+    # 订单公开接口（供小程序使用）
+    path('orders/create/', OrderCreateView.as_view(), name='order_create'),
+    path('user/orders/', UserOrderListView.as_view(), name='user_orders'),
+    path('user/orders/<int:order_id>/', UserOrderDetailView.as_view(), name='user_order_detail'),
+    path('user/orders/<int:order_id>/cancel/', UserOrderDetailView.as_view(), name='user_order_cancel'),
 ]

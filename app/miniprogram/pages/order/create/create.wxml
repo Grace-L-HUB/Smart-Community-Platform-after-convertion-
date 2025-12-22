@@ -1,0 +1,213 @@
+<view class="container">
+  <!-- 加载状态 -->
+  <van-loading wx:if="{{ loading }}" type="spinner" color="#1989fa" vertical class="loading-container">
+    加载中...
+  </van-loading>
+
+  <!-- 正常内容 -->
+  <view wx:else>
+    <!-- 商品信息 -->
+    <view class="section-card">
+      <view class="section-title">商品信息</view>
+      <van-card
+        price="{{ product.price }}"
+        origin-price="{{ product.originalPrice }}"
+        title="{{ product.name }}"
+        desc="{{ product.description }}"
+        thumb="{{ product.image }}"
+      >
+        <view slot="tags">
+          <van-tag plain type="primary" wx:if="{{ product.category }}">{{ product.category }}</van-tag>
+        </view>
+        <view slot="footer" class="quantity-control">
+          <view class="quantity-label">数量：</view>
+          <van-stepper
+            value="{{ quantity }}"
+            min="1"
+            max="{{ product.stock }}"
+            bind:change="onQuantityChange"
+          />
+        </view>
+      </van-card>
+    </view>
+
+    <!-- 取餐信息 -->
+    <view class="section-card">
+      <view class="section-title">取餐信息</view>
+      <van-cell-group inset>
+        <van-cell title="取餐方式" is-link bindtap="showPickupTypePopup">
+          <view slot="right-icon">
+            <text class="pickup-type-text">{{ pickupType === 'pickup' ? '到店自提' : '外卖配送' }}</text>
+            <van-icon name="arrow" />
+          </view>
+        </van-cell>
+
+        <!-- 到店自提信息 -->
+        <block wx:if="{{ pickupType === 'pickup' }}">
+          <van-cell title="商家地址" value="{{ shop.address }}" />
+        </block>
+
+        <!-- 外卖配送信息 -->
+        <block wx:else>
+          <van-field
+            value="{{ address }}"
+            label="配送地址"
+            placeholder="请输入详细地址"
+            bind:change="onAddressChange"
+            required
+          />
+        </block>
+
+        <van-field
+          value="{{ contactName }}"
+          label="联系人"
+          placeholder="请输入联系人姓名"
+          bind:change="onContactNameChange"
+          required
+        />
+        <van-field
+          value="{{ contactPhone }}"
+          label="联系电话"
+          placeholder="请输入联系电话"
+          type="number"
+          bind:change="onContactPhoneChange"
+          required
+        />
+        <van-field
+          value="{{ note }}"
+          label="备注"
+          placeholder="口味、偏好等要求"
+          bind:change="onNoteChange"
+        />
+      </van-cell-group>
+    </view>
+
+    <!-- 优惠券选择 -->
+    <view class="section-card">
+      <view class="section-title">优惠券</view>
+      <van-cell-group inset>
+        <van-cell
+          title="选择优惠券"
+          is-link
+          bindtap="showCouponPopup"
+          value="{{ loading ? '加载中...' : (selectedCoupon ? selectedCoupon.name : (availableCoupons.length > 0 ? '选择优惠券' : '暂无可用优惠券')) }}"
+          value-class="{{ selectedCoupon ? 'coupon-selected' : 'coupon-empty' }}"
+        />
+
+        <!-- 优惠金额显示 -->
+        <van-cell wx:if="{{ selectedCoupon }}" title="优惠金额">
+          <view slot="right-icon">
+            <text class="discount-amount">-¥{{ discountAmount }}</text>
+          </view>
+        </van-cell>
+      </van-cell-group>
+    </view>
+
+    <!-- 价格明细 -->
+    <view class="section-card">
+      <view class="section-title">价格明细</view>
+      <van-cell-group inset>
+        <van-cell title="商品金额">
+          <view slot="right-icon">¥{{ totalAmount }}</view>
+        </van-cell>
+        <van-cell wx:if="{{ selectedCoupon }}" title="优惠券抵扣">
+          <view slot="right-icon" class="discount-text">-¥{{ discountAmount }}</view>
+        </van-cell>
+        <van-cell title="实付金额">
+          <view slot="right-icon" class="final-amount">¥{{ actualAmount }}</view>
+        </van-cell>
+      </van-cell-group>
+    </view>
+  </view>
+
+  <!-- 底部提交栏 -->
+  <view class="bottom-bar">
+    <view class="total-info">
+      <text class="total-label">合计：</text>
+      <text class="total-price">¥{{ actualAmount }}</text>
+    </view>
+    <van-button
+      type="primary"
+      size="large"
+      loading="{{ submitting }}"
+      disabled="{{ submitting || !canSubmit }}"
+      bindtap="onSubmitOrder"
+      class="submit-btn"
+    >
+      {{ submitting ? '提交中...' : '提交订单' }}
+    </van-button>
+  </view>
+
+  <!-- 取餐方式选择弹窗 -->
+  <van-popup
+    show="{{ showPickupTypeModal }}"
+    position="bottom"
+    bind:close="hidePickupTypePopup"
+  >
+    <view class="popup-header">
+      <text>选择取餐方式</text>
+      <van-icon name="cross" bindtap="hidePickupTypePopup" />
+    </view>
+    <van-radio-group value="{{ pickupType }}" bind:change="onPickupTypeChange">
+      <van-cell-group>
+        <van-cell title="到店自提" clickable bindtap="onPickupTypeSelect" data-type="pickup">
+          <van-radio slot="right-icon" name="pickup" />
+        </van-cell>
+        <van-cell title="外卖配送" clickable bindtap="onPickupTypeSelect" data-type="delivery">
+          <van-radio slot="right-icon" name="delivery" />
+        </van-cell>
+      </van-cell-group>
+    </van-radio-group>
+  </van-popup>
+
+  <!-- 优惠券选择弹窗 -->
+  <van-popup
+    show="{{ showCouponModal }}"
+    position="bottom"
+    bind:close="hideCouponPopup"
+  >
+    <view class="popup-header">
+      <text>选择优惠券</text>
+      <van-icon name="cross" bindtap="hideCouponPopup" />
+    </view>
+    <view class="coupon-list">
+      <!-- 不使用优惠券 -->
+      <view class="coupon-item" bindtap="onCouponSelect" data-coupon="">
+        <van-cell
+          title="不使用优惠券"
+          clickable
+          border="{{ false }}"
+          class="{{ !selectedCoupon ? 'coupon-item-selected' : '' }}"
+        >
+          <van-checkbox slot="right-icon" value="{{ !selectedCoupon }}" />
+        </van-cell>
+      </view>
+
+      <!-- 可用优惠券列表 -->
+      <block wx:for="{{ availableCoupons }}" wx:key="id">
+        <view class="coupon-item" bindtap="onCouponSelect" data-coupon="{{ item }}">
+          <van-cell
+            title="{{ item.name }}"
+            label="{{ item.description }}"
+            clickable
+            border="{{ false }}"
+            class="{{ selectedCoupon && selectedCoupon.id === item.id ? 'coupon-item-selected' : '' }}"
+          >
+            <view slot="right-icon">
+              <view class="coupon-amount-info">
+                <text class="coupon-amount">¥{{ item.amount }}</text>
+                <text class="coupon-condition">满{{ item.minAmount }}可用</text>
+              </view>
+              <van-checkbox value="{{ selectedCoupon && selectedCoupon.id === item.id }}" />
+            </view>
+          </van-cell>
+        </view>
+      </block>
+
+      <!-- 无可用优惠券提示 -->
+      <view wx:if="{{ availableCoupons.length === 0 }}" class="no-coupon-tip">
+        <van-empty description="暂无可用优惠券" />
+      </view>
+    </view>
+  </van-popup>
+</view>

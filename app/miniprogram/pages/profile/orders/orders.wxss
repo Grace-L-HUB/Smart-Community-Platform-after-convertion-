@@ -1,43 +1,110 @@
+.container {
+  background-color: #f7f8fa;
+  min-height: 100vh;
+}
+
+.loading {
+  padding: 100rpx 0;
+}
+
 .order-list {
   padding: 24rpx;
 }
 
 .order-card {
-  background: var(--card-bg);
-  border-radius: var(--radius-md);
+  background: white;
+  border-radius: 16rpx;
   padding: 24rpx;
   margin-bottom: 24rpx;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
 }
 
 .order-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 16rpx;
+  margin-bottom: 20rpx;
+  padding-bottom: 16rpx;
+  border-bottom: 1rpx solid #f0f0f0;
 }
 
-.order-type {
-  font-size: 26rpx;
-  font-weight: 600;
-  color: var(--text-main);
-}
-
-.order-content {
+.order-info {
   display: flex;
   flex-direction: column;
   gap: 8rpx;
-  margin-bottom: 16rpx;
 }
 
-.order-title {
-  font-size: 28rpx;
-  color: var(--text-main);
+.merchant-name {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #323233;
 }
 
-.order-time {
+.order-no {
   font-size: 24rpx;
-  color: var(--text-gray);
+  color: #969799;
+}
+
+.order-items {
+  margin-bottom: 20rpx;
+}
+
+.order-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8rpx 0;
+}
+
+.item-name {
+  font-size: 28rpx;
+  color: #323233;
+  flex: 1;
+  margin-right: 20rpx;
+}
+
+.item-price {
+  font-size: 26rpx;
+  color: #646566;
+}
+
+.order-details {
+  margin-bottom: 20rpx;
+  padding: 16rpx;
+  background: #f8f8f8;
+  border-radius: 8rpx;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8rpx;
+}
+
+.detail-row:last-child {
+  margin-bottom: 0;
+}
+
+.detail-label {
+  font-size: 26rpx;
+  color: #646566;
+}
+
+.detail-value {
+  font-size: 26rpx;
+  color: #323233;
+}
+
+.detail-value.highlight {
+  color: #07c160;
+  font-weight: 600;
+  font-size: 28rpx;
+}
+
+.detail-value.discount {
+  color: #ee0a24;
+  font-weight: 600;
 }
 
 .order-footer {
@@ -48,8 +115,76 @@
   border-top: 1rpx solid #f0f0f0;
 }
 
-.order-amount {
+.price-info {
+  display: flex;
+  align-items: baseline;
+  gap: 8rpx;
+  flex: 1;
+}
+
+.total-label {
+  font-size: 26rpx;
+  color: #323233;
+}
+
+.total-amount {
   font-size: 32rpx;
   font-weight: 700;
-  color: #ff4444;
+  color: #ee0a24;
+}
+
+.original-amount {
+  font-size: 24rpx;
+  color: #969799;
+  text-decoration: line-through;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 6rpx;
+  align-items: center;
+}
+
+.action-buttons .van-button {
+  padding: 0 4rpx;
+  width: auto;
+  min-width: auto;
+  font-size: 22rpx;
+  height: 36rpx;
+  line-height: 34rpx;
+  border-radius: 18rpx;
+  white-space: nowrap;
+}
+
+.load-more {
+  text-align: center;
+  padding: 40rpx 0;
+}
+
+.no-more {
+  padding: 20rpx 0;
+}
+
+.bottom-button {
+  margin-top: 40rpx;
+}
+
+/* 响应式适配 */
+@media (max-width: 375px) {
+  .merchant-name {
+    font-size: 30rpx;
+  }
+
+  .total-amount {
+    font-size: 30rpx;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+    gap: 12rpx;
+  }
+
+  .action-buttons .van-button {
+    width: 120rpx;
+  }
 }
