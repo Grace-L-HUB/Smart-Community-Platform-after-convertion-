@@ -1,16 +1,18 @@
 // 商户管理 Store
 import { defineStore } from 'pinia'
+import { type ShopSettings } from '@/mocks/merchant'
 import {
-    mockOrders,
-    mockShopSettings,
-    mockMerchantStats,
-    type Order,
-    type ShopSettings,
-} from '@/mocks/merchant'
-import { 
-    merchantProductApi, merchantOrderApi, merchantCouponApi,
-    type Product as ApiProduct, type Order as ApiOrder, type Coupon as ApiCoupon 
+    merchantProductApi, merchantOrderApi,
+    type Product as ApiProduct, type Order as ApiOrder
 } from '@/services/merchant'
+
+// 导入统计API类型
+export interface MerchantStats {
+    todayOrders: number
+    todayRevenue: number
+    pendingOrders: number
+    salesTrend: Array<{ date: string, amount: number }>
+}
 
 // 转换API产品到前端产品接口
 export interface Product {
@@ -52,7 +54,7 @@ interface MerchantState {
     products: Product[]
     orders: Order[]
     shopSettings: ShopSettings
-    stats: typeof mockMerchantStats
+    stats: MerchantStats
     loading: boolean
     ordersLoading: boolean
 }
@@ -61,8 +63,22 @@ export const useMerchantStore = defineStore('merchant', {
     state: (): MerchantState => ({
         products: [],
         orders: [],
-        shopSettings: mockShopSettings,
-        stats: mockMerchantStats,
+        shopSettings: {
+            id: 0,
+            name: '',
+            logo: '',
+            announcement: '',
+            businessHours: { start: '08:00', end: '22:00' },
+            phone: '',
+            address: '',
+            category: '',
+        },
+        stats: {
+            todayOrders: 0,
+            todayRevenue: 0,
+            pendingOrders: 0,
+            salesTrend: []
+        },
         loading: false,
         ordersLoading: false,
     }),
@@ -150,22 +166,18 @@ export const useMerchantStore = defineStore('merchant', {
                 if (productResponse.success && productResponse.data) {
                     this.products = productResponse.data.map(this.convertApiProductToProduct)
                 }
-                
+
                 if (orderResponse.success && orderResponse.data) {
                     this.orders = orderResponse.data.items.map(this.convertApiOrderToOrder)
                 }
-                
-                // 暂时还使用mock数据的其他部分
-                this.shopSettings = { ...mockShopSettings }
-                this.stats = { ...mockMerchantStats }
-                
+
+                // shopSettings 和 stats 通过专门的 API 加载，不再使用 mock 数据
+
             } catch (error) {
                 console.error('加载数据失败:', error)
                 // 如果API调用失败，使用空数组
                 this.products = []
                 this.orders = []
-                this.shopSettings = { ...mockShopSettings }
-                this.stats = { ...mockMerchantStats }
             }
             
             this.loading = false
@@ -329,17 +341,17 @@ export const useMerchantStore = defineStore('merchant', {
             try {
                 const response = await merchantOrderApi.verifyPickupCode(code)
                 if (response.success) {
-                    // 重新加载订单列表以获取最新状态
-                    await this.loadOrders()
-                    return { 
-                        success: true, 
+                    // 重新加载所有订单数据以获取最新状态
+                    await this.loadAll()
+                    return {
+                        success: true,
                         message: response.message,
-                        order: response.data 
+                        order: response.data
                     }
                 } else {
-                    return { 
-                        success: false, 
-                        message: response.message || '核销码无效或订单已完成' 
+                    return {
+                        success: false,
+                        message: response.message || '核销码无效或订单已完成'
                     }
                 }
             } catch (error) {
@@ -355,6 +367,30 @@ export const useMerchantStore = defineStore('merchant', {
         updateShopSettings(settings: Partial<ShopSettings>) {
             Object.assign(this.shopSettings, settings)
             return { success: true, message: '店铺设置已更新' }
+        },
+
+        // 加载统计数据
+        async loadStats() {
+            try {
+                // 动态导入 merchantApi 以避免循环依赖
+                const merchantModule = await import('@/services/merchant')
+                const response = await merchantModule.merchantStatsApi.getStats()
+
+                console.log('统计数据响应:', response)
+
+                if (response.success && response.data) {
+                    this.stats = response.data
+                    return response.data
+                } else {
+                    console.error('统计数据API返回失败:', response.message)
+                    throw new Error(response.message || '获取统计数据失败')
+                }
+            } catch (error) {
+                console.error('加载统计数据失败:', error)
+                // 如果API调用失败，保持当前数据，不回退到mock数据
+                console.log('保持当前统计数据:', this.stats)
+                return this.stats
+            }
         },
     },
 })

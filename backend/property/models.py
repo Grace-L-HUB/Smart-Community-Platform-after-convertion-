@@ -700,3 +700,107 @@ class Bill(models.Model):
             return f"{self.billing_period_start.strftime('%Y年%m月')}"
         else:
             return f"{self.billing_period_start.strftime('%Y-%m-%d')} 至 {self.billing_period_end.strftime('%Y-%m-%d')}"
+
+
+# ===== 门禁日志模型 =====
+
+class AccessLog(models.Model):
+    """门禁日志模型"""
+    METHOD_CHOICES = (
+        ('face', '人脸识别'),
+        ('qrcode', '二维码'),
+        ('card', '刷卡'),
+        ('password', '密码'),
+    )
+
+    DIRECTION_CHOICES = (
+        ('in', '进入'),
+        ('out', '离开'),
+    )
+
+    # 人员信息
+    person_name = models.CharField(max_length=100, verbose_name="人员姓名")
+
+    # 开门方式和方向
+    method = models.CharField(max_length=20, choices=METHOD_CHOICES, verbose_name="开门方式")
+    direction = models.CharField(max_length=10, choices=DIRECTION_CHOICES, default='in', verbose_name="进出方向")
+
+    # 位置信息
+    location = models.CharField(max_length=100, verbose_name="位置")  # 如 "1栋东门", "南大门" 等
+
+    # 可选关联信息（如果有系统用户）
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='access_logs',
+        verbose_name="关联用户"
+    )
+
+    # 可选额外信息
+    person_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('resident', '业主'),
+            ('visitor', '访客'),
+            ('delivery', '配送员'),
+            ('staff', '工作人员'),
+            ('other', '其他'),
+        ],
+        default='resident',
+        verbose_name="人员类型"
+    )
+
+    # 记录时间
+    timestamp = models.DateTimeField(auto_now_add=True, verbose_name="记录时间")
+
+    # 设备信息（可选）
+    device_id = models.CharField(max_length=50, blank=True, verbose_name="设备ID")
+
+    # 状态信息
+    success = models.BooleanField(default=True, verbose_name="是否成功")
+
+    class Meta:
+        verbose_name = "门禁日志"
+        verbose_name_plural = "门禁日志"
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['timestamp']),  # 时间索引
+            models.Index(fields=['person_name']),  # 姓名索引
+            models.Index(fields=['method']),  # 开门方式索引
+            models.Index(fields=['location']),  # 位置索引
+            models.Index(fields=['person_type']),  # 人员类型索引
+        ]
+
+    def __str__(self):
+        return f"{self.person_name} - {self.get_method_display()} - {self.location} - {self.timestamp}"
+
+    def get_method_display_short(self):
+        """获取开门方式简称"""
+        method_map = {
+            'face': '人脸',
+            'qrcode': '二维码',
+            'card': '刷卡',
+            'password': '密码',
+        }
+        return method_map.get(self.method, self.method)
+
+    def get_direction_display_short(self):
+        """获取进出方向简称"""
+        direction_map = {
+            'in': '进入',
+            'out': '离开',
+        }
+        return direction_map.get(self.direction, self.direction)
+
+    def get_person_type_display_short(self):
+        """获取人员类型简称"""
+        type_map = {
+            'resident': '业主',
+            'visitor': '访客',
+            'delivery': '配送员',
+            'staff': '工作人员',
+            'other': '其他',
+        }
+        return type_map.get(self.person_type, '其他')

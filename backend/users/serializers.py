@@ -87,16 +87,16 @@ class WeChatRegisterSerializer(serializers.Serializer):
 
 
 class UserProfileSerializer(serializers.Serializer):
-    nickname = serializers.CharField(max_length=50, required=False, help_text="昵称")
+    nickname = serializers.CharField(max_length=50, required=False, allow_blank=True, help_text="昵称")
     avatar_url = serializers.URLField(max_length=500, required=False, allow_blank=True, help_text="头像URL（通过头像上传接口获取）")
     gender = serializers.ChoiceField(choices=[0, 1, 2], required=False, help_text="性别：0-未知，1-男，2-女")
-    birthday = serializers.DateField(required=False, help_text="生日")
-    real_name = serializers.CharField(max_length=20, required=False, help_text="真实姓名")
+    birthday = serializers.DateField(required=False, allow_null=True, help_text="生日")
+    real_name = serializers.CharField(max_length=20, required=False, allow_blank=True, allow_null=True, help_text="真实姓名")
     email = serializers.EmailField(required=False, allow_blank=True, help_text="邮箱地址")
-    province = serializers.CharField(max_length=50, required=False, help_text="省份")
-    city = serializers.CharField(max_length=50, required=False, help_text="城市")
-    district = serializers.CharField(max_length=50, required=False, help_text="区县")
-    address = serializers.CharField(max_length=200, required=False, help_text="详细地址")
+    province = serializers.CharField(max_length=50, required=False, allow_blank=True, allow_null=True, help_text="省份")
+    city = serializers.CharField(max_length=50, required=False, allow_blank=True, allow_null=True, help_text="城市")
+    district = serializers.CharField(max_length=50, required=False, allow_blank=True, allow_null=True, help_text="区县")
+    address = serializers.CharField(max_length=200, required=False, allow_blank=True, allow_null=True, help_text="详细地址")
 
     def validate_nickname(self, value):
         if value and not value.strip():

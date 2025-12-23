@@ -5,6 +5,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.db import transaction, models
+from datetime import timedelta
 from .models import (
     MerchantApplication, MerchantProfile, MerchantProduct,
     MerchantOrder, MerchantOrderItem, MerchantCoupon, UserCoupon
@@ -15,7 +16,8 @@ from .serializers import (
     MerchantProfileUpdateSerializer, MerchantProductSerializer,
     MerchantProductCreateUpdateSerializer, MerchantOrderSerializer,
     MerchantCouponSerializer, UserCouponSerializer, CouponReceiveSerializer,
-    CouponVerifySerializer, OrderStatusUpdateSerializer, PickupCodeVerifySerializer
+    CouponVerifySerializer, OrderStatusUpdateSerializer, PickupCodeVerifySerializer,
+    OrderCreateSerializer, LogoUploadSerializer
 )
 import logging
 from django.contrib.auth.hashers import make_password
@@ -259,7 +261,7 @@ class MerchantProfileView(APIView):
                     'success': False,
                     'message': '权限不足'
                 }, status=status.HTTP_403_FORBIDDEN)
-            
+
             try:
                 profile = MerchantProfile.objects.get(user=request.user)
             except MerchantProfile.DoesNotExist:
@@ -267,28 +269,56 @@ class MerchantProfileView(APIView):
                     'success': False,
                     'message': '商户档案不存在'
                 }, status=status.HTTP_404_NOT_FOUND)
-            
+
+            # 使用序列化器验证数据
             serializer = MerchantProfileUpdateSerializer(
-                profile, 
-                data=request.data, 
+                profile,
+                data=request.data,
                 partial=True
             )
-            
+
             if serializer.is_valid():
-                serializer.save()
-                
+                validated_data = serializer.validated_data
+
+                # 手动处理 shop_logo_url 字段（类似用户头像的处理方式）
+                shop_logo_url = request.data.get('shop_logo_url')
+                if shop_logo_url:
+                    from urllib.parse import urlparse
+                    parsed_url = urlparse(shop_logo_url)
+                    # 去掉开头的 /media/
+                    logo_path = parsed_url.path
+                    if logo_path.startswith('/media/'):
+                        logo_path = logo_path[7:]  # 去掉 '/media/'
+                    logger.info(f"原始URL: {shop_logo_url}")
+                    logger.info(f"解析后的路径: {logo_path}")
+                    profile.shop_logo = logo_path
+                    # 先单独保存 shop_logo 字段
+                    profile.save(update_fields=['shop_logo'])
+                    logger.info(f"设置 shop_logo = {profile.shop_logo}")
+
+                # 手动更新其他字段
+                for field, value in validated_data.items():
+                    if field != 'shop_logo' and hasattr(profile, field):
+                        setattr(profile, field, value)
+
+                profile.save()
+
+                # 重新从数据库读取确认
+                profile.refresh_from_db()
+                logger.info(f"最终 shop_logo = {profile.shop_logo}")
+
                 return Response({
                     'success': True,
                     'message': '档案信息更新成功',
                     'data': MerchantProfileSerializer(profile).data
                 })
-            
+
             return Response({
                 'success': False,
                 'message': '数据验证失败',
                 'errors': serializer.errors
             }, status=status.HTTP_400_BAD_REQUEST)
-            
+
         except Exception as e:
             logger.error(f"更新商户档案失败: {str(e)}")
             return Response({
@@ -485,7 +515,12 @@ class MerchantLoginView(APIView):
             
             # 生成token
             token = f"merchant_token_{user.id}_verified"
-            
+
+            # 构建头像完整URL
+            avatar_url = None
+            if merchant_profile.shop_logo:
+                avatar_url = request.build_absolute_uri(merchant_profile.shop_logo.url)
+
             # 返回用户信息
             return Response({
                 'success': True,
@@ -497,7 +532,7 @@ class MerchantLoginView(APIView):
                         'username': user.username,
                         'name': merchant_profile.shop_name,
                         'role': 'merchant',
-                        'avatar': merchant_profile.shop_logo.url if merchant_profile.shop_logo else None,
+                        'avatar': avatar_url,
                         'phone': user.phone,
                         'shop_name': merchant_profile.shop_name,
                     }
@@ -1532,4 +1567,329 @@ class CouponVerifyView(APIView):
             return Response({
                 'success': False,
                 'message': '核销失败，请重试'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class OrderCreateView(APIView):
+    """订单创建接口（小程序使用）"""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        """创建订单"""
+        try:
+
+            # 检查用户权限（普通用户才能下单）
+            if request.user.role not in [0, 2]:  # 普通用户或商户可以下单
+                return Response({
+                    'success': False,
+                    'message': '权限不足'
+                }, status=status.HTTP_403_FORBIDDEN)
+
+            # 验证数据
+            serializer = OrderCreateSerializer(data=request.data, context={'request': request})
+            if not serializer.is_valid():
+                return Response({
+                    'success': False,
+                    'message': '数据验证失败',
+                    'errors': serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # 创建订单
+            order = serializer.save()
+
+            # 返回订单详情
+            order_data = MerchantOrderSerializer(order, context={'request': request}).data
+
+            return Response({
+                'success': True,
+                'message': '订单创建成功',
+                'data': {
+                    'order_id': order.id,
+                    'order_no': order.order_no,
+                    'pickup_code': order.pickup_code,
+                    'total_amount': float(order.total_amount),
+                    'actual_amount': float(order.actual_amount),
+                    'discount_amount': float(order.discount_amount),
+                    'status': order.get_status_display(),
+                    'created_at': order.created_at
+                }
+            }, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            logger.error(f"创建订单失败: {str(e)}")
+            return Response({
+                'success': False,
+                'message': '创建订单失败，请重试'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class UserOrderListView(APIView):
+    """用户订单列表接口（小程序使用）"""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        """获取用户订单列表"""
+        try:
+            # 获取查询参数
+            status_filter = request.GET.get('status', '')
+            page = int(request.GET.get('page', 1))
+            page_size = int(request.GET.get('page_size', 20))
+
+            # 构建查询
+            queryset = MerchantOrder.objects.filter(user=request.user).select_related('merchant', 'used_coupon').prefetch_related('items')
+
+            if status_filter:
+                # 支持多个状态用逗号分隔
+                if ',' in status_filter:
+                    status_list = [s.strip() for s in status_filter.split(',')]
+                    queryset = queryset.filter(status__in=status_list)
+                else:
+                    queryset = queryset.filter(status=status_filter)
+
+            # 分页
+            start = (page - 1) * page_size
+            end = start + page_size
+            orders = queryset[start:end]
+            total = queryset.count()
+
+            serializer = MerchantOrderSerializer(orders, many=True, context={'request': request})
+
+            return Response({
+                'success': True,
+                'data': {
+                    'items': serializer.data,
+                    'total': total,
+                    'page': page,
+                    'page_size': page_size,
+                    'total_pages': (total + page_size - 1) // page_size
+                }
+            })
+
+        except Exception as e:
+            logger.error(f"获取用户订单列表失败: {str(e)}")
+            return Response({
+                'success': False,
+                'message': '获取订单列表失败'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class UserOrderDetailView(APIView):
+    """用户订单详情接口（小程序使用）"""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, order_id):
+        """获取用户订单详情"""
+        try:
+            order = MerchantOrder.objects.select_related('merchant', 'user', 'used_coupon').prefetch_related('items').get(
+                id=order_id, user=request.user
+            )
+
+            serializer = MerchantOrderSerializer(order, context={'request': request})
+
+            return Response({
+                'success': True,
+                'data': serializer.data
+            })
+
+        except MerchantOrder.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': '订单不存在'
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        except Exception as e:
+            logger.error(f"获取用户订单详情失败: {str(e)}")
+            return Response({
+                'success': False,
+                'message': '获取订单详情失败'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def post(self, request, order_id):
+        """取消订单"""
+        try:
+            order = MerchantOrder.objects.get(id=order_id, user=request.user)
+
+            # 检查订单状态是否可以取消
+            if order.status not in ['new']:
+                return Response({
+                    'success': False,
+                    'message': '订单状态不允许取消'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # 更新订单状态
+            order.status = 'cancelled'
+            order.save()
+
+            # 如果使用了优惠券，退还优惠券
+            if order.used_coupon:
+                order.used_coupon.is_used = False
+                order.used_coupon.used_at = None
+                order.used_coupon.save()
+
+            return Response({
+                'success': True,
+                'message': '订单已取消'
+            })
+
+        except MerchantOrder.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': '订单不存在'
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        except Exception as e:
+            logger.error(f"取消订单失败: {str(e)}")
+            return Response({
+                'success': False,
+                'message': '取消订单失败'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class MerchantStatsView(APIView):
+    """商户统计数据接口（商户端使用）"""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        """获取商户经营统计数据"""
+        try:
+            # 检查用户权限（只有商户可以查看自己的统计）
+            if request.user.role not in [1, 2]:  # 商户角色
+                return Response({
+                    'success': False,
+                    'message': '权限不足'
+                }, status=status.HTTP_403_FORBIDDEN)
+
+            # 获取商户档案
+            try:
+                merchant_profile = MerchantProfile.objects.get(user=request.user)
+            except MerchantProfile.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'message': '商户档案不存在'
+                }, status=status.HTTP_404_NOT_FOUND)
+
+            # 获取当前时间
+            now = timezone.now()
+            today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+            # 今日订单统计
+            today_orders = MerchantOrder.objects.filter(
+                merchant=merchant_profile,
+                created_at__gte=today_start
+            )
+
+            # 今日营业额（已完成订单）
+            today_completed_orders = today_orders.filter(status='completed')
+            today_revenue = today_completed_orders.aggregate(
+                total=models.Sum('actual_amount')
+            )['total'] or 0
+
+            # 待处理订单（新订单）
+            pending_orders = today_orders.filter(status='new').count()
+
+            # 近7天销售趋势
+            sales_trend = []
+            for i in range(7):
+                date = (now - timedelta(days=i)).replace(hour=0, minute=0, second=0, microsecond=0)
+                next_date = date + timedelta(days=1)
+
+                daily_revenue = MerchantOrder.objects.filter(
+                    merchant=merchant_profile,
+                    status='completed',
+                    created_at__gte=date,
+                    created_at__lt=next_date
+                ).aggregate(total=models.Sum('actual_amount'))['total'] or 0
+
+                sales_trend.insert(0, {
+                    'date': date.strftime('%m-%d'),
+                    'amount': float(daily_revenue)
+                })
+
+            return Response({
+                'success': True,
+                'data': {
+                    'todayOrders': today_orders.count(),
+                    'todayRevenue': float(today_revenue),
+                    'pendingOrders': pending_orders,
+                    'salesTrend': sales_trend
+                }
+            })
+
+        except Exception as e:
+            logger.error(f"获取商户统计失败: {str(e)}")
+            return Response({
+                'success': False,
+                'message': '获取统计数据失败'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class MerchantLogoUploadView(APIView):
+    """商户Logo上传接口"""
+
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        """上传商户Logo"""
+        try:
+            # 检查用户是否为商户
+            if request.user.role != 2:  # 商户角色
+                return Response({
+                    'success': False,
+                    'message': '权限不足'
+                }, status=status.HTTP_403_FORBIDDEN)
+
+            # 获取商户档案
+            try:
+                merchant_profile = MerchantProfile.objects.get(user=request.user)
+            except MerchantProfile.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'message': '商户档案不存在'
+                }, status=status.HTTP_404_NOT_FOUND)
+
+            # 验证上传的文件
+            serializer = LogoUploadSerializer(data=request.data)
+            if not serializer.is_valid():
+                return Response({
+                    'code': 400,
+                    'message': '文件验证失败',
+                    'errors': serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            logo_file = serializer.validated_data['logo']
+
+            # 生成唯一的文件名
+            import uuid
+            import os
+            file_ext = os.path.splitext(logo_file.name)[1].lower()
+            new_filename = f"{uuid.uuid4().hex}{file_ext}"
+
+            # 使用临时MerchantProfile实例来保存文件（不保存到数据库）
+            temp_profile = MerchantProfile()
+            temp_profile.shop_logo.save(new_filename, logo_file, save=False)
+
+            # 构建完整的URL
+            logo_url = request.build_absolute_uri(temp_profile.shop_logo.url)
+
+            logger.info(f"商户Logo上传成功: 商户ID={merchant_profile.id}, 文件名={new_filename}")
+
+            return Response({
+                'code': 200,
+                'message': 'Logo上传成功',
+                'data': {
+                    'logo_url': logo_url,
+                    'filename': new_filename
+                }
+            })
+
+        except Exception as e:
+            logger.error(f"Logo上传失败: {str(e)}")
+            return Response({
+                'code': 400,
+                'message': 'Logo上传失败，请重试'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

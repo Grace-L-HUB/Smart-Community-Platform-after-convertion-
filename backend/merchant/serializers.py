@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+import random
 from .models import (
     MerchantApplication, MerchantProfile, MerchantProduct,
     MerchantCoupon, UserCoupon, MerchantOrder, MerchantOrderItem
@@ -96,14 +97,15 @@ class MerchantApplicationReviewSerializer(serializers.ModelSerializer):
 
 class MerchantProfileSerializer(serializers.ModelSerializer):
     """商户档案序列化器"""
-    
+
     user_info = serializers.SerializerMethodField()
     category_display = serializers.CharField(source='get_shop_category_display', read_only=True)
+    shop_logo_url = serializers.SerializerMethodField()
     
     class Meta:
         model = MerchantProfile
         fields = [
-            'id', 'user', 'user_info', 'shop_name', 'shop_logo', 'shop_category',
+            'id', 'user', 'user_info', 'shop_name', 'shop_logo', 'shop_logo_url', 'shop_category',
             'category_display', 'shop_phone', 'shop_address', 'shop_description',
             'shop_announcement', 'business_hours_start', 'business_hours_end',
             'is_active', 'total_orders', 'total_revenue', 'created_at', 'updated_at'
@@ -118,6 +120,28 @@ class MerchantProfileSerializer(serializers.ModelSerializer):
             'display_name': obj.user.display_name,
             'phone': obj.user.phone,
         }
+
+    def get_shop_logo_url(self, obj):
+        """获取头像完整URL"""
+        if obj.shop_logo:
+            request = self.context.get('request')
+            if request:
+                # 构建基础URL
+                base_url = f"{request.scheme}://{request.get_host()}"
+                # 如果 shop_logo 是字符串
+                if isinstance(obj.shop_logo, str):
+                    # 如果已经是完整路径（以/开头），直接使用
+                    if obj.shop_logo.startswith('/'):
+                        return f"{base_url}{obj.shop_logo}"
+                    # 否则添加 /media/ 前缀
+                    return f"{base_url}/media/{obj.shop_logo}"
+                # 如果是 FieldFile 对象，使用 .url 属性
+                return f"{base_url}{obj.shop_logo.url}"
+            # 如果没有 request，尝试直接返回
+            if hasattr(obj.shop_logo, 'url'):
+                return obj.shop_logo.url
+            return f'/media/{obj.shop_logo}' if obj.shop_logo else None
+        return None
 
 
 class MerchantProfileUpdateSerializer(serializers.ModelSerializer):
@@ -369,11 +393,289 @@ class OrderStatusUpdateSerializer(serializers.Serializer):
 
 class PickupCodeVerifySerializer(serializers.Serializer):
     """取餐码验证序列化器"""
-    
+
     pickup_code = serializers.CharField(max_length=6)
-    
+
     def validate_pickup_code(self, value):
         """验证取餐码"""
         if len(value) != 6 or not value.isdigit():
             raise serializers.ValidationError("取餐码必须是6位数字")
         return value
+
+
+class LogoUploadSerializer(serializers.Serializer):
+    """Logo上传序列化器"""
+
+    logo = serializers.ImageField(help_text="Logo图片文件")
+
+    def validate_logo(self, value):
+        """验证Logo文件"""
+        # 限制文件大小（最大5MB）
+        max_size = 5 * 1024 * 1024
+        if value.size > max_size:
+            raise serializers.ValidationError("图片大小不能超过5MB")
+
+        # 限制文件类型
+        allowed_extensions = ['.jpg', '.jpeg', '.png', '.gif']
+        import os
+        ext = os.path.splitext(value.name)[1].lower()
+        if ext not in allowed_extensions:
+            raise serializers.ValidationError("只支持 JPG、PNG、GIF 格式的图片")
+
+        return value
+
+
+class OrderCreateSerializer(serializers.ModelSerializer):
+    """订单创建序列化器（小程序使用）"""
+    order_items = serializers.ListField(
+        child=serializers.DictField(),
+        write_only=True,
+        help_text="订单商品列表"
+    )
+    user_coupon_id = serializers.IntegerField(
+        allow_null=True,
+        required=False,
+        help_text="使用的优惠券ID"
+    )
+    merchant_id = serializers.IntegerField(
+        write_only=True,
+        help_text="商户ID"
+    )
+
+    class Meta:
+        model = MerchantOrder
+        fields = [
+            'merchant_id', 'contact_name', 'contact_phone', 'pickup_type',
+            'address', 'note', 'user_coupon_id', 'order_items'
+        ]
+        extra_kwargs = {
+            'merchant_id': {'write_only': True},
+            'contact_name': {'write_only': True},
+            'contact_phone': {'write_only': True},
+            'pickup_type': {'write_only': True},
+            'address': {'write_only': True},
+            'note': {'write_only': True},
+            'user_coupon_id': {'write_only': True},
+            'order_items': {'write_only': True},
+        }
+
+    def validate(self, data):
+        """验证订单数据"""
+        order_items = data.get('order_items', [])
+        if not order_items:
+            raise serializers.ValidationError("订单商品不能为空")
+
+        # 验证商品
+        for item in order_items:
+            product_id = item.get('product_id')
+            quantity = item.get('quantity', 1)
+
+            if not product_id or quantity <= 0:
+                raise serializers.ValidationError("商品ID和数量必须有效")
+
+        return data
+
+    def create(self, validated_data):
+        """创建订单"""
+        print("DEBUG: create方法开始执行")
+
+        try:
+            print(f"DEBUG: validated_data = {validated_data}")
+            print(f"DEBUG: validated_data类型 = {type(validated_data)}")
+
+            # 尝试弹出order_items
+            try:
+                order_items_data = validated_data.pop('order_items')
+                print(f"DEBUG: 成功获取order_items_data = {order_items_data}")
+            except Exception as e:
+                print(f"DEBUG: 弹出order_items失败: {e}")
+                raise
+
+            # 尝试弹出user_coupon_id
+            try:
+                user_coupon_id = validated_data.pop('user_coupon_id', None)
+                print(f"DEBUG: 成功获取user_coupon_id = {user_coupon_id}")
+            except Exception as e:
+                print(f"DEBUG: 弹出user_coupon_id失败: {e}")
+                raise
+
+            # 尝试弹出merchant_id
+            try:
+                merchant_id = validated_data.pop('merchant_id')
+                print(f"DEBUG: 成功获取merchant_id = {merchant_id}")
+            except Exception as e:
+                print(f"DEBUG: 弹出merchant_id失败: {e}")
+                raise
+
+            # 尝试转换为整数
+            if merchant_id is not None:
+                try:
+                    merchant_id = int(merchant_id)
+                    print(f"DEBUG: merchant_id转换为整数 = {merchant_id}")
+                except (ValueError, TypeError) as e:
+                    print(f"DEBUG: merchant_id转换整数失败: {e}")
+                    merchant_id = 0
+            else:
+                merchant_id = 0
+
+            # 获取请求数据
+            try:
+                request = self.context.get('request')
+                print(f"DEBUG: 获取request = {request}")
+                print(f"DEBUG: request类型 = {type(request)}")
+
+                if request:
+                    print(f"DEBUG: request.data = {getattr(request, 'data', 'NO_DATA')}")
+                    print(f"DEBUG: request.user = {getattr(request, 'user', 'NO_USER')}")
+            except Exception as e:
+                print(f"DEBUG: 获取request信息失败: {e}")
+                raise
+
+  
+            # 获取用户
+            user = None
+            print("DEBUG: 开始获取user")
+            if request:
+                try:
+                    user = request.user
+                    print(f"DEBUG: 获取user = {user}")
+                except Exception as e:
+                    print(f"DEBUG: 获取user失败: {e}")
+
+            print(f"DEBUG: 最终结果 - user = {user}, merchant_id = {merchant_id}")
+
+            # 验证必要的数据
+            if not user:
+                raise serializers.ValidationError("用户未登录")
+            if not merchant_id or merchant_id == 0:
+                raise serializers.ValidationError("商户ID不能为空")
+
+            # 计算订单总金额
+            total_amount = 0
+            try:
+                print(f"DEBUG: 开始计算总金额，order_items_data = {order_items_data}")
+                for item_data in order_items_data:
+                    subtotal = item_data['price'] * item_data['quantity']
+                    total_amount += subtotal
+                print(f"DEBUG: 计算总金额 = {total_amount}")
+            except Exception as e:
+                print(f"DEBUG: 计算总金额失败: {e}")
+                raise
+
+            # 处理优惠券
+            discount_amount = 0
+            actual_amount = total_amount
+            used_coupon = None
+
+            if user_coupon_id:
+                try:
+                    print(f"DEBUG: 开始处理优惠券，user_coupon_id = {user_coupon_id}")
+                    from django.utils import timezone
+                    user_coupon = UserCoupon.objects.get(
+                        id=user_coupon_id,
+                        user=user,
+                        status='unused'
+                    )
+                    print(f"DEBUG: 找到用户优惠券 = {user_coupon}")
+
+                    # 检查优惠券是否可用
+                    coupon = user_coupon.coupon
+                    now = timezone.now()
+                    if now < coupon.start_date or now > coupon.end_date:
+                        raise serializers.ValidationError("优惠券不在有效期内")
+
+                    if total_amount < coupon.min_amount:
+                        raise serializers.ValidationError(f"订单金额不足，最低需消费{coupon.min_amount}元")
+
+                    # 计算优惠金额
+                    if coupon.coupon_type == 'deduction':
+                        discount_amount = float(coupon.amount)
+                    elif coupon.coupon_type == 'discount':
+                        discount_amount = total_amount * (1 - float(coupon.amount))
+
+                    actual_amount = total_amount - discount_amount
+                    if actual_amount < 0:
+                        actual_amount = 0
+
+                    used_coupon = user_coupon
+                    print(f"DEBUG: 优惠券处理完成，discount_amount = {discount_amount}")
+
+                except UserCoupon.DoesNotExist:
+                    raise serializers.ValidationError("优惠券不存在或已使用")
+
+            # 创建订单 - 这里最容易出现问题
+            print("DEBUG: 开始创建订单对象")
+            try:
+                print(f"DEBUG: 准备传入MerchantOrder.create的参数:")
+                print(f"  - merchant_id: {merchant_id}")
+                print(f"  - user: {user}")
+                print(f"  - validated_data: {validated_data}")
+                print(f"  - total_amount: {total_amount}")
+                print(f"  - actual_amount: {actual_amount}")
+                print(f"  - discount_amount: {discount_amount}")
+                print(f"  - used_coupon: {used_coupon}")
+
+                order = MerchantOrder.objects.create(
+                    merchant_id=merchant_id,
+                    user=user,
+                    **validated_data,
+                    total_amount=total_amount,
+                    actual_amount=actual_amount,
+                    discount_amount=discount_amount,
+                    used_coupon=used_coupon,
+                    status='new',
+                    pickup_code=f"{random.randint(100000, 999999)}" if validated_data.get('pickup_type') == 'pickup' else ''
+                )
+                print(f"DEBUG: 成功创建订单 = {order}")
+            except Exception as e:
+                print(f"DEBUG: 创建订单失败: {e}")
+                print(f"DEBUG: 错误类型 = {type(e)}")
+                import traceback
+                print(f"DEBUG: 错误堆栈: {traceback.format_exc()}")
+                raise
+
+            # 创建订单项
+            try:
+                print(f"DEBUG: 开始创建订单项")
+                for item_data in order_items_data:
+                    item = MerchantOrderItem.objects.create(
+                        order=order,
+                        product_id=item_data['product_id'],
+                        product_name=item_data['product_name'],
+                        product_price=item_data['price'],
+                        quantity=item_data['quantity'],
+                        subtotal=item_data['price'] * item_data['quantity']
+                    )
+                    print(f"DEBUG: 创建订单项 = {item}")
+            except Exception as e:
+                print(f"DEBUG: 创建订单项失败: {e}")
+                raise
+
+            # 标记优惠券为已使用
+            if used_coupon:
+                try:
+                    print(f"DEBUG: 开始标记优惠券为已使用")
+                    from django.utils import timezone
+                    used_coupon.status = 'used'
+                    used_coupon.used_order = order
+                    used_coupon.used_at = timezone.now()
+                    used_coupon.save()
+
+                    # 更新优惠券使用计数
+                    coupon = used_coupon.coupon
+                    coupon.used_count += 1
+                    coupon.save()
+                    print(f"DEBUG: 优惠券标记完成")
+                except Exception as e:
+                    print(f"DEBUG: 标记优惠券失败: {e}")
+                    raise
+
+            print("DEBUG: create方法成功完成")
+            return order
+
+        except Exception as e:
+            print(f"DEBUG: create方法执行失败: {e}")
+            print(f"DEBUG: 错误类型 = {type(e)}")
+            import traceback
+            print(f"DEBUG: 完整错误堆栈: {traceback.format_exc()}")
+            raise

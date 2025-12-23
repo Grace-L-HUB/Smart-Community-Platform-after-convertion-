@@ -7,7 +7,7 @@
         <v-card rounded="lg">
           <v-card-title>基本信息</v-card-title>
           <v-card-text>
-            <v-form ref="formRef" v-model="formValid">
+            <v-form v-model="formValid">
               <v-row>
                 <!-- 头像上传 -->
                 <v-col cols="12" class="d-flex align-center mb-4">
@@ -16,7 +16,7 @@
                   </v-avatar>
                   <div>
                     <v-file-input
-                      v-model="form.logo"
+                      :model-value="form.logo"
                       accept="image/*"
                       show-size
                       variant="outlined"
@@ -27,6 +27,8 @@
                       hide-details
                       class="mb-2"
                       style="max-width: 200px;"
+                      :loading="uploadingLogo"
+                      @update:model-value="onLogoChange"
                     />
                     <div class="text-caption text-grey">建议尺寸 200x200px</div>
                   </div>
@@ -164,15 +166,15 @@
 
 <script lang="ts" setup>
 import { ref, reactive, onMounted } from 'vue'
-import { useMerchantStore } from '@/stores'
+import { useMerchantStore, useAuthStore } from '@/stores'
 import { merchantProfileApi, type MerchantProfile } from '@/services/merchant'
 
 const merchantStore = useMerchantStore()
 
-const formRef = ref()
 const formValid = ref(false)
 const saving = ref(false)
 const loading = ref(false)
+const uploadingLogo = ref(false)
 const profile = ref<MerchantProfile | null>(null)
 
 const categoryOptions = [
@@ -188,6 +190,7 @@ const categoryOptions = [
 const form = reactive({
   name: '',
   logo: null as File[] | null,
+  uploadedLogoUrl: '', // 存储上传后的Logo URL
   announcement: '',
   businessHours: {
     start: '08:00',
@@ -203,7 +206,7 @@ async function loadProfile() {
   loading.value = true
   try {
     const response = await merchantProfileApi.getProfile()
-    if (response.success) {
+    if (response.success && response.data) {
       profile.value = response.data
       loadFormFromProfile(response.data)
     } else {
@@ -219,6 +222,7 @@ async function loadProfile() {
 
 function loadFormFromProfile(profileData: MerchantProfile) {
   form.name = profileData.shop_name
+  form.uploadedLogoUrl = profileData.shop_logo_url || ''
   form.announcement = profileData.shop_announcement
   form.businessHours.start = profileData.business_hours_start
   form.businessHours.end = profileData.business_hours_end
@@ -226,6 +230,55 @@ function loadFormFromProfile(profileData: MerchantProfile) {
   form.address = profileData.shop_address
   form.category = profileData.shop_category
   form.description = profileData.shop_description
+}
+
+// 上传Logo到服务器
+async function uploadLogo(file: File) {
+  uploadingLogo.value = true
+  try {
+    const formData = new FormData()
+    formData.append('logo', file)
+
+    const response = await fetch('http://127.0.0.1:8000/api/merchant/upload/logo/', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: formData
+    })
+
+    const result = await response.json()
+    if (result.code === 200 && result.data?.logo_url) {
+      form.uploadedLogoUrl = result.data.logo_url
+      showSnackbar('success', 'Logo上传成功')
+    } else {
+      showSnackbar('error', result.message || 'Logo上传失败')
+      // 上传失败，清除选择
+      form.logo = null
+    }
+  } catch (error) {
+    console.error('Logo上传失败:', error)
+    showSnackbar('error', 'Logo上传失败，请重试')
+    form.logo = null
+  } finally {
+    uploadingLogo.value = false
+  }
+}
+
+// Logo文件选择变化
+function onLogoChange(files: File | File[] | null) {
+  // 处理v-file-input返回的可能是File或File[]
+  let fileList: File[] | null = null
+  if (files && files instanceof File) {
+    fileList = [files]
+  } else if (Array.isArray(files)) {
+    fileList = files
+  }
+
+  form.logo = fileList
+  if (fileList && fileList.length > 0 && fileList[0]) {
+    uploadLogo(fileList[0])
+  }
 }
 
 function loadSettings() {
@@ -255,22 +308,36 @@ async function saveSettings() {
     // 创建FormData对象
     const formData = new FormData()
     formData.append('shop_name', form.name)
+    formData.append('shop_category', form.category)
     formData.append('shop_announcement', form.announcement)
     formData.append('business_hours_start', form.businessHours.start)
     formData.append('business_hours_end', form.businessHours.end)
     formData.append('shop_phone', form.phone)
     formData.append('shop_address', form.address)
     formData.append('shop_description', form.description)
-    
-    // 如果有新的logo文件
-    if (form.logo && form.logo.length > 0) {
-      formData.append('shop_logo', form.logo[0])
+
+    // 如果有上传后的Logo URL，添加到表单
+    if (form.uploadedLogoUrl) {
+      formData.append('shop_logo_url', form.uploadedLogoUrl)
     }
 
     const response = await merchantProfileApi.updateProfile(formData)
-    
-    if (response.success) {
+
+    if (response.success && response.data) {
       profile.value = response.data
+      // 同步表单数据，包括 shop_logo_url
+      loadFormFromProfile(response.data)
+      // 更新 auth store 中的 avatar，确保导航栏显示最新头像
+      const authStore = useAuthStore()
+      if (authStore.user && response.data.shop_logo_url) {
+        // 将相对路径转换为完整URL
+        const fullAvatarUrl = toFullUrl(response.data.shop_logo_url)
+        authStore.user.avatar = fullAvatarUrl
+        // 同步到 localStorage
+        localStorage.setItem('user', JSON.stringify(authStore.user))
+      }
+      // 清除logo选择
+      form.logo = null
       showSnackbar('success', '设置已保存')
     } else {
       showSnackbar('error', response.message || '保存失败')
@@ -288,13 +355,28 @@ function getCategoryLabel(value: string) {
   return option?.title || value
 }
 
+// 将相对路径转换为完整URL
+function toFullUrl(path: string | undefined): string {
+  if (!path) return ''
+  // 如果已经是完整URL，直接返回
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path
+  }
+  // 拼接后端地址
+  return `http://127.0.0.1:8000${path}`
+}
+
 function getLogoUrl() {
   // 如果有新选择的文件，显示预览
-  if (form.logo && form.logo.length > 0) {
+  if (form.logo && form.logo.length > 0 && form.logo[0]) {
     return URL.createObjectURL(form.logo[0])
   }
-  // 否则显示现有的logo
-  return profile.value?.shop_logo || 'https://picsum.photos/seed/shop/100/100'
+  // 如果有上传后的URL，使用上传的URL（需要拼接完整URL）
+  if (form.uploadedLogoUrl) {
+    return toFullUrl(form.uploadedLogoUrl)
+  }
+  // 否则显示现有的logo (使用完整的URL)
+  return toFullUrl(profile.value?.shop_logo_url) || toFullUrl(profile.value?.shop_logo) || 'https://picsum.photos/seed/shop/100/100'
 }
 
 // 提示

@@ -82,12 +82,11 @@
             <!-- 优惠券底部（显示核销码） -->
             <view wx:if="{{ item.status === 'unused' }}" class="coupon-footer">
               <text class="verification-code">核销码：{{ item.verificationCode }}</text>
-              <van-button 
-                size="mini" 
-                type="primary" 
+              <van-button
+                size="mini"
+                type="primary"
                 data-merchant-id="{{ item.merchantId }}"
-                bindtap="onUseCoupon"
-                catch:tap="true"
+                catchtap="onUseCoupon"
               >
                 去商户
               </van-button>
