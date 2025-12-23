@@ -17,7 +17,7 @@
       <text class="qr-text">点击出示身份码</text>
     </view>
     <view class="identity-info">
-      <text class="community-name">{{communityInfo.name || '阳光花园社区'}}</text>
+      <text class="community-name">{{communityInfo.name || '暂未绑定社区'}}</text>
       <text class="user-role">已认证业主</text>
     </view>
   </view>

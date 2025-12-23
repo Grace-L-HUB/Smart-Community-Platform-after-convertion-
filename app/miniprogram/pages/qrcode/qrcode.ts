@@ -164,14 +164,14 @@ Page({
                 if (res.statusCode === 200 && res.data.code === 200) {
                     this.setData({
                         communityInfo: {
-                            name: res.data.data?.name || '阳光花园社区'
+                            name: res.data.data?.name || '暂未绑定社区'
                         }
                     });
                 } else {
                     // API错误，使用默认文本
                     this.setData({
                         communityInfo: {
-                            name: '阳光花园社区'
+                            name: '暂未绑定社区'
                         }
                     });
                 }
@@ -181,7 +181,7 @@ Page({
                 // 网络错误，使用默认文本
                 this.setData({
                     communityInfo: {
-                        name: '阳光花园社区'
+                        name: '暂未绑定社区'
                     }
                 });
             }

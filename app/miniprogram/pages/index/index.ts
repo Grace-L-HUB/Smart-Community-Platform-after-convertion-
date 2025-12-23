@@ -133,7 +133,7 @@ Page({
                     const community = res.data.data || {};
                     this.setData({
                         communityInfo: {
-                            name: community.name || '阳光花园社区',
+                            name: community.name || '暂未绑定社区',
                             address: community.address || ''
                         }
                     });
@@ -142,7 +142,7 @@ Page({
                     // 使用默认社区名称
                     this.setData({
                         communityInfo: {
-                            name: '阳光花园社区',
+                            name: '暂未绑定社区',
                             address: ''
                         }
                     });
@@ -153,7 +153,7 @@ Page({
                 // 使用默认社区名称
                 this.setData({
                     communityInfo: {
-                        name: '阳光花园社区',
+                        name: '暂未绑定社区',
                         address: ''
                     }
                 });
