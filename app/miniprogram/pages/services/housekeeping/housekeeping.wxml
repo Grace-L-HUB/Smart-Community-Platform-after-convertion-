@@ -1,10 +1,18 @@
 <view class="container">
-  <view class="service-grid">
+  <!-- 加载状态 -->
+  <van-loading wx:if="{{loading}}" size="32px">加载服务项目中...</van-loading>
+
+  <!-- 服务项目网格 -->
+  <view wx:else class="service-grid">
     <block wx:for="{{services}}" wx:key="id">
       <view class="service-card" bind:tap="onServiceClick" data-id="{{item.id}}">
         <image class="service-icon" src="{{item.icon}}"></image>
         <text class="service-name">{{item.name}}</text>
-        <text class="service-price">¥{{item.price}}/次起</text>
+        <text class="service-description">{{item.description}}</text>
+        <view class="price-group">
+          <text class="service-price">¥{{item.price}}/次</text>
+          <text class="original-price" wx:if="{{item.originalPrice && item.originalPrice > 0}}">¥{{item.originalPrice}}</text>
+        </view>
       </view>
     </block>
   </view>
@@ -19,7 +27,16 @@
   </view>
 
   <view class="submit-section">
-    <van-button block round color="#07c160" bind:click="onSubmit">立即预约</van-button>
+    <van-button 
+      block 
+      round 
+      color="#07c160" 
+      bind:click="onSubmit"
+      loading="{{submitting}}"
+      disabled="{{!selectedService || !serviceTime || !address || !phone || submitting}}"
+    >
+      {{submitting ? '预约中...' : '立即预约'}}
+    </van-button>
   </view>
 
   <van-popup show="{{showService}}" position="bottom" bind:close="closeServicePicker">

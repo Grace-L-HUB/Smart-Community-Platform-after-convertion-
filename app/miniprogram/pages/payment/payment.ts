@@ -1,4 +1,5 @@
 // pages/payment/payment.ts
+const API_PROPERTY_URL = 'http://127.0.0.1:8000/api/property'
 
 interface BillInfo {
     id: number;
@@ -74,17 +75,17 @@ Page({
     async loadBills() {
         if (!this.data.userInfo?.id) {
             wx.showToast({ title: '请先登录', icon: 'none' });
-            // 使用模拟数据进行测试
-            this.loadMockBills();
+            // 清空账单数据，不使用模拟数据
+            this.setData({ bills: [], selectedBills: [], totalAmount: 0 });
             return;
         }
 
         this.setData({ loading: true });
         
-        console.log('请求账单API:', `http://localhost:8000/api/property/bills?user_id=${this.data.userInfo.id}&status=unpaid`);
+        console.log('请求账单API:', `${API_PROPERTY_URL}/bills?user_id=${this.data.userInfo.id}&status=unpaid`);
         
         wx.request({
-            url: 'http://localhost:8000/api/property/bills',
+            url: `${API_PROPERTY_URL}/bills`,
             method: 'GET',
             data: {
                 user_id: this.data.userInfo.id,
@@ -111,82 +112,20 @@ Page({
                     const errorMsg = (res.data && res.data.message) || '获取账单失败';
                     console.error('API响应错误:', res);
                     wx.showToast({ title: errorMsg, icon: 'none' });
-                    
-                    // 如果API失败，加载模拟数据
-                    this.loadMockBills();
+                    // 清空账单数据，不使用模拟数据
+                    this.setData({ bills: [], selectedBills: [], totalAmount: 0 });
                 }
             },
             fail: (error) => {
                 console.error('网络请求失败:', error);
-                wx.showToast({ title: '网络错误，使用测试数据', icon: 'none' });
-                
-                // 如果网络错误，加载模拟数据
-                this.loadMockBills();
+                wx.showToast({ title: '网络请求失败，请稍后重试', icon: 'none' });
+                // 清空账单数据，不使用模拟数据
+                this.setData({ bills: [], selectedBills: [], totalAmount: 0 });
             },
             complete: () => {
                 this.setData({ loading: false });
             }
         });
-    },
-
-    // 加载模拟账单数据（用于测试）
-    loadMockBills() {
-        const mockBills = [
-            {
-                id: 1,
-                bill_no: 'BILL202501010001',
-                title: '2025年1月物业管理费',
-                fee_type: 'property',
-                fee_type_display: '物业费',
-                amount: '223.75',
-                status: 'unpaid',
-                status_display: '待支付',
-                due_date: '2025-02-15',
-                period_display: '2025年1月',
-                is_overdue: false,
-                house_info: {
-                    address: '1栋1单元101室',
-                    area: '89.5'
-                },
-                user_info: {
-                    name: '测试用户',
-                    phone: '13800138001'
-                },
-                amountCents: 22375
-            },
-            {
-                id: 2,
-                bill_no: 'BILL202501010002',
-                title: '2025年1月车位管理费',
-                fee_type: 'parking',
-                fee_type_display: '停车费',
-                amount: '100.00',
-                status: 'unpaid',
-                status_display: '待支付',
-                due_date: '2025-02-15',
-                period_display: '2025年1月',
-                is_overdue: false,
-                house_info: {
-                    address: '1栋1单元101室',
-                    area: '89.5'
-                },
-                user_info: {
-                    name: '测试用户',
-                    phone: '13800138001'
-                },
-                amountCents: 10000
-            }
-        ];
-
-        this.setData({ bills: mockBills });
-        
-        // 默认选中所有账单
-        const allBillIds = mockBills.map(bill => bill.id.toString());
-        this.setData({ selectedBills: allBillIds });
-        this.calculateTotal();
-        this.updateOverdueStatus();
-        
-        console.log('加载模拟账单数据:', mockBills);
     },
 
     onBillChange(event: any) {
@@ -242,7 +181,7 @@ Page({
         
         for (const billId of selectedBills) {
             wx.request({
-                url: `http://localhost:8000/api/property/bills/${billId}/pay`,
+                url: `${API_PROPERTY_URL}/bills/${billId}/pay`,
                 method: 'POST',
                 header: {
                     'content-type': 'application/json'

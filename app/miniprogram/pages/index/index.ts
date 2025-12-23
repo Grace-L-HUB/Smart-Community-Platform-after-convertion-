@@ -1,4 +1,7 @@
 // pages/index/index.ts
+const API_BASE_URL = 'http://127.0.0.1:8000/api'
+const API_PROPERTY_URL = 'http://127.0.0.1:8000/api/property'
+
 Page({
     data: {
         userInfo: {
@@ -6,25 +9,42 @@ Page({
         },
         // 最新公告通知
         latestNotice: {
-            title: '关于小区正在进行绿化维护的通知',
-            content: '预计本周三上午9点到12点...',
+            title: '',
+            content: '',
             id: 0
         },
         showNotice: false,
         // 用户房屋绑定信息
-        userBuildings: [] as string[]
+        userBuildings: [] as string[],
+        // 系统配置信息
+        systemConfig: {
+            customerServicePhone: ''
+        },
+        // 社区信息
+        communityInfo: {
+            name: '',
+            address: ''
+        },
+        // 天气信息
+        weatherInfo: {
+            condition: '晴',
+            temperature: '26'
+        }
     },
 
     onLoad() {
         // Check login status, etc.
         this.loadUserBuildings();
         this.loadLatestNotice();
+        this.loadCustomerServicePhone();
+        this.loadCommunityInfo();
+        this.loadWeatherInfo();
     },
 
     // 加载最新全员通知
     loadLatestNotice() {
         wx.request({
-            url: 'http://127.0.0.1:8000/api/property/announcements',
+            url: `${API_PROPERTY_URL}/announcements`,
             method: 'GET',
             success: (res: any) => {
                 if (res.statusCode === 200 && res.data.code === 200) {
@@ -56,12 +76,111 @@ Page({
                     }
                 } else {
                     console.error('获取最新通知失败:', res.data);
-                    // 保持默认显示
+                    // 没有通知时隐藏通知栏
+                    this.setData({ showNotice: false });
                 }
             },
             fail: (err) => {
                 console.error('获取最新通知网络请求失败:', err);
-                // 保持默认显示
+                // 网络失败时隐藏通知栏
+                this.setData({ showNotice: false });
+            }
+        });
+    },
+
+    // 加载客服电话配置
+    loadCustomerServicePhone() {
+        wx.request({
+            url: `${API_BASE_URL}/system/config`,
+            method: 'GET',
+            success: (res: any) => {
+                if (res.statusCode === 200 && res.data.code === 200) {
+                    const config = res.data.data || {};
+                    this.setData({
+                        systemConfig: {
+                            customerServicePhone: config.customer_service_phone || '400-123-4567'
+                        }
+                    });
+                } else {
+                    console.error('获取系统配置失败:', res.data);
+                    // 使用默认客服电话
+                    this.setData({
+                        systemConfig: {
+                            customerServicePhone: '400-123-4567'
+                        }
+                    });
+                }
+            },
+            fail: (err) => {
+                console.error('获取系统配置网络请求失败:', err);
+                // 使用默认客服电话
+                this.setData({
+                    systemConfig: {
+                        customerServicePhone: '400-123-4567'
+                    }
+                });
+            }
+        });
+    },
+
+    // 加载社区信息
+    loadCommunityInfo() {
+        wx.request({
+            url: `${API_PROPERTY_URL}/community/info`,
+            method: 'GET',
+            success: (res: any) => {
+                if (res.statusCode === 200 && res.data.code === 200) {
+                    const community = res.data.data || {};
+                    this.setData({
+                        communityInfo: {
+                            name: community.name || '阳光花园社区',
+                            address: community.address || ''
+                        }
+                    });
+                } else {
+                    console.error('获取社区信息失败:', res.data);
+                    // 使用默认社区名称
+                    this.setData({
+                        communityInfo: {
+                            name: '阳光花园社区',
+                            address: ''
+                        }
+                    });
+                }
+            },
+            fail: (err) => {
+                console.error('获取社区信息网络请求失败:', err);
+                // 使用默认社区名称
+                this.setData({
+                    communityInfo: {
+                        name: '阳光花园社区',
+                        address: ''
+                    }
+                });
+            }
+        });
+    },
+
+    // 加载天气信息
+    loadWeatherInfo() {
+        wx.request({
+            url: `${API_PROPERTY_URL}/weather`,
+            method: 'GET',
+            success: (res: any) => {
+                if (res.statusCode === 200 && res.data.code === 200) {
+                    const weather = res.data.data || {};
+                    this.setData({
+                        weatherInfo: {
+                            condition: weather.condition || '晴',
+                            temperature: weather.temperature || '26'
+                        }
+                    });
+                } else {
+                    console.error('获取天气信息失败:', res.data);
+                }
+            },
+            fail: (err) => {
+                console.error('获取天气信息网络请求失败:', err);
             }
         });
     },
@@ -141,14 +260,15 @@ Page({
 
     onQuickAction(e: any) {
         const action = e.currentTarget.dataset.action;
-        if (action === 'open') {
-            wx.showToast({
-                title: '开门中...',
-                icon: 'loading'
+        if (action === 'repair') {
+            // 跳转到报事报修页面
+            wx.navigateTo({
+                url: '/pages/repair/repair'
             });
         } else if (action === 'call') {
-            wx.makePhoneCall({
-                phoneNumber: '400-123-4567'
+            // 跳转到常用电话页面
+            wx.navigateTo({
+                url: '/pages/services/contacts/contacts'
             });
         }
     }

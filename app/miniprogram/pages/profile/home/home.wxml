@@ -1,0 +1,81 @@
+<view class="container">
+  <!-- 加载状态 -->
+  <view wx:if="{{loading}}" class="loading-container">
+    <van-loading type="spinner" color="#1989fa" />
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <!-- 错误状态 -->
+  <view wx:elif="{{error}}" class="error-container">
+    <van-empty description="{{error}}">
+      <van-button round type="danger" class="bottom-button" bindtap="onRefresh">
+        重新加载
+      </van-button>
+    </van-empty>
+  </view>
+
+  <!-- 个人主页内容 -->
+  <view wx:else>
+    <!-- 用户基本信息 -->
+    <view class="profile-header">
+      <view class="avatar-container">
+        <image class="avatar" src="{{userInfo.avatar_url || 'https://img.yzcdn.cn/vant/cat.jpeg'}}"></image>
+      </view>
+      <view class="info-text">
+        <text class="nickname">{{userInfo.display_name || userInfo.nickname || '未设置昵称'}}</text>
+        <text class="uid">ID: {{userInfo.id}}</text>
+        <text class="phone" wx:if="{{userInfo.phone}}">{{userInfo.phone}}</text>
+      </view>
+      <view class="vip-card">
+        <view class="flex-between">
+          <text class="vip-title">
+            <text wx:if="{{userInfo.role === 0}}">普通居民</text>
+            <text wx:elif="{{userInfo.role === 1}}">物业人员 • 金卡</text>
+            <text wx:elif="{{userInfo.role === 2}}">商户 • 金卡</text>
+            <text wx:elif="{{userInfo.role === 3}}">管理员 • 钻石卡</text>
+            <text wx:else>社区成员</text>
+          </text>
+          <van-icon 
+            name="{{userInfo.role >= 1 ? 'gem' : 'user-o'}}" 
+            color="{{userInfo.role >= 1 ? '#d4af37' : '#999'}}" 
+            size="20px" />
+        </view>
+        <text class="vip-desc">
+          <text wx:if="{{userInfo.role === 0}}">享受社区基础服务</text>
+          <text wx:elif="{{userInfo.role === 1}}">享受物业管理权限</text>
+          <text wx:elif="{{userInfo.role === 2}}">享受商户入驻服务</text>
+          <text wx:elif="{{userInfo.role === 3}}">享受管理员特权</text>
+          <text wx:else>享受社区服务</text>
+        </text>
+      </view>
+    </view>
+
+    <!-- 用户详细信息 -->
+    <view class="user-detail-card mt-20 p-30">
+      <van-cell-group inset>
+        <van-cell title="真实姓名" value="{{userInfo.real_name || '未设置'}}">
+          <van-button size="small" type="primary" bindtap="goToEditProfile">编辑</van-button>
+        </van-cell>
+        <van-cell title="性别" value="{{userInfo.gender === 1 ? '男' : (userInfo.gender === 2 ? '女' : '未设置')}}">
+          <van-button size="small" type="primary" bindtap="goToEditProfile">编辑</van-button>
+        </van-cell>
+        <van-cell title="生日" value="{{userInfo.birthday || '未设置'}}">
+          <van-button size="small" type="primary" bindtap="goToEditProfile">编辑</van-button>
+        </van-cell>
+        <van-cell title="地址" value="{{userInfo.full_address || '未设置'}}">
+          <van-button size="small" type="primary" bindtap="goToEditProfile">编辑</van-button>
+        </van-cell>
+        <van-cell title="注册时间" value="{{userInfo.created_at || '未设置'}}">
+          <van-button size="small" type="primary" bindtap="goToEditProfile">编辑</van-button>
+        </van-cell>
+      </van-cell-group>
+    </view>
+
+    <!-- 底部操作 -->
+    <view class="bottom-actions mt-20 p-30">
+      <van-button block round color="#07c160" bindtap="goToEditProfile">
+        编辑个人资料
+      </van-button>
+    </view>
+  </view>
+</view>

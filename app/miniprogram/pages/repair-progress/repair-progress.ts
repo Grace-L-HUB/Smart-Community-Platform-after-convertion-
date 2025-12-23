@@ -1,4 +1,6 @@
 // pages/repair-progress/repair-progress.ts
+const API_PROPERTY_URL = 'http://127.0.0.1:8000/api/property'
+
 Page({
   data: {
     // 搜索和筛选
@@ -80,7 +82,7 @@ Page({
     }
     
     wx.request({
-      url: `http://127.0.0.1:8000/api/property/repair-orders?${queryParams}`,
+      url: `${API_PROPERTY_URL}/repair-orders?${queryParams}`,
       method: 'GET',
       header: {
         'Authorization': `Bearer ${wx.getStorageSync('token') || ''}`
@@ -109,27 +111,29 @@ Page({
           });
         } else {
           console.error('获取工单列表失败:', res.data);
-          // 使用备用数据
-          const mockData = this.getMockOrderList();
-          const newList = refresh ? mockData.list : [...this.data.orderList, ...mockData.list];
+          // 清空列表，不使用备用数据
           this.setData({
-            orderList: newList,
-            hasMore: mockData.hasMore,
-            page: this.data.page + 1,
+            orderList: [],
+            hasMore: false,
             loading: false
+          });
+          wx.showToast({
+            title: res.data.message || '获取工单列表失败',
+            icon: 'none'
           });
         }
       },
       fail: (err) => {
         console.error('获取工单列表网络请求失败:', err);
-        // 使用备用数据
-        const mockData = this.getMockOrderList();
-        const newList = refresh ? mockData.list : [...this.data.orderList, ...mockData.list];
+        // 清空列表，不使用备用数据
         this.setData({
-          orderList: newList,
-          hasMore: mockData.hasMore,
-          page: this.data.page + 1,
+          orderList: [],
+          hasMore: false,
           loading: false
+        });
+        wx.showToast({
+          title: '网络请求失败，请稍后重试',
+          icon: 'none'
         });
       }
     });
@@ -293,7 +297,7 @@ Page({
     wx.showLoading({ title: '提交中...' });
     
     wx.request({
-      url: `http://127.0.0.1:8000/api/property/repair-orders/${selectedOrder.id}/rating`,
+      url: `${API_PROPERTY_URL}/repair-orders/${selectedOrder.id}/rating`,
       method: 'POST',
       data: {
         rating,

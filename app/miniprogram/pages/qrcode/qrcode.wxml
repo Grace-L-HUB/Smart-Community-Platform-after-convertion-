@@ -50,6 +50,7 @@
   <!-- 用户信息卡片 - 身份码 -->
   <view class="info-section card" wx:if="{{type !== 'visitor'}}">
     <van-cell-group border="{{false}}">
+      <van-cell title="社区" value="{{communityInfo.name || '阳光花园社区'}}" />
       <van-cell title="姓名" value="{{userInfo.name}}" />
       <van-cell title="房号" value="{{userInfo.room}}" />
       <van-cell title="手机号" value="{{userInfo.phone}}" wx:if="{{userInfo.phone}}" />
@@ -60,6 +61,7 @@
   <!-- 访客信息卡片 - 访客码 -->
   <view class="info-section card" wx:if="{{type === 'visitor'}}">
     <van-cell-group border="{{false}}">
+      <van-cell title="社区" value="{{communityInfo.name || '阳光花园社区'}}" />
       <van-cell title="访客姓名" value="{{visitorInfo.name}}" />
       <van-cell title="手机号" value="{{visitorInfo.phone}}" />
       <van-cell title="访问时间" value="{{visitorInfo.visitTime}}" />

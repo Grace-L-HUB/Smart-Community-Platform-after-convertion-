@@ -1,3 +1,4 @@
+// pages/profile/settings/settings.js
 Page({
     onAccountSecurity() {
         wx.showModal({
@@ -49,4 +50,4 @@ Page({
             }
         });
     }
-});
+})

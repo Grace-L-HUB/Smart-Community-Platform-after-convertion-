@@ -1,8 +1,8 @@
-// pages/services/services.ts
+// pages/services/services.js
 Page({
     data: {
         active: 0,
-        shops: [] as any[],
+        shops: [],
         loading: false,
         error: ''
     },
@@ -18,11 +18,11 @@ Page({
         wx.request({
             url: 'http://127.0.0.1:8000/api/merchant/profiles/',
             method: 'GET',
-            success: (res: any) => {
+            success: (res) => {
                 console.log('商户列表响应:', res.data);
                 
                 if (res.statusCode === 200 && res.data.success) {
-                    const merchants = res.data.data.map((merchant: any) => ({
+                    const merchants = res.data.data.map((merchant) => ({
                         id: merchant.id,
                         name: merchant.shop_name,
                         desc: merchant.shop_description || '优质商户，诚信经营',
@@ -33,7 +33,7 @@ Page({
                         phone: merchant.shop_phone,
                         address: merchant.shop_address,
                         isActive: merchant.is_active
-                    })).filter((merchant: any) => merchant.isActive); // 只显示启用的商户
+                    })).filter((merchant) => merchant.isActive); // 只显示启用的商户
                     
                     this.setData({
                         shops: merchants,
@@ -97,7 +97,7 @@ Page({
         this.loadMerchants();
     },
 
-    onShopClick(event: any) {
+    onShopClick(event) {
         const shopId = event.currentTarget.dataset.id;
         wx.navigateTo({
             url: `/pages/shop/detail/detail?id=${shopId}`

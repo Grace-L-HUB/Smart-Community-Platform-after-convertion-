@@ -14,6 +14,10 @@ Page({
             room: '',
             phone: ''
         },
+        // 社区信息
+        communityInfo: {
+            name: ''
+        },
         // 访客相关
         visitorId: '',
         visitorInfo: {
@@ -48,6 +52,9 @@ Page({
         } else {
             this.initUserInfo();
         }
+        
+        // 获取社区信息
+        this.loadCommunityInfo();
     },
 
     onReady() {
@@ -139,6 +146,43 @@ Page({
                 // 网络错误，使用默认文本
                 this.setData({
                     'userInfo.room': '暂未绑定房屋'
+                });
+            }
+        });
+    },
+
+    // 获取社区信息
+    loadCommunityInfo() {
+        wx.request({
+            url: `${API_BASE_URL}/property/community/info`,
+            method: 'GET',
+            header: {
+                'Authorization': `Bearer ${wx.getStorageSync('token') || ''}`
+            },
+            success: (res: any) => {
+                console.log('社区信息响应:', res.data);
+                if (res.statusCode === 200 && res.data.code === 200) {
+                    this.setData({
+                        communityInfo: {
+                            name: res.data.data?.name || '阳光花园社区'
+                        }
+                    });
+                } else {
+                    // API错误，使用默认文本
+                    this.setData({
+                        communityInfo: {
+                            name: '阳光花园社区'
+                        }
+                    });
+                }
+            },
+            fail: (err) => {
+                console.error('获取社区信息失败:', err);
+                // 网络错误，使用默认文本
+                this.setData({
+                    communityInfo: {
+                        name: '阳光花园社区'
+                    }
                 });
             }
         });

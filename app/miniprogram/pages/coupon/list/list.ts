@@ -126,10 +126,10 @@ Page({
             wx.navigateTo({
                 url: `/pages/coupon/qrcode/qrcode?id=${couponId}`
             })
-        } else {
-            // 显示优惠券详情
+        } else if (coupon) {
+            // 显示优惠券详情（使用二维码页面展示）
             wx.navigateTo({
-                url: `/pages/coupon/detail/detail?id=${couponId}`
+                url: `/pages/coupon/qrcode/qrcode?id=${couponId}`
             })
         }
     },

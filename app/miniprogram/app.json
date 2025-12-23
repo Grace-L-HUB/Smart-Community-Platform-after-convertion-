@@ -37,7 +37,8 @@
     "pages/message/chat/chat",
     "pages/coupon/list/list",
     "pages/coupon/market/market",
-    "pages/order/create/create"
+    "pages/order/create/create",
+    "pages/profile/home/home"
   ],
   "window": {
     "navigationBarTextStyle": "black",

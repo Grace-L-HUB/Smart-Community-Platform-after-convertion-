@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://127.0.0.1:8000/api/merchant'
+const API_BASE_URL = 'http://127.0.0.1:8000/api'
 
 Page({
     data: {
@@ -129,13 +129,34 @@ Page({
 
     // 联系商家
     onContactMerchant(e: any) {
-        wx.showModal({
-            title: '联系商家',
-            content: '是否拨打10011001011（仅为模拟）',
-            confirmText: '拨打',
-            cancelText: '不拨打',
-            success: (res) => {
-                // 无论选择哪个都直接结束，不做任何操作
+        const merchantId = e.currentTarget.dataset.merchantId;
+        // 从API获取商家联系电话
+        wx.request({
+            url: `${API_BASE_URL}/merchant/profiles/${merchantId}`,
+            method: 'GET',
+            success: (res: any) => {
+                if (res.statusCode === 200 && res.data.success) {
+                    const phone = res.data.data.phone || '400-123-4567';
+                    wx.showModal({
+                        title: '联系商家',
+                        content: `是否拨打${phone}`,
+                        confirmText: '拨打',
+                        cancelText: '不拨打',
+                        success: (modalRes) => {
+                            if (modalRes.confirm) {
+                                wx.makePhoneCall({
+                                    phoneNumber: phone
+                                });
+                            }
+                        }
+                    });
+                } else {
+                    wx.showToast({ title: '获取商家电话失败', icon: 'none' });
+                }
+            },
+            fail: (error) => {
+                console.error('获取商家电话失败:', error);
+                wx.showToast({ title: '获取商家电话失败', icon: 'none' });
             }
         });
     },

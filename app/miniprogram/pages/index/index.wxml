@@ -2,8 +2,8 @@
   <!-- Header Section -->
   <view class="header-section">
     <view class="user-greeting">
-      <text class="greeting-text">早安，业主</text>
-      <text class="weather-text">晴 26°C</text>
+      <text class="greeting-text">早安，{{userInfo.nickName || '业主'}}</text>
+      <text class="weather-text">{{weatherInfo.condition}} {{weatherInfo.temperature}}°C</text>
     </view>
     <view class="notification-icon">
       <van-icon name="bell" size="24px" color="#fff" />
@@ -17,7 +17,7 @@
       <text class="qr-text">点击出示身份码</text>
     </view>
     <view class="identity-info">
-      <text class="community-name">阳光花园社区</text>
+      <text class="community-name">{{communityInfo.name || '阳光花园社区'}}</text>
       <text class="user-role">已认证业主</text>
     </view>
   </view>
@@ -36,9 +36,9 @@
   <!-- Quick Actions -->
   <view class="section-title">快捷服务</view>
   <van-grid column-num="4" border="{{ false }}" gutter="10">
-    <van-grid-item icon="lock" text="一键开门" bind:click="onQuickAction" data-action="open" />
+    <van-grid-item icon="repair" text="报事报修" bind:click="onQuickAction" data-action="repair" />
     <van-grid-item icon="friends" text="访客邀请" link-type="navigateTo" url="/pages/services/visitor/visitor" />
     <van-grid-item icon="logistics" text="快递代收" link-type="navigateTo" url="/pages/express/express" />
-    <van-grid-item icon="phone" text="一键呼叫" bind:click="onQuickAction" data-action="call" />
+    <van-grid-item icon="phone" text="常用电话" bind:click="onQuickAction" data-action="call" />
   </van-grid>
 </view>

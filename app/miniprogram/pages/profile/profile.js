@@ -1,4 +1,4 @@
-// pages/profile/profile.ts
+// pages/profile/profile.js
 const API_BASE_URL = 'http://127.0.0.1:8000/api'
 const API_AUTH_URL = 'http://127.0.0.1:8000/api/auth'
 const API_UPLOAD_URL = 'http://127.0.0.1:8000/api/upload'
@@ -52,7 +52,7 @@ Page({
             header: {
                 'Authorization': `Bearer ${wx.getStorageSync('token') || ''}`
             },
-            success: (res: any) => {
+            success: (res) => {
                 console.log('用户信息请求成功:', res.data)
                 if (res.statusCode === 200 && res.data.code === 200) {
                     const userInfo = res.data.data

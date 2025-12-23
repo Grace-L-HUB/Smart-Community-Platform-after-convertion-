@@ -1,14 +1,6 @@
 // 物业管理 Store
 import { defineStore } from 'pinia'
 import {
-    mockHouses,
-    mockWorkOrders,
-    mockBills,
-    mockAnnouncements,
-    mockActivities,
-    mockAccessLogs,
-    mockEmployees,
-    mockPropertyStats,
     type House,
     type WorkOrder,
     type Bill,
@@ -16,7 +8,7 @@ import {
     type Activity,
     type AccessLog,
     type Employee,
-} from '@/mocks/property'
+} from '@/types/property'
 import {
     propertyAPI,
     type HouseBindingApplication,
@@ -325,16 +317,16 @@ export const usePropertyStore = defineStore('property', {
                 // 转换报修工单数据为前端格式
                 this.workOrders = this.convertRepairOrdersToFrontend(this.repairOrdersAPI)
 
-                // 保持mock数据用于其他功能
-                this.bills = [...mockBills]
-                this.activities = [...mockActivities]
-
                 // 加载门禁日志数据
                 await this.loadAccessLogs()
+                
+                // 初始化空数据
+                this.bills = []
+                this.activities = []
 
             } catch (error) {
                 console.error('加载数据失败:', error)
-                // 失败时使用mock数据作为fallback
+                // 失败时初始化空数据
                 this.houseBindingApplications = []
                 this.parkingBindingApplications = []
                 this.approvedHouseBindings = []
@@ -342,12 +334,14 @@ export const usePropertyStore = defineStore('property', {
                 this.announcementsAPI = []
                 this.repairOrdersAPI = []
                 this.repairEmployeesAPI = []
-                this.houses = [...mockHouses] // fallback to mock data
-                this.parkings = [] // 车位数据没有mock，置空
-                this.stats = { ...mockPropertyStats } // fallback to mock stats
-                this.employees = [...mockEmployees] // fallback to mock employees
-                this.announcements = [...mockAnnouncements] // fallback to mock announcements
-                this.workOrders = [...mockWorkOrders] // fallback to mock work orders
+                this.houses = []
+                this.parkings = []
+                this.stats = {}
+                this.employees = []
+                this.announcements = []
+                this.workOrders = []
+                this.bills = []
+                this.activities = []
             }
 
             this.loading = false
