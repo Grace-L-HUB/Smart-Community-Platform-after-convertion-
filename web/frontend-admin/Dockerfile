@@ -17,6 +17,7 @@ ARG API_BASE_URL=http://localhost:8000/api
 
 # 构建应用（注入环境变量）
 ENV VITE_API_BASE_URL=${API_BASE_URL}
+ENV NODE_OPTIONS=--max-old-space-size=2048
 RUN npm run build-only
 
 # 生产阶段

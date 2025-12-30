@@ -46,24 +46,18 @@ export default defineConfig({
         configFile: 'src/styles/settings.scss',
       },
     }),
-    Fonts({
-      fontsource: {
-        families: [
-          {
-            name: 'Roboto',
-            weights: [100, 300, 400, 500, 700, 900],
-            styles: ['normal', 'italic'],
-          },
-        ],
-        // 使用国内镜像
-        inject: true,
-      },
-      // 使用 Google Fonts 国内镜像
-      google: {
-        preconnect: true,
-        display: 'swap',
-      },
-    }),
+    // Fonts({
+    //   fontsource: {
+    //     families: [
+    //       {
+    //         name: 'Roboto',
+    //         weights: [100, 300, 400, 500, 700, 900],
+    //         styles: ['normal', 'italic'],
+    //       },
+    //     ],
+    //     inject: false,
+    //   },
+    // }),
   ],
   optimizeDeps: {
     exclude: [
