@@ -26,7 +26,8 @@ SECRET_KEY = os.getenv('SECRET_KEY', "django-insecure-v2-00z==uu(p^-@w7$z%n&9g!0
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',') if os.getenv('ALLOWED_HOSTS') else []
+# ALLOWED_HOSTS 配置：支持环境变量，如果没有设置则允许所有（仅开发环境）
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',') if os.getenv('ALLOWED_HOSTS') else ['*']
 
 
 # Application definition
@@ -207,7 +208,8 @@ CORS_ALLOWED_METHODS = [
 ]
 
 # 对于API接口，禁用CSRF保护
-CSRF_TRUSTED_ORIGINS = [
+# 从环境变量读取，如果没有则使用默认值
+CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',') if os.getenv('CSRF_TRUSTED_ORIGINS') else [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "https://servicewechat.com",
