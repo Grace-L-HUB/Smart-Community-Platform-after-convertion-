@@ -88,7 +88,7 @@ services:
       context: ./web/frontend-admin
       dockerfile: Dockerfile
       args:
-        - API_BASE_URL=${API_BASE_URL:-http://backend:8000/api}
+        - API_BASE_URL=${API_BASE_URL:-/api}
     container_name: smart_community_frontend
     restart: always
     ports:
