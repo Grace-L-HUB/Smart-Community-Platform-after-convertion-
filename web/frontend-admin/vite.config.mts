@@ -71,13 +71,7 @@ export default defineConfig({
   build: {
     // 优化构建配置
     target: 'es2015',
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
-      },
-    },
+    minify: 'esbuild', // 使用esbuild（Vite默认，不需要额外安装terser）
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
