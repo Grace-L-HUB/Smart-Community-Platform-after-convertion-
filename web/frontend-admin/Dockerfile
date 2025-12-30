@@ -17,7 +17,7 @@ ARG API_BASE_URL=http://localhost:8000/api
 
 # 构建应用（注入环境变量）
 ENV VITE_API_BASE_URL=${API_BASE_URL}
-RUN npm run build
+RUN npm run build-only
 
 # 生产阶段
 FROM nginx:alpine
