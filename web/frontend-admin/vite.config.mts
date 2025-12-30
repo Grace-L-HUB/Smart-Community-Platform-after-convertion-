@@ -46,17 +46,17 @@ export default defineConfig({
         configFile: 'src/styles/settings.scss',
       },
     }),
-    // Fonts({
-    //   fontsource: {
-    //     families: [
-    //       {
-    //         name: 'Roboto',
-    //         weights: [100, 300, 400, 500, 700, 900],
-    //         styles: ['normal', 'italic'],
-    //       },
-    //     ],
-    //   },
-    // }),
+    Fonts({
+      fontsource: {
+        families: [
+          {
+            name: 'Roboto',
+            weights: [100, 300, 400, 500, 700, 900],
+            styles: ['normal', 'italic'],
+          },
+        ],
+      },
+    }),
   ],
   optimizeDeps: {
     exclude: [
