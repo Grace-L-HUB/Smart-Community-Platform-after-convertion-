@@ -55,6 +55,13 @@ export default defineConfig({
             styles: ['normal', 'italic'],
           },
         ],
+        // 使用国内镜像
+        inject: true,
+      },
+      // 使用 Google Fonts 国内镜像
+      google: {
+        preconnect: true,
+        display: 'swap',
       },
     }),
   ],
