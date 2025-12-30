@@ -168,6 +168,29 @@ REST_FRAMEWORK = {
     ],
 }
 
+# drf-spectacular 配置
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Smart Community API',
+    'DESCRIPTION': '智慧社区管理系统 API 文档',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'SCHEMA_PATH_PREFIX': '/api',
+    'COMPONENT_SPLIT_REQUEST': True,
+    'TAGS': [
+        {'name': '认证', 'description': '用户认证相关接口'},
+        {'name': '用户', 'description': '用户信息管理'},
+        {'name': '房产', 'description': '房产管理相关接口'},
+        {'name': '车位', 'description': '车位管理相关接口'},
+        {'name': '访客', 'description': '访客邀请管理'},
+        {'name': '公告', 'description': '公告管理'},
+        {'name': '报修', 'description': '报修工单管理'},
+        {'name': '缴费', 'description': '费用和账单管理'},
+        {'name': '门禁', 'description': '门禁日志管理'},
+        {'name': '社区', 'description': '社区功能'},
+        {'name': '商户', 'description': '商户管理'},
+    ],
+}
+
 AUTH_USER_MODEL = 'users.User'
 
 # WeChat Configuration
