@@ -26,8 +26,15 @@ SECRET_KEY = os.getenv('SECRET_KEY', "django-insecure-v2-00z==uu(p^-@w7$z%n&9g!0
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
 
-# ALLOWED_HOSTS 配置：支持环境变量，如果没有设置则允许所有（仅开发环境）
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',') if os.getenv('ALLOWED_HOSTS') else ['*']
+# ALLOWED_HOSTS 配置：支持环境变量
+# Django 不支持 '*'，需要明确列出所有允许的主机
+allowed_hosts_env = os.getenv('ALLOWED_HOSTS', '')
+if allowed_hosts_env:
+    # 按逗号分割并去除空白
+    ALLOWED_HOSTS = [h.strip() for h in allowed_hosts_env.split(',') if h.strip()]
+else:
+    # 默认值：允许本地访问
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 
 # Application definition
