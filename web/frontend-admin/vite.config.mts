@@ -29,7 +29,7 @@ export default defineConfig({
       ],
       dts: 'src/auto-imports.d.ts',
       eslintrc: {
-        enabled: true,
+        enabled: false, // 构建时禁用eslintrc生成
       },
       vueTemplate: true,
     }),
@@ -67,6 +67,30 @@ export default defineConfig({
       'unplugin-vue-router/data-loaders',
       'unplugin-vue-router/data-loaders/basic',
     ],
+  },
+  build: {
+    // 优化构建配置
+    target: 'es2015',
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+      },
+    },
+    chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vue-vendor': ['vue', 'vue-router', 'pinia'],
+          'vuetify-vendor': ['vuetify'],
+          'utils-vendor': ['axios', 'dayjs'],
+        },
+      },
+    },
+    // 减少并发以提高稳定性
+    reportCompressedSize: false,
+    sourcemap: false,
   },
   define: { 'process.env': {} },
   resolve: {

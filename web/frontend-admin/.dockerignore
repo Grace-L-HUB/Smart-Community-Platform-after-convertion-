@@ -31,4 +31,11 @@ Thumbs.db
 
 # Tests
 coverage/
+.nyc_output
 
+# TypeScript
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
