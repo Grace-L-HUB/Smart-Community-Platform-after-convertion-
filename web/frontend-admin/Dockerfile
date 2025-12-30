@@ -4,13 +4,13 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # 设置Node.js内存限制和优化选项
-ENV NODE_OPTIONS="--max-old-space-size=3072 --no-warnings"
+ENV NODE_OPTIONS="--max-old-space-size=2048"
 
 # 复制package文件
 COPY package*.json ./
 
 # 安装依赖（包括devDependencies，因为构建需要vite等工具）
-RUN npm install --legacy-peer-deps --no-audit
+RUN npm ci
 
 # 复制源代码
 COPY . .
