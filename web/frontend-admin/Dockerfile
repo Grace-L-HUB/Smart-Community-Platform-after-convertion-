@@ -5,13 +5,12 @@ WORKDIR /app
 
 # 设置Node.js内存限制和优化选项
 ENV NODE_OPTIONS="--max-old-space-size=3072 --no-warnings"
-ENV NODE_ENV=production
 
 # 复制package文件
 COPY package*.json ./
 
-# 安装依赖（使用npm install而不是npm ci，更稳定）
-RUN npm install --legacy-peer-deps --prefer-offline --no-audit
+# 安装依赖（包括devDependencies，因为构建需要vite等工具）
+RUN npm install --legacy-peer-deps --no-audit
 
 # 复制源代码
 COPY . .
@@ -21,9 +20,10 @@ ARG API_BASE_URL=http://localhost:8000/api
 
 # 构建应用（注入环境变量）
 ENV VITE_API_BASE_URL=${API_BASE_URL}
+ENV NODE_ENV=production
 
-# 构建应用（跳过type-check以加快构建速度）
-RUN npm run build-only -- --mode production
+# 构建应用
+RUN npm run build-only
 
 # 生产阶段
 FROM nginx:alpine
