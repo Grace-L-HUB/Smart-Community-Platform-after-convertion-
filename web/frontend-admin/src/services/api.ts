@@ -1,5 +1,6 @@
 // API 基础服务配置
-const API_BASE_URL = 'http://127.0.0.1:8000/api'
+// 支持环境变量，构建时注入
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'
 
 // 请求响应接口
 interface ApiResponse<T = any> {
