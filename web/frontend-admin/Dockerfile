@@ -10,7 +10,9 @@ ENV NODE_OPTIONS="--max-old-space-size=2048"
 COPY package*.json ./
 
 # 安装依赖（包括devDependencies，因为构建需要vite等工具）
-RUN npm ci
+# 使用 npm install 而不是 npm ci，因为 npm ci 要求 package-lock.json 必须与 package.json 完全匹配
+# 在服务器部署场景中，npm install 更稳定可靠
+RUN npm install --legacy-peer-deps
 
 # 复制源代码
 COPY . .
