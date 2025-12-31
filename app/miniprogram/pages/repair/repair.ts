@@ -1,4 +1,6 @@
 // pages/repair/repair.ts
+import { API_BASE_URL } from '../../config/api'
+
 Page({
     data: {
         // 报修类别：public-公共区域，household-入户维修
@@ -156,7 +158,7 @@ Page({
         
         // 提交报修工单到后端
         wx.request({
-            url: 'http://127.0.0.1:8000/api/property/repair-orders',
+            url: `${API_BASE_URL}/property/repair-orders`,
             method: 'POST',
             data: {
                 user_id: userInfo.user_id,
@@ -223,7 +225,7 @@ Page({
         }
 
         wx.request({
-            url: 'http://127.0.0.1:8000/api/property/house/my-houses',
+            url: `${API_BASE_URL}/property/house/my-houses`,
             method: 'GET',
             data: {
                 user_id: userInfo.user_id
@@ -312,7 +314,7 @@ Page({
     // 从后端获取报修选项数据
     loadRepairOptions() {
         wx.request({
-            url: 'http://127.0.0.1:8000/api/property/repair-orders/options',
+            url: `${API_BASE_URL}/property/repair-orders/options`,
             method: 'GET',
             success: (res: any) => {
                 if (res.statusCode === 200 && res.data.code === 200) {

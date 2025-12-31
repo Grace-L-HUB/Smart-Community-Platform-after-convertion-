@@ -239,7 +239,7 @@ async function uploadLogo(file: File) {
     const formData = new FormData()
     formData.append('logo', file)
 
-    const response = await fetch('http://127.0.0.1:8000/api/merchant/upload/logo/', {
+    const response = await fetch('http://139.224.17.154:8000/api/merchant/upload/logo/', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -363,7 +363,7 @@ function toFullUrl(path: string | undefined): string {
     return path
   }
   // 拼接后端地址
-  return `http://127.0.0.1:8000${path}`
+  return `http://139.224.17.154:8000${path}`
 }
 
 function getLogoUrl() {

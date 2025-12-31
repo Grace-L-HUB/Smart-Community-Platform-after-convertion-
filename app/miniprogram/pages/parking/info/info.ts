@@ -1,4 +1,6 @@
 // pages/parking/info/info.ts
+import { API_BASE_URL } from '../../config/api'
+
 interface ParkingInfo {
   id: number
   area: string
@@ -50,7 +52,7 @@ Page({
     wx.showLoading({ title: '加载中...' });
 
     wx.request({
-      url: `http://127.0.0.1:8000/api/parking/my-parkings?user_id=${userInfo.user_id}`,
+      url: `${API_BASE_URL}/parking/my-parkings?user_id=${userInfo.user_id}`,
       method: 'GET',
       header: {
         'Authorization': `Bearer ${wx.getStorageSync('token') || ''}`
@@ -161,7 +163,7 @@ Page({
     wx.showLoading({ title: '解绑中...' });
 
     wx.request({
-      url: `http://127.0.0.1:8000/api/parking/binding/unbind/${this.data.parkingInfo.id}`,
+      url: `${API_BASE_URL}/parking/binding/unbind/${this.data.parkingInfo.id}`,
       method: 'PATCH',
       header: {
         'content-type': 'application/json',

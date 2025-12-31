@@ -1,4 +1,6 @@
 // pages/house/info/info.ts
+import { API_BASE_URL } from '../../config/api'
+
 interface HouseInfo {
   id: number
   building: string
@@ -48,7 +50,7 @@ Page({
     wx.showLoading({ title: '加载中...' });
 
     wx.request({
-      url: `http://127.0.0.1:8000/api/property/house/my-houses?user_id=${userInfo.user_id}`,
+      url: `${API_BASE_URL}/property/house/my-houses?user_id=${userInfo.user_id}`,
       method: 'GET',
       header: {
         'Authorization': `Bearer ${wx.getStorageSync('token') || ''}`
@@ -150,7 +152,7 @@ Page({
     wx.showLoading({ title: '解绑中...' });
 
     wx.request({
-      url: `http://127.0.0.1:8000/api/property/house/binding/unbind/${this.data.houseInfo.id}`,
+      url: `${API_BASE_URL}/property/house/binding/unbind/${this.data.houseInfo.id}`,
       method: 'PATCH',
       header: {
         'content-type': 'application/json',

@@ -450,7 +450,7 @@ async function loadBills(loadMore = false) {
     params.append('page', pagination.value.page.toString())
     params.append('page_size', pagination.value.pageSize.toString())
     
-    const url = `http://localhost:8000/api/property/bills?${params.toString()}`
+    const url = `http://139.224.17.154:8000/api/property/bills?${params.toString()}`
     
     // 添加详细的调试日志
     console.log('=== 账单API调用详情 ===')
@@ -519,7 +519,7 @@ async function loadAllBills() {
     // 设置一个很大的page_size来获取所有数据
     params.append('page_size', '1000')
     
-    const url = `http://localhost:8000/api/property/bills?${params.toString()}`
+    const url = `http://139.224.17.154:8000/api/property/bills?${params.toString()}`
     
     // 添加详细的调试日志
     console.log('=== 加载所有账单 ===')
@@ -563,7 +563,7 @@ async function loadAllBills() {
 // 加载统计数据
 async function loadStats() {
   try {
-    const response = await fetch('http://localhost:8000/api/property/bills/stats')
+    const response = await fetch('http://139.224.17.154:8000/api/property/bills/stats')
     const result = await response.json()
     
     if (result.code === 200) {
@@ -579,7 +579,7 @@ async function loadFeeStandards() {
   if (!newBill.fee_type) return
   
   try {
-    const response = await fetch('http://localhost:8000/api/property/fee-standards')
+    const response = await fetch('http://139.224.17.154:8000/api/property/fee-standards')
     const result = await response.json()
     
     if (result.code === 200) {
@@ -595,7 +595,7 @@ async function loadFeeStandards() {
 // 催缴
 async function sendReminder(bill: Bill) {
   try {
-    const response = await fetch('http://localhost:8000/api/property/bills/reminder', {
+    const response = await fetch('http://139.224.17.154:8000/api/property/bills/reminder', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -639,7 +639,7 @@ async function handleGenerate() {
   try {
     generating.value = true
     
-    const response = await fetch('http://localhost:8000/api/property/bills/generate', {
+    const response = await fetch('http://139.224.17.154:8000/api/property/bills/generate', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

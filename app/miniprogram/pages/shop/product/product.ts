@@ -1,4 +1,6 @@
 // pages/shop/product/product.ts
+import { API_BASE_URL } from '../../config/api'
+
 Page({
     data: {
         productId: 0,
@@ -33,7 +35,7 @@ Page({
         this.setData({ loading: true, error: '' });
 
         wx.request({
-            url: `http://127.0.0.1:8000/api/merchant/product/public/${this.data.productId}/`,
+            url: `${API_BASE_URL}/merchant/product/public/${this.data.productId}/`,
             method: 'GET',
             success: (res: any) => {
                 console.log('商品详情响应:', res.data);
@@ -130,7 +132,7 @@ Page({
         if (!this.data.shopId) return;
         
         wx.request({
-            url: `http://127.0.0.1:8000/api/merchant/coupons/public/${this.data.shopId}/`,
+            url: `${API_BASE_URL}/merchant/coupons/public/${this.data.shopId}/`,
             method: 'GET',
             success: (res: any) => {
                 if (res.statusCode === 200 && res.data.success) {
@@ -173,7 +175,7 @@ Page({
         }
 
         wx.request({
-            url: 'http://127.0.0.1:8000/api/merchant/coupons/receive/',
+            url: `${API_BASE_URL}/merchant/coupons/receive/`,
             method: 'POST',
             data: {
                 coupon_id: couponId

@@ -29,7 +29,7 @@
 
 | API端点 | 请求方法 | 功能描述 | 对应页面 |
 |---------|---------|---------|---------|
-| `http://127.0.0.1:8000/api/merchant/profiles/` | GET | 获取商户列表(街角好店) | 服务页 (pages/services/services.ts) |
+| `http://139.224.17.154:8000/api/merchant/profiles/` | GET | 获取商户列表(街角好店) | 服务页 (pages/services/services.ts) |
 | `/property/announcements` | GET | 获取物业公告列表 | 公告页 (pages/services/announcements/announcements.ts) |
 | `/property/announcements/{id}` | GET | 获取公告详情 | 公告详情页 (pages/services/announcement-detail/announcement-detail.ts) |
 | `/property/housekeeping/` | GET | 获取家政服务列表 | 家政服务页 (pages/services/housekeeping/housekeeping.ts) |

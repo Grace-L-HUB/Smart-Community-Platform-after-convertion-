@@ -1,4 +1,6 @@
 // pages/parking/binding/binding.ts
+import { API_BASE_URL } from '../../../config/api'
+
 Page({
     data: {
         communityName: '阳光花园',
@@ -34,7 +36,7 @@ Page({
     // 从后端获取停车区域列表
     loadAreaList() {
         wx.request({
-            url: 'http://127.0.0.1:8000/api/parking/options/areas',
+            url: `${API_BASE_URL}/parking/options/areas`,
             method: 'GET',
             success: (res: any) => {
                 if (res.statusCode === 200 && res.data.code === 200) {
@@ -62,7 +64,7 @@ Page({
     // 根据停车区域获取车位号列表
     loadParkingSpaceList(area: string) {
         wx.request({
-            url: `http://127.0.0.1:8000/api/parking/options/spaces?area=${encodeURIComponent(area)}`,
+            url: `${API_BASE_URL}/parking/options/spaces?area=${encodeURIComponent(area)}`,
             method: 'GET',
             success: (res: any) => {
                 if (res.statusCode === 200 && res.data.code === 200) {
@@ -103,7 +105,7 @@ Page({
     // 获取车位身份选项列表
     loadIdentityList() {
         wx.request({
-            url: 'http://127.0.0.1:8000/api/parking/options/identities',
+            url: `${API_BASE_URL}/parking/options/identities`,
             method: 'GET',
             success: (res: any) => {
                 if (res.statusCode === 200 && res.data.code === 200) {
@@ -300,7 +302,7 @@ Page({
 
         // 提交车位绑定申请到后端
         wx.request({
-            url: 'http://127.0.0.1:8000/api/parking/binding/apply',
+            url: `${API_BASE_URL}/parking/binding/apply`,
             method: 'POST',
             data: {
                 user_id: userInfo.user_id,

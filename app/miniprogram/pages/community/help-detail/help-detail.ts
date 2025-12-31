@@ -1,5 +1,7 @@
 // pages/community/help-detail/help-detail.ts
-const API_BASE_URL = 'http://127.0.0.1:8000/api/community'
+import { API_BASE_URL } from '../../../config/api'
+const API_COMMUNITY_URL = 'http://139.224.17.154:8000/api/community'
+const MEDIA_BASE_URL = 'http://139.224.17.154:8000'
 
 Page({
     data: {
@@ -78,7 +80,7 @@ Page({
                             avatar: resp.responder.avatar ? 
                                 (resp.responder.avatar.startsWith('http') ? 
                                     resp.responder.avatar : 
-                                    `http://127.0.0.1:8000${resp.responder.avatar}`) : 
+                                    `${MEDIA_BASE_URL}${resp.responder.avatar}`) : 
                                 '',
                             time: resp.time_ago,
                             message: resp.message
@@ -89,7 +91,7 @@ Page({
                             avatar: data.publisher.avatar ? 
                                 (data.publisher.avatar.startsWith('http') ? 
                                     data.publisher.avatar : 
-                                    `http://127.0.0.1:8000${data.publisher.avatar}`) : 
+                                    `${MEDIA_BASE_URL}${data.publisher.avatar}`) : 
                                 ''
                         }
                     });

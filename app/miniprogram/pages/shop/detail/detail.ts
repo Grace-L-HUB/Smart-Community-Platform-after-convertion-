@@ -1,4 +1,6 @@
 // pages/shop/detail/detail.ts
+import { API_BASE_URL } from '../../config/api'
+
 Page({
     data: {
         active: 0,
@@ -27,7 +29,7 @@ Page({
         this.setData({ loading: true, error: '' });
 
         wx.request({
-            url: `http://127.0.0.1:8000/api/merchant/profile/${this.data.shopId}/`,
+            url: `${API_BASE_URL}/merchant/profile/${this.data.shopId}/`,
             method: 'GET',
             success: (res: any) => {
                 console.log('商户详情响应:', res.data);
@@ -79,7 +81,7 @@ Page({
         this.setData({ productsLoading: true, productsError: '' });
 
         wx.request({
-            url: `http://127.0.0.1:8000/api/merchant/products/public/${this.data.shopId}/`,
+            url: `${API_BASE_URL}/merchant/products/public/${this.data.shopId}/`,
             method: 'GET',
             success: (res: any) => {
                 console.log('商品列表响应:', res.data);

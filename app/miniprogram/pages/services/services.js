@@ -1,4 +1,6 @@
 // pages/services/services.js
+import { API_BASE_URL } from '../../config/api'
+
 Page({
     data: {
         active: 0,
@@ -16,7 +18,7 @@ Page({
         this.setData({ loading: true, error: '' });
         
         wx.request({
-            url: 'http://127.0.0.1:8000/api/merchant/profiles/',
+            url: `${API_BASE_URL}/merchant/profiles/`,
             method: 'GET',
             success: (res) => {
                 console.log('商户列表响应:', res.data);

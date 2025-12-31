@@ -1,4 +1,6 @@
 // pages/services/announcement-detail/announcement-detail.ts
+import { API_BASE_URL } from '../../../config/api'
+
 Page({
     data: {
         id: 0,
@@ -40,7 +42,7 @@ Page({
         this.setData({ loading: true });
 
         wx.request({
-            url: `http://127.0.0.1:8000/api/property/announcements/${id}`,
+            url: `${API_BASE_URL}/property/announcements/${id}`,
             method: 'GET',
             success: (res: any) => {
                 if (res.statusCode === 200 && res.data.code === 200) {
@@ -148,7 +150,7 @@ Page({
         }
 
         wx.request({
-            url: `http://127.0.0.1:8000/api/property/house/my-houses?user_id=${userInfo.user_id}`,
+            url: `${API_BASE_URL}/property/house/my-houses?user_id=${userInfo.user_id}`,
             method: 'GET',
             success: (res: any) => {
                 if (res.statusCode === 200 && res.data.code === 200) {

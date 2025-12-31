@@ -1,4 +1,6 @@
 // pages/parking/index/index.ts
+import { API_BASE_URL } from '../../../config/api'
+
 Page({
   data: {
     loading: true
@@ -26,7 +28,7 @@ Page({
     }
 
     wx.request({
-      url: `http://127.0.0.1:8000/api/parking/my-parkings?user_id=${userInfo.user_id}`,
+      url: `${API_BASE_URL}/parking/my-parkings?user_id=${userInfo.user_id}`,
       method: 'GET',
       header: {
         'Authorization': `Bearer ${wx.getStorageSync('token') || ''}`

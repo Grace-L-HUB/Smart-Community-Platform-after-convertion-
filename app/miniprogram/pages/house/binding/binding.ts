@@ -1,4 +1,6 @@
 // pages/house/binding/binding.ts
+import { API_BASE_URL } from '../../../config/api'
+
 Page({
     data: {
         communityName: '阳光花园',
@@ -32,7 +34,7 @@ Page({
     // 从后端获取楼栋列表
     loadBuildingList() {
         wx.request({
-            url: 'http://127.0.0.1:8000/api/property/house/options/buildings',
+            url: `${API_BASE_URL}/property/house/options/buildings`,
             method: 'GET',
             success: (res: any) => {
                 if (res.statusCode === 200 && res.data.code === 200) {
@@ -60,7 +62,7 @@ Page({
     // 根据楼栋获取单元列表
     loadUnitList(building: string) {
         wx.request({
-            url: `http://127.0.0.1:8000/api/property/house/options/units?building=${encodeURIComponent(building)}`,
+            url: `${API_BASE_URL}/property/house/options/units?building=${encodeURIComponent(building)}`,
             method: 'GET',
             success: (res: any) => {
                 if (res.statusCode === 200 && res.data.code === 200) {
@@ -98,7 +100,7 @@ Page({
     // 根据楼栋和单元获取房号列表
     loadRoomList(building: string, unit: string) {
         wx.request({
-            url: `http://127.0.0.1:8000/api/property/house/options/rooms?building=${encodeURIComponent(building)}&unit=${encodeURIComponent(unit)}`,
+            url: `${API_BASE_URL}/property/house/options/rooms?building=${encodeURIComponent(building)}&unit=${encodeURIComponent(unit)}`,
             method: 'GET',
             success: (res: any) => {
                 if (res.statusCode === 200 && res.data.code === 200) {
@@ -137,7 +139,7 @@ Page({
     // 根据房屋信息获取可选身份列表
     loadIdentityList(building: string, unit: string, room: string) {
         wx.request({
-            url: `http://127.0.0.1:8000/api/property/house/options/identities?building=${encodeURIComponent(building)}&unit=${encodeURIComponent(unit)}&room=${encodeURIComponent(room)}`,
+            url: `${API_BASE_URL}/property/house/options/identities?building=${encodeURIComponent(building)}&unit=${encodeURIComponent(unit)}&room=${encodeURIComponent(room)}`,
             method: 'GET',
             success: (res: any) => {
                 if (res.statusCode === 200 && res.data.code === 200) {
@@ -354,7 +356,7 @@ Page({
 
         // 提交房屋绑定申请到后端
         wx.request({
-            url: 'http://127.0.0.1:8000/api/property/house/binding/apply',
+            url: `${API_BASE_URL}/property/house/binding/apply`,
             method: 'POST',
             data: {
                 user_id: userInfo.user_id,

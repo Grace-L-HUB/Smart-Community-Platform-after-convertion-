@@ -1,6 +1,6 @@
 // pages/profile/edit/edit.ts
-const API_BASE_URL = 'http://127.0.0.1:8000/api'
-const API_UPLOAD_URL = 'http://127.0.0.1:8000/api/upload'
+import { API_BASE_URL } from '../../../config/api'
+const API_UPLOAD_URL = 'http://139.224.17.154:8000/api/upload'
 
 Page({
     data: {

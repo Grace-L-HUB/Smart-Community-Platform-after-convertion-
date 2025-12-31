@@ -1,6 +1,6 @@
 const defaultAvatarUrl = 'https://mmbiz.qpic.cn/mmbiz/icTdbqWNOwNRna42FI242Lcia07jQodd2FJGIYQfG0LAJGFxM4FbnQP6yfMxBgJ0F3YRqJCJ1aPAK2dQagdusBZg/0'
-const API_BASE_URL = 'http://127.0.0.1:8000/api/auth'
-const API_UPLOAD_URL = 'http://127.0.0.1:8000/api/upload'
+import { API_BASE_URL as API_AUTH_URL } from '../../config/api'
+const API_UPLOAD_URL = 'http://139.224.17.154:8000/api/upload'
 
 Page({
     data: {
@@ -37,7 +37,7 @@ Page({
         wx.showLoading({ title: '发送中...' })
 
         wx.request({
-            url: `${API_BASE_URL}/send-sms-code`,
+            url: `${API_AUTH_URL}/send-sms-code`,
             method: 'POST',
             data: { phone: this.data.phone },
             success: (res: any) => {
@@ -299,7 +299,7 @@ Page({
         // SMS Register
         wx.showLoading({ title: '注册中...' })
         wx.request({
-            url: `${API_BASE_URL}/sms-register`,
+            url: `${API_AUTH_URL}/sms-register`,
             method: 'POST',
             data: {
                 phone,

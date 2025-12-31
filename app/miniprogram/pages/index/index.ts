@@ -1,6 +1,6 @@
 // pages/index/index.ts
-const API_BASE_URL = 'http://127.0.0.1:8000/api'
-const API_PROPERTY_URL = 'http://127.0.0.1:8000/api/property'
+import { API_BASE_URL } from '../../config/api'
+const API_PROPERTY_URL = 'http://139.224.17.154:8000/api/property'
 
 Page({
     data: {
@@ -195,7 +195,7 @@ Page({
         }
 
         wx.request({
-            url: `http://127.0.0.1:8000/api/property/house/my-houses?user_id=${userInfo.user_id}`,
+            url: `${API_BASE_URL}/property/house/my-houses?user_id=${userInfo.user_id}`,
             method: 'GET',
             success: (res: any) => {
                 if (res.statusCode === 200 && res.data.code === 200) {

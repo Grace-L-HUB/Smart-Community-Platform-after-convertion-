@@ -2,7 +2,7 @@
 // @ts-ignore
 const drawQrcode = require('../../../miniprogram_npm/weapp-qrcode-canvas-2d/index.js')
 
-const API_BASE_URL = 'http://127.0.0.1:8000/api'
+import { API_BASE_URL } from '../../../config/api'
 
 Page({
     data: {
