@@ -5,12 +5,13 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.db import models
 from .models import (
-    HouseBindingApplication, HouseUserBinding, Visitor,
-    ParkingBindingApplication, ParkingUserBinding, Announcement,
+    HouseBindingApplication, HouseUserBinding, House, Building, Visitor,
+    ParkingBindingApplication, ParkingUserBinding, ParkingSpace, Announcement,
     RepairOrder, RepairOrderImage, RepairEmployee, FeeStandard, Bill, AccessLog
 )
 from .serializers import (
     HouseBindingApplicationSerializer, HouseUserBindingSerializer,
+    HouseCreateSerializer, ParkingSpaceCreateSerializer,
     VisitorCreateSerializer, VisitorListSerializer, VisitorDetailSerializer,
     ParkingBindingApplicationSerializer, ParkingUserBindingSerializer,
     AnnouncementCreateSerializer, AnnouncementListSerializer, AnnouncementDetailSerializer,
@@ -23,6 +24,74 @@ import json
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
+
+
+# ===== 房产和车位基础数据管理视图 =====
+
+class HouseCreateView(APIView):
+    """房产创建接口"""
+    permission_classes = []
+
+    def post(self, request):
+        """创建房产"""
+        serializer = HouseCreateSerializer(data=request.data)
+
+        if serializer.is_valid():
+            house = serializer.save()
+            logger.info(f"创建房产成功: {house.building.name}-{house.unit}-{house.room_number}")
+
+            return Response({
+                "code": 200,
+                "message": "创建房产成功",
+                "data": {
+                    "id": house.id,
+                    "building": house.building.name,
+                    "unit": house.unit,
+                    "floor": house.floor,
+                    "room_number": house.room_number,
+                    "area": str(house.area),
+                    "status": house.status,
+                    "full_address": f"{house.building.name}{house.unit}{house.room_number}"
+                }
+            })
+
+        return Response({
+            "code": 400,
+            "message": "数据校验失败",
+            "errors": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ParkingSpaceCreateView(APIView):
+    """车位创建接口"""
+    permission_classes = []
+
+    def post(self, request):
+        """创建车位"""
+        serializer = ParkingSpaceCreateSerializer(data=request.data)
+
+        if serializer.is_valid():
+            parking_space = serializer.save()
+            logger.info(f"创建车位成功: {parking_space.area_name}-{parking_space.space_number}")
+
+            return Response({
+                "code": 200,
+                "message": "创建车位成功",
+                "data": {
+                    "id": parking_space.id,
+                    "area_name": parking_space.area_name,
+                    "space_number": parking_space.space_number,
+                    "parking_type": parking_space.parking_type,
+                    "status": parking_space.status,
+                    "full_address": f"{parking_space.area_name}-{parking_space.space_number}"
+                }
+            })
+
+        return Response({
+            "code": 400,
+            "message": "数据校验失败",
+            "errors": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
 
 
 class HouseBindingApplicationView(APIView):

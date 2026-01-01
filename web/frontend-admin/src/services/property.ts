@@ -307,10 +307,36 @@ class PropertyAPI {
   }
 
   /**
-   * 获取车位基础数据列表  
+   * 获取车位基础数据列表
    */
   async getParkingSpaceList(): Promise<ApiResponse<any[]>> {
     return apiClient.get('/parking/space/list')
+  }
+
+  /**
+   * 创建房产
+   */
+  async createHouse(data: {
+    building: number
+    unit: string
+    floor: number
+    room_number: string
+    area: number
+    status: number
+  }): Promise<ApiResponse<any>> {
+    return apiClient.post('/property/house/create', data)
+  }
+
+  /**
+   * 创建车位
+   */
+  async createParkingSpace(data: {
+    area_name: string
+    space_number: string
+    parking_type: 'owned' | 'rented'
+    status: number
+  }): Promise<ApiResponse<any>> {
+    return apiClient.post('/parking/space/create', data)
   }
 
   // === 工作台统计 ===

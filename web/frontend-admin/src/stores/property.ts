@@ -823,6 +823,58 @@ export const usePropertyStore = defineStore('property', {
         // ===== 门禁日志操作 =====
 
         /**
+         * 创建房产
+         */
+        async createHouse(data: {
+            building: number
+            unit: string
+            floor: number
+            room_number: string
+            area: number
+            status: number
+        }) {
+            try {
+                const response = await propertyAPI.createHouse(data)
+                if (response.code === 200) {
+                    // 重新加载房产列表
+                    const houseListResponse = await propertyAPI.getHouseList()
+                    this.houses = houseListResponse.data || []
+                    return response.data
+                } else {
+                    throw new Error(response.message || '创建房产失败')
+                }
+            } catch (error) {
+                console.error('创建房产失败:', error)
+                throw error
+            }
+        },
+
+        /**
+         * 创建车位
+         */
+        async createParkingSpace(data: {
+            area_name: string
+            space_number: string
+            parking_type: 'owned' | 'rented'
+            status: number
+        }) {
+            try {
+                const response = await propertyAPI.createParkingSpace(data)
+                if (response.code === 200) {
+                    // 重新加载车位列表
+                    const parkingListResponse = await propertyAPI.getParkingSpaceList()
+                    this.parkings = parkingListResponse.data || []
+                    return response.data
+                } else {
+                    throw new Error(response.message || '创建车位失败')
+                }
+            } catch (error) {
+                console.error('创建车位失败:', error)
+                throw error
+            }
+        },
+
+        /**
          * 加载门禁日志数据
          */
         async loadAccessLogs(params?: {
