@@ -1,5 +1,6 @@
 {
   "pages": [
+    "pages/login/login",
     "pages/index/index",
     "pages/services/services",
     "pages/community/community",
@@ -16,7 +17,6 @@
     "pages/market/market",
     "pages/shop/detail/detail",
     "pages/shop/product/product",
-    "pages/login/login",
     "pages/community/market-detail/market-detail",
     "pages/community/post-item/post-item",
     "pages/community/help-detail/help-detail",

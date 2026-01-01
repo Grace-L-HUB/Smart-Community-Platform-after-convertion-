@@ -1,66 +1,71 @@
-// pages/services/housekeeping/housekeeping.js
+const API_BASE_URL = require('../../../config/api.js').API_BASE_URL
+
 Page({
-
-  /**
-   * 页面的初始数据
-   */
   data: {
-
+    services: [
+      {
+        id: 1,
+        name: '日常保洁',
+        price: 80,
+        unit: '次',
+        description: '家庭日常清洁服务',
+        image: '/images/housekeeping/cleaning.jpg'
+      },
+      {
+        id: 2,
+        name: '深度保洁',
+        price: 200,
+        unit: '次',
+        description: '全方位深度清洁',
+        image: '/images/housekeeping/deep-cleaning.jpg'
+      },
+      {
+        id: 3,
+        name: '家电清洗',
+        price: 120,
+        unit: '台',
+        description: '空调、洗衣机等家电清洗',
+        image: '/images/housekeeping/appliance.jpg'
+      },
+      {
+        id: 4,
+        name: '玻璃清洁',
+        price: 100,
+        unit: '次',
+        description: '窗户玻璃专业清洁',
+        image: '/images/housekeeping/glass.jpg'
+      }
+    ],
+    loading: false
   },
 
-  /**
-   * 生命周期函数--监听页面加载
-   */
-  onLoad(options) {
-
+  onLoad() {
+    this.loadServices()
   },
 
-  /**
-   * 生命周期函数--监听页面初次渲染完成
-   */
-  onReady() {
-
+  loadServices() {
+    this.setData({ loading: true })
+    setTimeout(() => {
+      this.setData({ loading: false })
+    }, 500)
   },
 
-  /**
-   * 生命周期函数--监听页面显示
-   */
-  onShow() {
-
+  onServiceClick(e) {
+    const serviceId = e.currentTarget.dataset.id
+    wx.navigateTo({
+      url: '/pages/services/housekeeping-detail/housekeeping-detail?id=' + serviceId
+    })
   },
 
-  /**
-   * 生命周期函数--监听页面隐藏
-   */
-  onHide() {
-
+  onBookService(e) {
+    const serviceId = e.currentTarget.dataset.id
+    wx.navigateTo({
+      url: '/pages/order/create/create?type=housekeeping&serviceId=' + serviceId
+    })
   },
 
-  /**
-   * 生命周期函数--监听页面卸载
-   */
-  onUnload() {
-
-  },
-
-  /**
-   * 页面相关事件处理函数--监听用户下拉动作
-   */
   onPullDownRefresh() {
-
-  },
-
-  /**
-   * 页面上拉触底事件的处理函数
-   */
-  onReachBottom() {
-
-  },
-
-  /**
-   * 用户点击右上角分享
-   */
-  onShareAppMessage() {
-
+    this.loadServices()
+    wx.stopPullDownRefresh()
   }
 })

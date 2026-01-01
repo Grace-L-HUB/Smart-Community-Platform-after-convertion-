@@ -1,66 +1,67 @@
-// pages/community/event-detail/event-detail.js
+const API_BASE_URL = require('../../../config/api.js').API_BASE_URL
+
 Page({
-
-  /**
-   * 页面的初始数据
-   */
   data: {
-
+    event: {},
+    loading: false
   },
 
-  /**
-   * 生命周期函数--监听页面加载
-   */
   onLoad(options) {
-
+    if (options.id) {
+      this.loadEventDetail(options.id)
+    }
   },
 
-  /**
-   * 生命周期函数--监听页面初次渲染完成
-   */
-  onReady() {
-
+  loadEventDetail(id) {
+    this.setData({ loading: true })
+    
+    wx.request({
+      url: API_BASE_URL + '/community/events/' + id + '/',
+      method: 'GET',
+      header: {
+        'Authorization': 'Bearer ' + (wx.getStorageSync('token') || '')
+      },
+      success: (res) => {
+        if (res.statusCode === 200 && res.data.code === 200) {
+          this.setData({
+            event: res.data.data || {},
+            loading: false
+          })
+        }
+      },
+      fail: () => {
+        this.setData({ loading: false })
+        wx.showToast({
+          title: '加载失败',
+          icon: 'none'
+        })
+      }
+    })
   },
 
-  /**
-   * 生命周期函数--监听页面显示
-   */
-  onShow() {
-
+  onJoinEvent() {
+    const eventId = this.data.event.id
+    wx.request({
+      url: API_BASE_URL + '/community/events/' + eventId + '/join/',
+      method: 'POST',
+      header: {
+        'Authorization': 'Bearer ' + (wx.getStorageSync('token') || '')
+      },
+      success: (res) => {
+        if (res.statusCode === 200 && res.data.code === 200) {
+          wx.showToast({
+            title: '报名成功',
+            icon: 'success'
+          })
+          this.loadEventDetail(eventId)
+        }
+      }
+    })
   },
 
-  /**
-   * 生命周期函数--监听页面隐藏
-   */
-  onHide() {
-
-  },
-
-  /**
-   * 生命周期函数--监听页面卸载
-   */
-  onUnload() {
-
-  },
-
-  /**
-   * 页面相关事件处理函数--监听用户下拉动作
-   */
-  onPullDownRefresh() {
-
-  },
-
-  /**
-   * 页面上拉触底事件的处理函数
-   */
-  onReachBottom() {
-
-  },
-
-  /**
-   * 用户点击右上角分享
-   */
-  onShareAppMessage() {
-
+  onShare() {
+    wx.showShareMenu({
+      withShareTicket: true
+    })
   }
 })

@@ -1,5 +1,5 @@
 // pages/services/services.js
-import { API_BASE_URL } from '../../config/api'
+const { API_BASE_URL } = require('../../config/api')
 
 Page({
     data: {
@@ -13,12 +13,11 @@ Page({
         this.loadMerchants();
     },
 
-    // 从后端获取商户列表
     loadMerchants() {
         this.setData({ loading: true, error: '' });
         
         wx.request({
-            url: `${API_BASE_URL}/merchant/profiles/`,
+            url: API_BASE_URL + '/merchant/profiles/',
             method: 'GET',
             success: (res) => {
                 console.log('商户列表响应:', res.data);
@@ -28,14 +27,14 @@ Page({
                         id: merchant.id,
                         name: merchant.shop_name,
                         desc: merchant.shop_description || '优质商户，诚信经营',
-                        price: `营业时间 ${merchant.business_hours_start}-${merchant.business_hours_end}`,
+                        price: '营业时间 ' + merchant.business_hours_start + '-' + merchant.business_hours_end,
                         image: merchant.shop_logo || 'https://img.yzcdn.cn/vant/logo.png',
                         discount: merchant.shop_announcement || '',
                         category: merchant.category_display,
                         phone: merchant.shop_phone,
                         address: merchant.shop_address,
                         isActive: merchant.is_active
-                    })).filter((merchant) => merchant.isActive); // 只显示启用的商户
+                    })).filter((merchant) => merchant.isActive);
                     
                     this.setData({
                         shops: merchants,
@@ -47,7 +46,6 @@ Page({
                         error: res.data.message || '获取商户列表失败',
                         loading: false
                     });
-                    // 使用备用数据
                     this.loadFallbackData();
                 }
             },
@@ -57,13 +55,11 @@ Page({
                     error: '网络请求失败，请检查网络连接',
                     loading: false
                 });
-                // 使用备用数据
                 this.loadFallbackData();
             }
         });
     },
 
-    // 备用数据（API失败时使用）
     loadFallbackData() {
         this.setData({
             shops: [
@@ -94,7 +90,6 @@ Page({
         });
     },
 
-    // 重新加载数据
     onRefresh() {
         this.loadMerchants();
     },
@@ -102,7 +97,7 @@ Page({
     onShopClick(event) {
         const shopId = event.currentTarget.dataset.id;
         wx.navigateTo({
-            url: `/pages/shop/detail/detail?id=${shopId}`
+            url: '/pages/shop/detail/detail?id=' + shopId
         });
     }
 });

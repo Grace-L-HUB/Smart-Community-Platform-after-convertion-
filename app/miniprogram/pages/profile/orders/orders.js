@@ -1,66 +1,93 @@
-// pages/profile/orders/orders.js
+const API_BASE_URL = require('../../../config/api.js').API_BASE_URL
+
 Page({
-
-  /**
-   * 页面的初始数据
-   */
   data: {
-
+    orders: [],
+    loading: false,
+    activeTab: 'all'
   },
 
-  /**
-   * 生命周期函数--监听页面加载
-   */
-  onLoad(options) {
-
+  onLoad() {
+    this.loadOrders()
   },
 
-  /**
-   * 生命周期函数--监听页面初次渲染完成
-   */
-  onReady() {
-
-  },
-
-  /**
-   * 生命周期函数--监听页面显示
-   */
   onShow() {
-
+    this.loadOrders()
   },
 
-  /**
-   * 生命周期函数--监听页面隐藏
-   */
-  onHide() {
-
+  onTabChange(e) {
+    const tab = e.currentTarget.dataset.tab
+    this.setData({ activeTab: tab })
+    this.loadOrders()
   },
 
-  /**
-   * 生命周期函数--监听页面卸载
-   */
-  onUnload() {
-
+  loadOrders() {
+    this.setData({ loading: true })
+    
+    wx.request({
+      url: API_BASE_URL + '/orders/',
+      method: 'GET',
+      data: {
+        status: this.data.activeTab !== 'all' ? this.data.activeTab : ''
+      },
+      header: {
+        'Authorization': 'Bearer ' + (wx.getStorageSync('token') || '')
+      },
+      success: (res) => {
+        if (res.statusCode === 200 && res.data.code === 200) {
+          this.setData({
+            orders: res.data.data || [],
+            loading: false
+          })
+        }
+      },
+      fail: () => {
+        this.setData({ loading: false })
+        wx.showToast({
+          title: '加载失败',
+          icon: 'none'
+        })
+      }
+    })
   },
 
-  /**
-   * 页面相关事件处理函数--监听用户下拉动作
-   */
+  onOrderClick(e) {
+    const orderId = e.currentTarget.dataset.id
+    wx.navigateTo({
+      url: '/pages/order/detail/detail?id=' + orderId
+    })
+  },
+
+  onCancelOrder(e) {
+    const orderId = e.currentTarget.dataset.id
+    wx.showModal({
+      title: '确认取消',
+      content: '确定要取消这个订单吗？',
+      success: (res) => {
+        if (res.confirm) {
+          wx.request({
+            url: API_BASE_URL + '/orders/' + orderId + '/cancel/',
+            method: 'POST',
+            header: {
+              'Authorization': 'Bearer ' + (wx.getStorageSync('token') || '')
+            },
+            success: (res) => {
+              if (res.statusCode === 200) {
+                wx.showToast({
+                  title: '取消成功',
+                  icon: 'success'
+                })
+                this.loadOrders()
+              }
+            }
+          })
+        }
+      }
+    })
+  },
+
   onPullDownRefresh() {
-
-  },
-
-  /**
-   * 页面上拉触底事件的处理函数
-   */
-  onReachBottom() {
-
-  },
-
-  /**
-   * 用户点击右上角分享
-   */
-  onShareAppMessage() {
-
+    this.loadOrders()
+    wx.stopPullDownRefresh()
   }
 })

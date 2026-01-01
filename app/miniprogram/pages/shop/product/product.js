@@ -1,66 +1,62 @@
-// pages/shop/product/product.js
+const API_BASE_URL = require('../../config/api.js').API_BASE_URL
+
 Page({
-
-  /**
-   * 页面的初始数据
-   */
   data: {
-
+    products: [],
+    loading: false,
+    category: 'all'
   },
 
-  /**
-   * 生命周期函数--监听页面加载
-   */
-  onLoad(options) {
-
+  onLoad() {
+    this.loadProducts()
   },
 
-  /**
-   * 生命周期函数--监听页面初次渲染完成
-   */
-  onReady() {
-
+  onCategoryChange(e) {
+    this.setData({
+      category: e.currentTarget.dataset.category
+    })
+    this.loadProducts()
   },
 
-  /**
-   * 生命周期函数--监听页面显示
-   */
-  onShow() {
-
+  loadProducts() {
+    this.setData({ loading: true })
+    
+    wx.request({
+      url: `${API_BASE_URL}/shop/products/`,
+      method: 'GET',
+      data: {
+        category: this.data.category !== 'all' ? this.data.category : ''
+      },
+      header: {
+        'Authorization': `Bearer ${wx.getStorageSync('token') || ''}`
+      },
+      success: (res) => {
+        if (res.statusCode === 200 && res.data.code === 200) {
+          this.setData({
+            products: res.data.data || [],
+            loading: false
+          })
+        }
+      },
+      fail: () => {
+        this.setData({ loading: false })
+        wx.showToast({
+          title: '加载失败',
+          icon: 'none'
+        })
+      }
+    })
   },
 
-  /**
-   * 生命周期函数--监听页面隐藏
-   */
-  onHide() {
-
+  onProductClick(e) {
+    const id = e.currentTarget.dataset.id
+    wx.navigateTo({
+      url: `/pages/shop/detail/detail?id=${id}`
+    })
   },
 
-  /**
-   * 生命周期函数--监听页面卸载
-   */
-  onUnload() {
-
-  },
-
-  /**
-   * 页面相关事件处理函数--监听用户下拉动作
-   */
   onPullDownRefresh() {
-
-  },
-
-  /**
-   * 页面上拉触底事件的处理函数
-   */
-  onReachBottom() {
-
-  },
-
-  /**
-   * 用户点击右上角分享
-   */
-  onShareAppMessage() {
-
+    this.loadProducts()
+    wx.stopPullDownRefresh()
   }
 })

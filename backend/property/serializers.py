@@ -489,6 +489,7 @@ class RepairOrderCreateSerializer(serializers.ModelSerializer):
 
 class RepairOrderListSerializer(serializers.ModelSerializer):
     """报修工单列表序列化器"""
+    images = RepairOrderImageSerializer(many=True, read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     type_display = serializers.CharField(source='get_repair_type_display', read_only=True)
     priority_display = serializers.CharField(source='get_priority_display', read_only=True)
@@ -498,8 +499,9 @@ class RepairOrderListSerializer(serializers.ModelSerializer):
         model = RepairOrder
         fields = [
             'id', 'order_no', 'category', 'category_display', 'repair_type', 'type_display',
-            'priority', 'priority_display', 'summary', 'location', 'reporter_name', 
-            'reporter_phone', 'status', 'status_display', 'assignee', 'created_at', 'updated_at'
+            'priority', 'priority_display', 'summary', 'description', 'location', 'reporter_name', 
+            'reporter_phone', 'status', 'status_display', 'assignee', 'result', 'cost',
+            'images', 'created_at', 'updated_at'
         ]
 
 

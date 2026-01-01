@@ -991,10 +991,11 @@ class DashboardStatsView(APIView):
     def get(self, request):
         """获取工作台统计数据"""
         try:
-            from .models import House, ParkingSpace
+            from .models import House, ParkingSpace, RepairOrder
             from users.models import User
             from datetime import date, timedelta
             from django.utils import timezone
+            from django.db.models import Count
             
             # 计算统计数据
             total_houses = House.objects.count()
@@ -1004,30 +1005,45 @@ class DashboardStatsView(APIView):
             total_parking_spaces = ParkingSpace.objects.count()
             occupied_parking_spaces = ParkingUserBinding.objects.filter(status=1).count()
             
-            # 模拟工单数据（实际项目中应该有WorkOrder模型）
-            pending_work_orders = 5
-            today_repairs = 3
+            # 从数据库获取真实的工单数据
+            pending_work_orders = RepairOrder.objects.filter(status='pending').count()
+            
+            today = date.today()
+            today_repairs = RepairOrder.objects.filter(
+                created_at__date=today
+            ).count()
             
             # 模拟费收缴率
             fee_collection_rate = round((occupied_houses / total_houses if total_houses > 0 else 0) * 0.85, 3)
             
-            # 近7天数据（模拟）
-            today = date.today()
+            # 近7天数据（从数据库获取）
             work_order_trend = []
             for i in range(6, -1, -1):
                 target_date = today - timedelta(days=i)
+                count = RepairOrder.objects.filter(
+                    created_at__date=target_date
+                ).count()
                 work_order_trend.append({
                     'date': target_date.strftime('%m-%d'),
-                    'count': (i * 2 + 3) % 8 + 1  # 模拟数据
+                    'count': count
                 })
             
-            # 报修类型分布（模拟）
-            repair_type_distribution = [
-                {'type': '水电', 'value': 35},
-                {'type': '门窗', 'value': 20},
-                {'type': '公区', 'value': 25},
-                {'type': '其他', 'value': 20},
-            ]
+            # 报修类型分布（从数据库获取）
+            repair_type_distribution = []
+            type_choices = dict(RepairOrder.TYPE_CHOICES)
+            for type_value, type_name in type_choices.items():
+                count = RepairOrder.objects.filter(repair_type=type_value).count()
+                if count > 0:
+                    repair_type_distribution.append({
+                        'type': type_name,
+                        'value': count
+                    })
+            
+            # 如果没有数据，返回空列表
+            if not repair_type_distribution:
+                repair_type_distribution = [
+                    {'type': '暂无数据', 'value': 0}
+                ]
             
             stats = {
                 'pendingWorkOrders': pending_work_orders,

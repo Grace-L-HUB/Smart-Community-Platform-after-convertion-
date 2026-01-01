@@ -1,66 +1,77 @@
-// pages/community/market-detail/market-detail.js
+const API_BASE_URL = require('../../../config/api.js').API_BASE_URL
+
 Page({
-
-  /**
-   * 页面的初始数据
-   */
   data: {
-
+    item: {},
+    loading: false,
+    quantity: 1
   },
 
-  /**
-   * 生命周期函数--监听页面加载
-   */
   onLoad(options) {
-
+    if (options.id) {
+      this.loadItemDetail(options.id)
+    }
   },
 
-  /**
-   * 生命周期函数--监听页面初次渲染完成
-   */
-  onReady() {
-
+  loadItemDetail(id) {
+    this.setData({ loading: true })
+    
+    wx.request({
+      url: API_BASE_URL + '/market-items/' + id + '/',
+      method: 'GET',
+      header: {
+        'Authorization': 'Bearer ' + (wx.getStorageSync('token') || '')
+      },
+      success: (res) => {
+        if (res.statusCode === 200 && res.data.code === 200) {
+          this.setData({
+            item: res.data.data || {},
+            loading: false
+          })
+        }
+      },
+      fail: () => {
+        this.setData({ loading: false })
+        wx.showToast({
+          title: '加载失败',
+          icon: 'none'
+        })
+      }
+    })
   },
 
-  /**
-   * 生命周期函数--监听页面显示
-   */
-  onShow() {
-
+  onQuantityChange(e) {
+    this.setData({
+      quantity: parseInt(e.detail.value) || 1
+    })
   },
 
-  /**
-   * 生命周期函数--监听页面隐藏
-   */
-  onHide() {
-
+  onDecrease() {
+    if (this.data.quantity > 1) {
+      this.setData({
+        quantity: this.data.quantity - 1
+      })
+    }
   },
 
-  /**
-   * 生命周期函数--监听页面卸载
-   */
-  onUnload() {
-
+  onIncrease() {
+    this.setData({
+      quantity: this.data.quantity + 1
+    })
   },
 
-  /**
-   * 页面相关事件处理函数--监听用户下拉动作
-   */
-  onPullDownRefresh() {
-
+  onContact() {
+    const item = this.data.item
+    if (item.seller_phone) {
+      wx.makePhoneCall({
+        phoneNumber: item.seller_phone
+      })
+    }
   },
 
-  /**
-   * 页面上拉触底事件的处理函数
-   */
-  onReachBottom() {
-
-  },
-
-  /**
-   * 用户点击右上角分享
-   */
-  onShareAppMessage() {
-
+  onShare() {
+    wx.showShareMenu({
+      withShareTicket: true
+    })
   }
 })

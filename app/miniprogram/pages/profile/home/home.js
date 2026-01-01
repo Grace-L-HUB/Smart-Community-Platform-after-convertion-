@@ -1,5 +1,5 @@
 // pages/profile/home/home.js
-import { API_BASE_URL } from '../../../config/api'
+const { API_BASE_URL } = require('../../../config/api')
 
 Page({
     data: {
@@ -13,15 +13,12 @@ Page({
     },
 
     onShow() {
-        // 每次显示页面时重新加载用户信息，以防信息更新
         this.loadUserProfile()
     },
 
-    // 从本地存储获取用户基本信息
     getStoredUserInfo() {
         const userInfo = wx.getStorageSync('userInfo')
         if (!userInfo || !userInfo.user_id) {
-            // 没有用户信息，跳转到登录页
             wx.showModal({
                 title: '提示',
                 content: '请先登录',
@@ -37,7 +34,6 @@ Page({
         return userInfo
     },
 
-    // 从后端API获取完整的用户信息
     loadUserProfile() {
         const storedUserInfo = this.getStoredUserInfo()
         if (!storedUserInfo) return
@@ -57,12 +53,9 @@ Page({
                 console.log('用户信息请求成功:', res.data)
                 if (res.statusCode === 200 && res.data.code === 200) {
                     const userInfo = res.data.data
-                    // 使用后端返回的avatar_url字段，如果没有则使用默认头像
                     if (userInfo.avatar_url) {
-                        // 后端已经返回了完整的URL，直接使用
                         userInfo.avatar_url = userInfo.avatar_url
                     } else {
-                        // 如果没有avatar_url，使用默认头像
                         userInfo.avatar_url = 'https://img.yzcdn.cn/vant/cat.jpeg'
                     }
 
@@ -71,7 +64,6 @@ Page({
                         loading: false
                     })
 
-                    // 更新本地存储的用户信息
                     const updatedStoredInfo = { ...storedUserInfo, ...userInfo }
                     wx.setStorageSync('userInfo', updatedStoredInfo)
                 } else {
@@ -89,7 +81,6 @@ Page({
                     loading: false
                 })
 
-                // 网络失败时，使用本地存储的基本信息作为备用
                 if (storedUserInfo) {
                     this.setData({
                         userInfo: {
@@ -104,12 +95,10 @@ Page({
         })
     },
 
-    // 重新加载用户信息
     onRefresh() {
         this.loadUserProfile()
     },
 
-    // 跳转到个人信息编辑页面
     goToEditProfile() {
         wx.navigateTo({
             url: '/pages/profile/edit/edit'

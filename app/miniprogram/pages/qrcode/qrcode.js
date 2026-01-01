@@ -1,66 +1,73 @@
 // pages/qrcode/qrcode.js
+const { API_BASE_URL } = require('../../config/api')
+
 Page({
+    data: {
+        type: '',
+        qrCodeUrl: '',
+        loading: true
+    },
 
-  /**
-   * 页面的初始数据
-   */
-  data: {
+    onLoad(options) {
+        const type = options.type || 'identity'
+        this.setData({ type: type })
+        
+        if (type === 'identity') {
+            this.loadIdentityQRCode()
+        } else if (type === 'house') {
+            this.loadHouseQRCode()
+        }
+    },
 
-  },
+    loadIdentityQRCode() {
+        const userInfo = wx.getStorageSync('userInfo')
+        if (!userInfo || !userInfo.user_id) {
+            wx.showModal({
+                title: '提示',
+                content: '请先登录',
+                showCancel: false,
+                success: () => {
+                    wx.reLaunch({ url: '/pages/login/login' })
+                }
+            })
+            return
+        }
 
-  /**
-   * 生命周期函数--监听页面加载
-   */
-  onLoad(options) {
+        wx.request({
+            url: API_BASE_URL + '/qrcode/identity',
+            method: 'GET',
+            data: {
+                user_id: userInfo.user_id
+            },
+            header: {
+                'Authorization': 'Bearer ' + (wx.getStorageSync('token') || '')
+            },
+            success: (res) => {
+                if (res.statusCode === 200 && res.data.code === 200) {
+                    this.setData({
+                        qrCodeUrl: res.data.data.qrcode_url,
+                        loading: false
+                    })
+                } else {
+                    wx.showToast({ title: res.data.message || '获取二维码失败', icon: 'none' })
+                    this.setData({ loading: false })
+                }
+            },
+            fail: () => {
+                wx.showToast({ title: '网络请求失败', icon: 'none' })
+                this.setData({ loading: false })
+            }
+        })
+    },
 
-  },
+    loadHouseQRCode() {
+        wx.showToast({ title: '功能开发中', icon: 'none' })
+    },
 
-  /**
-   * 生命周期函数--监听页面初次渲染完成
-   */
-  onReady() {
-
-  },
-
-  /**
-   * 生命周期函数--监听页面显示
-   */
-  onShow() {
-
-  },
-
-  /**
-   * 生命周期函数--监听页面隐藏
-   */
-  onHide() {
-
-  },
-
-  /**
-   * 生命周期函数--监听页面卸载
-   */
-  onUnload() {
-
-  },
-
-  /**
-   * 页面相关事件处理函数--监听用户下拉动作
-   */
-  onPullDownRefresh() {
-
-  },
-
-  /**
-   * 页面上拉触底事件的处理函数
-   */
-  onReachBottom() {
-
-  },
-
-  /**
-   * 用户点击右上角分享
-   */
-  onShareAppMessage() {
-
-  }
-})
+    onShareAppMessage() {
+        return {
+            title: '智慧社区',
+            path: '/pages/index/index'
+        }
+    }
+});

@@ -1,66 +1,89 @@
-// pages/house/index/index.js
+const API_BASE_URL = require('../../config/api.js').API_BASE_URL
+
 Page({
-
-  /**
-   * 页面的初始数据
-   */
   data: {
-
+    houseList: [],
+    loading: false
   },
 
-  /**
-   * 生命周期函数--监听页面加载
-   */
-  onLoad(options) {
-
+  onLoad() {
+    this.loadHouseList()
   },
 
-  /**
-   * 生命周期函数--监听页面初次渲染完成
-   */
-  onReady() {
-
-  },
-
-  /**
-   * 生命周期函数--监听页面显示
-   */
   onShow() {
-
+    this.loadHouseList()
   },
 
-  /**
-   * 生命周期函数--监听页面隐藏
-   */
-  onHide() {
-
+  loadHouseList() {
+    this.setData({ loading: true })
+    
+    wx.request({
+      url: API_BASE_URL + '/house/list/',
+      method: 'GET',
+      header: {
+        'Authorization': 'Bearer ' + (wx.getStorageSync('token') || '')
+      },
+      success: (res) => {
+        if (res.statusCode === 200 && res.data.code === 200) {
+          this.setData({
+            houseList: res.data.data || [],
+            loading: false
+          })
+        }
+      },
+      fail: () => {
+        this.setData({ loading: false })
+        wx.showToast({
+          title: '加载失败',
+          icon: 'none'
+        })
+      }
+    })
   },
 
-  /**
-   * 生命周期函数--监听页面卸载
-   */
-  onUnload() {
-
+  onAddHouse() {
+    wx.navigateTo({
+      url: '/pages/house/binding/binding'
+    })
   },
 
-  /**
-   * 页面相关事件处理函数--监听用户下拉动作
-   */
+  onHouseClick(e) {
+    const id = e.currentTarget.dataset.id
+    wx.navigateTo({
+      url: '/pages/house/info/info?id=' + id
+    })
+  },
+
+  onUnbind(e) {
+    const id = e.currentTarget.dataset.id
+    wx.showModal({
+      title: '确认解绑',
+      content: '确定要解绑这个房屋吗？',
+      success: (res) => {
+        if (res.confirm) {
+          wx.request({
+            url: API_BASE_URL + '/house/unbind/' + id + '/',
+            method: 'DELETE',
+            header: {
+              'Authorization': 'Bearer ' + (wx.getStorageSync('token') || '')
+            },
+            success: (res) => {
+              if (res.statusCode === 200) {
+                wx.showToast({
+                  title: '解绑成功',
+                  icon: 'success'
+                })
+                this.loadHouseList()
+              }
+            }
+          })
+        }
+      }
+    })
+  },
+
   onPullDownRefresh() {
-
-  },
-
-  /**
-   * 页面上拉触底事件的处理函数
-   */
-  onReachBottom() {
-
-  },
-
-  /**
-   * 用户点击右上角分享
-   */
-  onShareAppMessage() {
-
+    this.loadHouseList()
+    wx.stopPullDownRefresh()
   }
 })

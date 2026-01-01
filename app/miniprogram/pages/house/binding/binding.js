@@ -1,66 +1,106 @@
-// pages/house/binding/binding.js
+const API_BASE_URL = require('../../config/api.js').API_BASE_URL
+
 Page({
-
-  /**
-   * 页面的初始数据
-   */
   data: {
-
+    form: {
+      building: '',
+      unit: '',
+      floor: '',
+      room: '',
+      ownerName: '',
+      ownerPhone: '',
+      area: ''
+    },
+    loading: false
   },
 
-  /**
-   * 生命周期函数--监听页面加载
-   */
-  onLoad(options) {
-
+  onLoad() {
   },
 
-  /**
-   * 生命周期函数--监听页面初次渲染完成
-   */
-  onReady() {
-
+  onBuildingChange(e) {
+    this.setData({
+      'form.building': e.detail.value
+    })
   },
 
-  /**
-   * 生命周期函数--监听页面显示
-   */
-  onShow() {
-
+  onUnitChange(e) {
+    this.setData({
+      'form.unit': e.detail.value
+    })
   },
 
-  /**
-   * 生命周期函数--监听页面隐藏
-   */
-  onHide() {
-
+  onFloorChange(e) {
+    this.setData({
+      'form.floor': e.detail.value
+    })
   },
 
-  /**
-   * 生命周期函数--监听页面卸载
-   */
-  onUnload() {
-
+  onRoomChange(e) {
+    this.setData({
+      'form.room': e.detail.value
+    })
   },
 
-  /**
-   * 页面相关事件处理函数--监听用户下拉动作
-   */
-  onPullDownRefresh() {
-
+  onOwnerNameChange(e) {
+    this.setData({
+      'form.ownerName': e.detail.value
+    })
   },
 
-  /**
-   * 页面上拉触底事件的处理函数
-   */
-  onReachBottom() {
-
+  onOwnerPhoneChange(e) {
+    this.setData({
+      'form.ownerPhone': e.detail.value
+    })
   },
 
-  /**
-   * 用户点击右上角分享
-   */
-  onShareAppMessage() {
+  onAreaChange(e) {
+    this.setData({
+      'form.area': e.detail.value
+    })
+  },
 
+  onSubmit() {
+    const { building, unit, floor, room, ownerName, ownerPhone, area } = this.data.form
+
+    if (!building || !unit || !floor || !room || !ownerName || !ownerPhone) {
+      wx.showToast({
+        title: '请填写完整信息',
+        icon: 'none'
+      })
+      return
+    }
+
+    this.setData({ loading: true })
+
+    wx.request({
+      url: `${API_BASE_URL}/house/bind/`,
+      method: 'POST',
+      data: {
+        building,
+        unit,
+        floor,
+        room,
+        owner_name: ownerName,
+        owner_phone: ownerPhone,
+        area: parseFloat(area) || 0
+      },
+      header: {
+        'Authorization': `Bearer ${wx.getStorageSync('token') || ''}`
+      },
+      success: (res) => {
+        if (res.statusCode === 200 && res.data.code === 200) {
+          wx.showToast({
+            title: '绑定成功',
+            icon: 'success'
+          })
+          setTimeout(() => {
+            wx.navigateBack()
+          }, 1500)
+        }
+      },
+      complete: () => {
+        this.setData({ loading: false })
+      }
+    })
   }
 })

@@ -1,66 +1,82 @@
-// pages/parking/binding/binding.js
+const API_BASE_URL = require('../../config/api.js').API_BASE_URL
+
 Page({
-
-  /**
-   * 页面的初始数据
-   */
   data: {
-
+    form: {
+      plateNumber: '',
+      carModel: '',
+      ownerName: '',
+      ownerPhone: ''
+    },
+    loading: false
   },
 
-  /**
-   * 生命周期函数--监听页面加载
-   */
-  onLoad(options) {
-
+  onLoad() {
   },
 
-  /**
-   * 生命周期函数--监听页面初次渲染完成
-   */
-  onReady() {
-
+  onPlateNumberChange(e) {
+    this.setData({
+      'form.plateNumber': e.detail.value
+    })
   },
 
-  /**
-   * 生命周期函数--监听页面显示
-   */
-  onShow() {
-
+  onCarModelChange(e) {
+    this.setData({
+      'form.carModel': e.detail.value
+    })
   },
 
-  /**
-   * 生命周期函数--监听页面隐藏
-   */
-  onHide() {
-
+  onOwnerNameChange(e) {
+    this.setData({
+      'form.ownerName': e.detail.value
+    })
   },
 
-  /**
-   * 生命周期函数--监听页面卸载
-   */
-  onUnload() {
-
+  onOwnerPhoneChange(e) {
+    this.setData({
+      'form.ownerPhone': e.detail.value
+    })
   },
 
-  /**
-   * 页面相关事件处理函数--监听用户下拉动作
-   */
-  onPullDownRefresh() {
+  onSubmit() {
+    const { plateNumber, carModel, ownerName, ownerPhone } = this.data.form
 
-  },
+    if (!plateNumber || !ownerName || !ownerPhone) {
+      wx.showToast({
+        title: '请填写完整信息',
+        icon: 'none'
+      })
+      return
+    }
 
-  /**
-   * 页面上拉触底事件的处理函数
-   */
-  onReachBottom() {
+    this.setData({ loading: true })
 
-  },
-
-  /**
-   * 用户点击右上角分享
-   */
-  onShareAppMessage() {
-
+    wx.request({
+      url: API_BASE_URL + '/parking/bind/',
+      method: 'POST',
+      data: {
+        plate_number: plateNumber,
+        car_model: carModel,
+        owner_name: ownerName,
+        owner_phone: ownerPhone
+      },
+      header: {
+        'Authorization': 'Bearer ' + (wx.getStorageSync('token') || '')
+      },
+      success: (res) => {
+        if (res.statusCode === 200 && res.data.code === 200) {
+          wx.showToast({
+            title: '绑定成功',
+            icon: 'success'
+          })
+          setTimeout(() => {
+            wx.navigateBack()
+          }, 1500)
+        }
+      },
+      complete: () => {
+        this.setData({ loading: false })
+      }
+    })
   }
 })

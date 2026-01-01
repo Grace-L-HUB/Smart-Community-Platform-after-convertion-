@@ -1,66 +1,89 @@
-// pages/parking/index/index.js
+const API_BASE_URL = require('../../config/api.js').API_BASE_URL
+
 Page({
-
-  /**
-   * 页面的初始数据
-   */
   data: {
-
+    parkingList: [],
+    loading: false
   },
 
-  /**
-   * 生命周期函数--监听页面加载
-   */
-  onLoad(options) {
-
+  onLoad() {
+    this.loadParkingList()
   },
 
-  /**
-   * 生命周期函数--监听页面初次渲染完成
-   */
-  onReady() {
-
-  },
-
-  /**
-   * 生命周期函数--监听页面显示
-   */
   onShow() {
-
+    this.loadParkingList()
   },
 
-  /**
-   * 生命周期函数--监听页面隐藏
-   */
-  onHide() {
-
+  loadParkingList() {
+    this.setData({ loading: true })
+    
+    wx.request({
+      url: API_BASE_URL + '/parking/list/',
+      method: 'GET',
+      header: {
+        'Authorization': 'Bearer ' + (wx.getStorageSync('token') || '')
+      },
+      success: (res) => {
+        if (res.statusCode === 200 && res.data.code === 200) {
+          this.setData({
+            parkingList: res.data.data || [],
+            loading: false
+          })
+        }
+      },
+      fail: () => {
+        this.setData({ loading: false })
+        wx.showToast({
+          title: '加载失败',
+          icon: 'none'
+        })
+      }
+    })
   },
 
-  /**
-   * 生命周期函数--监听页面卸载
-   */
-  onUnload() {
-
+  onAddParking() {
+    wx.navigateTo({
+      url: '/pages/parking/binding/binding'
+    })
   },
 
-  /**
-   * 页面相关事件处理函数--监听用户下拉动作
-   */
+  onParkingClick(e) {
+    const id = e.currentTarget.dataset.id
+    wx.navigateTo({
+      url: '/pages/parking/info/info?id=' + id
+    })
+  },
+
+  onUnbind(e) {
+    const id = e.currentTarget.dataset.id
+    wx.showModal({
+      title: '确认解绑',
+      content: '确定要解绑这个车位吗？',
+      success: (res) => {
+        if (res.confirm) {
+          wx.request({
+            url: API_BASE_URL + '/parking/unbind/' + id + '/',
+            method: 'DELETE',
+            header: {
+              'Authorization': 'Bearer ' + (wx.getStorageSync('token') || '')
+            },
+            success: (res) => {
+              if (res.statusCode === 200) {
+                wx.showToast({
+                  title: '解绑成功',
+                  icon: 'success'
+                })
+                this.loadParkingList()
+              }
+            }
+          })
+        }
+      }
+    })
+  },
+
   onPullDownRefresh() {
-
-  },
-
-  /**
-   * 页面上拉触底事件的处理函数
-   */
-  onReachBottom() {
-
-  },
-
-  /**
-   * 用户点击右上角分享
-   */
-  onShareAppMessage() {
-
+    this.loadParkingList()
+    wx.stopPullDownRefresh()
   }
 })

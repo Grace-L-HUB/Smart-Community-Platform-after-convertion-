@@ -1,66 +1,48 @@
-// pages/repair-progress/repair-progress.js
+const { API_BASE_URL } = require('../../config/api')
+
 Page({
+    data: {
+        repairs: [],
+        loading: false
+    },
 
-  /**
-   * 页面的初始数据
-   */
-  data: {
+    onLoad() {
+        this.loadRepairs()
+    },
 
-  },
+    loadRepairs() {
+        const userInfo = wx.getStorageSync('userInfo')
+        if (!userInfo || !userInfo.user_id) {
+            wx.showToast({ title: '请先登录', icon: 'none' })
+            return
+        }
 
-  /**
-   * 生命周期函数--监听页面加载
-   */
-  onLoad(options) {
+        this.setData({ loading: true })
 
-  },
-
-  /**
-   * 生命周期函数--监听页面初次渲染完成
-   */
-  onReady() {
-
-  },
-
-  /**
-   * 生命周期函数--监听页面显示
-   */
-  onShow() {
-
-  },
-
-  /**
-   * 生命周期函数--监听页面隐藏
-   */
-  onHide() {
-
-  },
-
-  /**
-   * 生命周期函数--监听页面卸载
-   */
-  onUnload() {
-
-  },
-
-  /**
-   * 页面相关事件处理函数--监听用户下拉动作
-   */
-  onPullDownRefresh() {
-
-  },
-
-  /**
-   * 页面上拉触底事件的处理函数
-   */
-  onReachBottom() {
-
-  },
-
-  /**
-   * 用户点击右上角分享
-   */
-  onShareAppMessage() {
-
-  }
-})
+        wx.request({
+            url: API_BASE_URL + '/property/repair-orders',
+            method: 'GET',
+            data: {
+                user_id: userInfo.user_id
+            },
+            header: {
+                'Authorization': 'Bearer ' + (wx.getStorageSync('token') || '')
+            },
+            success: (res) => {
+                if (res.statusCode === 200 && res.data.code === 200) {
+                    this.setData({
+                        repairs: res.data.data.list || [],
+                        loading: false
+                    })
+                } else {
+                    wx.showToast({ title: '加载失败', icon: 'none' })
+                    this.setData({ loading: false })
+                }
+            },
+            fail: () => {
+                wx.showToast({ title: '网络错误', icon: 'none' })
+                this.setData({ loading: false })
+            }
+        })
+    }
+});

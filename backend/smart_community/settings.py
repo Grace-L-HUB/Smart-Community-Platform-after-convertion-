@@ -194,8 +194,8 @@ SPECTACULAR_SETTINGS = {
 AUTH_USER_MODEL = 'users.User'
 
 # WeChat Configuration
-WECHAT_APP_ID = os.getenv('WECHAT_APP_ID', 'wx76f88d4df468af72') # Using appid from config as default
-WECHAT_APP_SECRET = os.getenv('WECHAT_APP_SECRET', 'e8d2cd917739c6c4d20116fbd5c7f5fc') # Needs to be filled
+WECHAT_APP_ID = os.getenv('WECHAT_APP_ID', 'wx1cf1167b27de2500') # Updated to match miniprogram appid
+WECHAT_APP_SECRET = os.getenv('WECHAT_APP_SECRET', '') # Needs to be filled from WeChat platform
 
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
