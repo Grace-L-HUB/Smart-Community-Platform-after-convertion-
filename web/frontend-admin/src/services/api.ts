@@ -43,7 +43,21 @@ class ApiClient {
       }
 
       const result = await response.json()
-      return result
+      
+      // 兼容后端返回格式：code=200 表示成功
+      if (result.code === 200) {
+        return {
+          success: true,
+          message: result.message || '操作成功',
+          data: result.data
+        }
+      } else {
+        return {
+          success: false,
+          message: result.message || '操作失败',
+          data: undefined
+        }
+      }
     } catch (error) {
       console.error('API请求失败:', error)
       throw error

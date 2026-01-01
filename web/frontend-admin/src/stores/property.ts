@@ -311,11 +311,13 @@ export const usePropertyStore = defineStore('property', {
                 this.announcements = this.convertAnnouncementsToFrontend(this.announcementsAPI)
 
                 // 存储报修工单API数据
-                this.repairOrdersAPI = repairOrdersResponse.data?.list || []
+                console.log('报修工单API响应:', repairOrdersResponse)
+                this.repairOrdersAPI = repairOrdersResponse.data || []
                 this.repairEmployeesAPI = repairEmployeesResponse.data || []
                 
                 // 转换报修工单数据为前端格式
                 this.workOrders = this.convertRepairOrdersToFrontend(this.repairOrdersAPI)
+                console.log('转换后的工单数据:', this.workOrders)
 
                 // 加载门禁日志数据
                 await this.loadAccessLogs()
