@@ -372,7 +372,7 @@ export const usePropertyStore = defineStore('property', {
         async approveResident(id: number) {
             try {
                 const response = await propertyAPI.auditHouseBinding(id, 'approve')
-                if (response.code === 200) {
+                if (response.success) {
                     // 更新本地状态
                     const application = this.houseBindingApplications.find(app => app.id === id)
                     if (application) {
@@ -391,7 +391,7 @@ export const usePropertyStore = defineStore('property', {
         async rejectResident(id: number, reason: string) {
             try {
                 const response = await propertyAPI.auditHouseBinding(id, 'reject', reason)
-                if (response.code === 200) {
+                if (response.success) {
                     // 更新本地状态
                     const application = this.houseBindingApplications.find(app => app.id === id)
                     if (application) {
@@ -411,7 +411,7 @@ export const usePropertyStore = defineStore('property', {
         async approveParking(id: number) {
             try {
                 const response = await propertyAPI.auditParkingBinding(id, 'approve')
-                if (response.code === 200) {
+                if (response.success) {
                     // 更新本地状态
                     const application = this.parkingBindingApplications.find(app => app.id === id)
                     if (application) {
@@ -429,7 +429,7 @@ export const usePropertyStore = defineStore('property', {
         async rejectParking(id: number, reason: string) {
             try {
                 const response = await propertyAPI.auditParkingBinding(id, 'reject', reason)
-                if (response.code === 200) {
+                if (response.success) {
                     // 更新本地状态
                     const application = this.parkingBindingApplications.find(app => app.id === id)
                     if (application) {
@@ -453,7 +453,7 @@ export const usePropertyStore = defineStore('property', {
         async unbindHouse(bindingId: number) {
             try {
                 const response = await propertyAPI.unbindHouse(bindingId)
-                if (response.code === 200) {
+                if (response.success) {
                     // 重新加载数据以获取最新状态
                     await this.loadAll()
                 }
@@ -470,7 +470,7 @@ export const usePropertyStore = defineStore('property', {
         async unbindParkingSpace(bindingId: number) {
             try {
                 const response = await propertyAPI.unbindParkingSpace(bindingId)
-                if (response.code === 200) {
+                if (response.success) {
                     await this.loadAll()
                 }
                 return response
@@ -489,7 +489,7 @@ export const usePropertyStore = defineStore('property', {
             try {
                 const response = await propertyAPI.assignRepairOrder(id, assignee, 1) // TODO: 从auth store获取真实用户ID
                 
-                if (response.code === 200) {
+                if (response.success) {
                     // 重新加载工单列表
                     await this.reloadRepairOrders()
                     return response.data
@@ -509,7 +509,7 @@ export const usePropertyStore = defineStore('property', {
             try {
                 const response = await propertyAPI.completeRepairOrder(id, result, cost)
                 
-                if (response.code === 200) {
+                if (response.success) {
                     // 重新加载工单列表
                     await this.reloadRepairOrders()
                     return response.data
@@ -529,7 +529,7 @@ export const usePropertyStore = defineStore('property', {
             try {
                 const response = await propertyAPI.rejectRepairOrder(id)
                 
-                if (response.code === 200) {
+                if (response.success) {
                     // 重新加载工单列表
                     await this.reloadRepairOrders()
                     return response.data
@@ -548,7 +548,7 @@ export const usePropertyStore = defineStore('property', {
         async reloadRepairOrders() {
             try {
                 const response = await propertyAPI.getRepairOrderList()
-                if (response.code === 200) {
+                if (response.success) {
                     this.repairOrdersAPI = response.data?.list || []
                     this.workOrders = this.convertRepairOrdersToFrontend(this.repairOrdersAPI)
                 } else {
@@ -566,7 +566,7 @@ export const usePropertyStore = defineStore('property', {
         async reloadDashboardStats() {
             try {
                 const response = await propertyAPI.getDashboardStats()
-                if (response.code === 200) {
+                if (response.success) {
                     this.stats = response.data || this.stats
                     return response.data
                 } else {
@@ -651,7 +651,7 @@ export const usePropertyStore = defineStore('property', {
 
                 const response = await propertyAPI.createAnnouncement(createData)
                 
-                if (response.code === 200) {
+                if (response.success) {
                     // 重新加载公告列表
                     await this.reloadAnnouncements()
                     return response.data
@@ -681,7 +681,7 @@ export const usePropertyStore = defineStore('property', {
 
                 const response = await propertyAPI.updateAnnouncement(id, updateData)
                 
-                if (response.code === 200) {
+                if (response.success) {
                     // 重新加载公告列表
                     await this.reloadAnnouncements()
                     return response.data
@@ -701,7 +701,7 @@ export const usePropertyStore = defineStore('property', {
             try {
                 const response = await propertyAPI.withdrawAnnouncement(id)
                 
-                if (response.code === 200) {
+                if (response.success) {
                     // 重新加载公告列表
                     await this.reloadAnnouncements()
                     return response.data
@@ -721,7 +721,7 @@ export const usePropertyStore = defineStore('property', {
             try {
                 const response = await propertyAPI.publishAnnouncement(id)
                 
-                if (response.code === 200) {
+                if (response.success) {
                     // 重新加载公告列表
                     await this.reloadAnnouncements()
                     return response.data
@@ -741,7 +741,7 @@ export const usePropertyStore = defineStore('property', {
             try {
                 const response = await propertyAPI.deleteAnnouncement(id)
                 
-                if (response.code === 200) {
+                if (response.success) {
                     // 重新加载公告列表
                     await this.reloadAnnouncements()
                     return response.data
@@ -760,7 +760,7 @@ export const usePropertyStore = defineStore('property', {
         async reloadAnnouncements() {
             try {
                 const response = await propertyAPI.getAnnouncementList()
-                if (response.code === 200) {
+                if (response.success) {
                     this.announcementsAPI = response.data || []
                     this.announcements = this.convertAnnouncementsToFrontend(this.announcementsAPI)
                 }
@@ -799,7 +799,7 @@ export const usePropertyStore = defineStore('property', {
         async addEmployee(employee: { name: string; phone: string; role: string }) {
             try {
                 const response = await propertyAPI.addEmployee(employee)
-                if (response.code === 200) {
+                if (response.success) {
                     // 重新加载员工数据
                     const employeesResponse = await propertyAPI.getEmployeeList()
                     this.employees = employeesResponse.data || []
@@ -840,7 +840,7 @@ export const usePropertyStore = defineStore('property', {
         }) {
             try {
                 const response = await propertyAPI.createHouse(data)
-                if (response.code === 200) {
+                if (response.success) {
                     // 重新加载房产列表
                     const houseListResponse = await propertyAPI.getHouseList()
                     this.houses = houseListResponse.data || []
@@ -865,7 +865,7 @@ export const usePropertyStore = defineStore('property', {
         }) {
             try {
                 const response = await propertyAPI.createParkingSpace(data)
-                if (response.code === 200) {
+                if (response.success) {
                     // 重新加载车位列表
                     const parkingListResponse = await propertyAPI.getParkingSpaceList()
                     this.parkings = parkingListResponse.data || []
@@ -894,7 +894,7 @@ export const usePropertyStore = defineStore('property', {
         }) {
             try {
                 const response = await propertyAPI.getAccessLogs(params)
-                if (response.code === 200 && response.data) {
+                if (response.success && response.data) {
                     // 转换后端数据格式为前端需要的格式
                     this.accessLogs = response.data.list.map(log => ({
                         id: log.id,
@@ -993,7 +993,7 @@ export const usePropertyStore = defineStore('property', {
         }) {
             try {
                 const response = await propertyAPI.createAccessLog(data)
-                if (response.code === 200) {
+                if (response.success) {
                     // 重新加载数据
                     await this.loadAccessLogs()
                 }
