@@ -3,7 +3,7 @@
     <div class="d-flex align-center mb-6">
       <h1 class="text-h4 font-weight-bold">房产列表</h1>
       <v-spacer />
-      <v-btn color="primary" prepend-icon="mdi-plus">新增房产</v-btn>
+      <v-btn color="primary" prepend-icon="mdi-plus" @click="openCreateDialog">新增房产</v-btn>
     </div>
 
     <!-- 筛选栏 -->
@@ -143,6 +143,90 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- 新增房产弹窗 -->
+    <v-dialog v-model="createDialog" max-width="600">
+      <v-card>
+        <v-card-title class="d-flex align-center">
+          <v-icon icon="mdi-home-plus" class="mr-2" />
+          新增房产
+          <v-spacer />
+          <v-btn icon variant="text" @click="createDialog = false">
+            <v-icon icon="mdi-close" />
+          </v-btn>
+        </v-card-title>
+        <v-divider />
+        <v-card-text class="pt-4">
+          <v-form ref="createFormRef" v-model="createValid">
+            <v-row>
+              <v-col cols="6">
+                <v-select
+                  v-model="createFormData.building"
+                  :items="buildingIdOptions"
+                  item-title="title"
+                  item-value="value"
+                  label="楼栋"
+                  variant="outlined"
+                  :rules="[rules.required]"
+                />
+              </v-col>
+              <v-col cols="6">
+                <v-select
+                  v-model="createFormData.unit"
+                  :items="unitOptions"
+                  label="单元"
+                  variant="outlined"
+                  :rules="[rules.required]"
+                />
+              </v-col>
+              <v-col cols="6">
+                <v-text-field
+                  v-model.number="createFormData.floor"
+                  type="number"
+                  label="楼层"
+                  variant="outlined"
+                  :rules="[rules.required, rules.positiveNumber]"
+                />
+              </v-col>
+              <v-col cols="6">
+                <v-text-field
+                  v-model="createFormData.room_number"
+                  label="门牌号"
+                  variant="outlined"
+                  placeholder="如: 101"
+                  :rules="[rules.required]"
+                />
+              </v-col>
+              <v-col cols="6">
+                <v-text-field
+                  v-model.number="createFormData.area"
+                  type="number"
+                  label="面积 (㎡)"
+                  variant="outlined"
+                  :rules="[rules.required, rules.positiveNumber]"
+                />
+              </v-col>
+              <v-col cols="6">
+                <v-select
+                  v-model="createFormData.status"
+                  :items="statusCreateOptions"
+                  item-title="title"
+                  item-value="value"
+                  label="房屋状态"
+                  variant="outlined"
+                  :rules="[rules.required]"
+                />
+              </v-col>
+            </v-row>
+          </v-form>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="createDialog = false">取消</v-btn>
+          <v-btn color="primary" :loading="createLoading" @click="submitCreate">确定</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -166,6 +250,43 @@ const statusOptions = [
   { title: '出租', value: 'rent' },
   { title: '空置', value: 'empty' },
 ]
+
+// 新增房产相关
+const createDialog = ref(false)
+const createValid = ref(false)
+const createLoading = ref(false)
+const createFormRef = ref<any>(null)
+
+// 楼栋选项（带ID）
+const buildingIdOptions = [
+  { title: '1栋', value: 1 },
+  { title: '2栋', value: 2 },
+  { title: '3栋', value: 3 },
+  { title: '4栋', value: 4 },
+]
+
+// 创建表单状态
+const createFormData = reactive({
+  building: null as number | null,
+  unit: '',
+  floor: 1,
+  room_number: '',
+  area: 0,
+  status: 1,
+})
+
+// 状态选项（创建时使用）
+const statusCreateOptions = [
+  { title: '自住', value: 1 },
+  { title: '出租', value: 2 },
+  { title: '空置', value: 3 },
+]
+
+// 表单验证规则
+const rules = {
+  required: (v: any) => !!v || '此字段必填',
+  positiveNumber: (v: any) => v > 0 || '必须大于0',
+}
 
 // 表格配置
 const headers = [
@@ -232,6 +353,41 @@ function editHouse(house: House) {
 
 function deleteHouse(house: House) {
   console.log('删除房产:', house)
+}
+
+// 新增房产方法
+function openCreateDialog() {
+  // 重置表单
+  createFormData.building = null
+  createFormData.unit = '1单元'
+  createFormData.floor = 1
+  createFormData.room_number = ''
+  createFormData.area = 0
+  createFormData.status = 1
+  createDialog.value = true
+}
+
+async function submitCreate() {
+  const { valid } = await createFormRef.value.validate()
+  if (!valid) return
+
+  createLoading.value = true
+  try {
+    await propertyStore.createHouse({
+      building: createFormData.building!,
+      unit: createFormData.unit,
+      floor: createFormData.floor,
+      room_number: createFormData.room_number,
+      area: createFormData.area,
+      status: createFormData.status,
+    })
+    createDialog.value = false
+  } catch (error: any) {
+    console.error('创建房产失败:', error)
+    // 这里可以添加错误提示
+  } finally {
+    createLoading.value = false
+  }
 }
 
 onMounted(() => {

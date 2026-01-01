@@ -3,7 +3,7 @@
     <div class="d-flex align-center mb-6">
       <h1 class="text-h4 font-weight-bold">车位管理</h1>
       <v-spacer />
-      <v-btn color="primary" prepend-icon="mdi-plus">新增车位</v-btn>
+      <v-btn color="primary" prepend-icon="mdi-plus" @click="openCreateDialog">新增车位</v-btn>
     </div>
 
     <!-- 筛选栏 -->
@@ -209,6 +209,72 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- 新增车位弹窗 -->
+    <v-dialog v-model="createDialog" max-width="500">
+      <v-card>
+        <v-card-title class="d-flex align-center">
+          <v-icon icon="mdi-car-plus" class="mr-2" />
+          新增车位
+          <v-spacer />
+          <v-btn icon variant="text" @click="createDialog = false">
+            <v-icon icon="mdi-close" />
+          </v-btn>
+        </v-card-title>
+        <v-divider />
+        <v-card-text class="pt-4">
+          <v-form ref="createFormRef" v-model="createValid">
+            <v-row>
+              <v-col cols="12">
+                <v-select
+                  v-model="createFormData.area_name"
+                  :items="areaNameOptions"
+                  label="停车区域"
+                  variant="outlined"
+                  :rules="[rules.required]"
+                />
+              </v-col>
+              <v-col cols="12">
+                <v-text-field
+                  v-model="createFormData.space_number"
+                  label="车位号"
+                  variant="outlined"
+                  placeholder="如: A-001"
+                  :rules="[rules.required]"
+                />
+              </v-col>
+              <v-col cols="12">
+                <v-select
+                  v-model="createFormData.parking_type"
+                  :items="parkingTypeCreateOptions"
+                  item-title="title"
+                  item-value="value"
+                  label="车位类型"
+                  variant="outlined"
+                  :rules="[rules.required]"
+                />
+              </v-col>
+              <v-col cols="12">
+                <v-select
+                  v-model="createFormData.status"
+                  :items="parkingStatusCreateOptions"
+                  item-title="title"
+                  item-value="value"
+                  label="车位状态"
+                  variant="outlined"
+                  :rules="[rules.required]"
+                />
+              </v-col>
+            </v-row>
+          </v-form>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="createDialog = false">取消</v-btn>
+          <v-btn color="primary" :loading="createLoading" @click="submitCreate">确定</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -235,6 +301,46 @@ const statusOptions = [
   { title: '到期', value: 'expired' },
   { title: '空闲', value: 'empty' },
 ]
+
+// 新增车位相关
+const createDialog = ref(false)
+const createValid = ref(false)
+const createLoading = ref(false)
+const createFormRef = ref<any>(null)
+
+// 创建表单状态
+const createFormData = reactive({
+  area_name: '',
+  space_number: '',
+  parking_type: 'owned' as 'owned' | 'rented',
+  status: 1,
+})
+
+// 停车区域选项（新增时使用）
+const areaNameOptions = [
+  'A区地下停车场',
+  'B区地下停车场',
+  'C区地面停车场',
+  'D区地面停车场',
+]
+
+// 车位类型选项（新增时使用）
+const parkingTypeCreateOptions = [
+  { title: '自有车位', value: 'owned' },
+  { title: '租赁车位', value: 'rented' },
+]
+
+// 车位状态选项（新增时使用）
+const parkingStatusCreateOptions = [
+  { title: '正常', value: 1 },
+  { title: '占用', value: 2 },
+  { title: '维修中', value: 3 },
+]
+
+// 表单验证规则
+const rules = {
+  required: (v: any) => !!v || '此字段必填',
+}
 
 // 表格配置
 const headers = [
@@ -310,6 +416,37 @@ const selectedParking = ref<Parking | null>(null)
 function viewDetail(parking: Parking) {
   selectedParking.value = parking
   detailDialog.value = true
+}
+
+// 新增车位方法
+function openCreateDialog() {
+  // 重置表单
+  createFormData.area_name = 'A区地下停车场'
+  createFormData.space_number = ''
+  createFormData.parking_type = 'owned'
+  createFormData.status = 1
+  createDialog.value = true
+}
+
+async function submitCreate() {
+  const { valid } = await createFormRef.value.validate()
+  if (!valid) return
+
+  createLoading.value = true
+  try {
+    await propertyStore.createParkingSpace({
+      area_name: createFormData.area_name,
+      space_number: createFormData.space_number,
+      parking_type: createFormData.parking_type,
+      status: createFormData.status,
+    })
+    createDialog.value = false
+  } catch (error: any) {
+    console.error('创建车位失败:', error)
+    // 这里可以添加错误提示
+  } finally {
+    createLoading.value = false
+  }
 }
 
 onMounted(() => {

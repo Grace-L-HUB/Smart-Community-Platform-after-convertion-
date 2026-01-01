@@ -7,6 +7,76 @@ from .models import (
 from django.utils import timezone
 
 
+# ===== 房产和车位基础数据管理序列化器 =====
+
+class HouseCreateSerializer(serializers.ModelSerializer):
+    """房产创建序列化器"""
+
+    class Meta:
+        model = House
+        fields = ['building', 'unit', 'floor', 'room_number', 'area', 'status']
+
+    def validate_area(self, value):
+        """验证面积"""
+        if value <= 0:
+            raise serializers.ValidationError("面积必须大于0")
+        return value
+
+    def validate(self, data):
+        """验证唯一性约束"""
+        building_id = data.get('building')
+        unit = data.get('unit')
+        room_number = data.get('room_number')
+
+        # 检查是否已存在相同的房产
+        if House.objects.filter(
+            building_id=building_id,
+            unit=unit,
+            room_number=room_number
+        ).exists():
+            raise serializers.ValidationError(
+                f"该房产已存在：楼栋ID {building_id} {unit} {room_number}"
+            )
+
+        return data
+
+
+class ParkingSpaceCreateSerializer(serializers.ModelSerializer):
+    """车位创建序列化器"""
+
+    class Meta:
+        model = ParkingSpace
+        fields = ['area_name', 'space_number', 'parking_type', 'status']
+
+    def validate_area_name(self, value):
+        """验证停车区域"""
+        if not value or len(value.strip()) == 0:
+            raise serializers.ValidationError("停车区域不能为空")
+        return value.strip()
+
+    def validate_space_number(self, value):
+        """验证车位号"""
+        if not value or len(value.strip()) == 0:
+            raise serializers.ValidationError("车位号不能为空")
+        return value.strip()
+
+    def validate(self, data):
+        """验证唯一性约束"""
+        area_name = data.get('area_name')
+        space_number = data.get('space_number')
+
+        # 检查是否已存在相同的车位
+        if ParkingSpace.objects.filter(
+            area_name=area_name,
+            space_number=space_number
+        ).exists():
+            raise serializers.ValidationError(
+                f"该车位已存在：{area_name} - {space_number}"
+            )
+
+        return data
+
+
 class HouseBindingApplicationSerializer(serializers.ModelSerializer):
     """房屋绑定申请序列化器"""
     

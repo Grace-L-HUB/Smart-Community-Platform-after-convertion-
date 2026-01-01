@@ -1,5 +1,6 @@
 from django.urls import path
 from .views import (
+    HouseCreateView, ParkingSpaceCreateView,
     HouseBindingApplicationView, MyHouseListView, HouseBindingStatsView,
     VisitorInviteView, VisitorDetailView, VisitorStatusView, VisitorQRCodeView,
     ParkingBindingApplicationView, MyParkingListView, ParkingBindingStatsView,
@@ -62,7 +63,11 @@ urlpatterns = [
     
     # 车位绑定解绑
     path('parking/binding/unbind/<int:binding_id>', ParkingBindingUnbindView.as_view(), name='parking_binding_unbind'),
-    
+
+    # 基础数据管理 - 创建
+    path('property/house/create', HouseCreateView.as_view(), name='house_create'),
+    path('parking/space/create', ParkingSpaceCreateView.as_view(), name='parking_space_create'),
+
     # 基础数据列表
     path('property/house/list', HouseListView.as_view(), name='house_list'),
     path('parking/space/list', ParkingSpaceListView.as_view(), name='parking_space_list'),

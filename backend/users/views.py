@@ -347,7 +347,7 @@ class WeChatRegisterView(APIView):
 
 
 class UserProfileView(APIView):
-    
+
     def get(self, request):
         # TODO: 后续添加JWT认证后，从token获取用户
         # user = request.user
