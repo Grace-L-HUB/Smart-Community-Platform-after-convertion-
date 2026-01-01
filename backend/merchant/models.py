@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 import uuid
+import random
 
 User = get_user_model()
 
@@ -382,15 +383,15 @@ class MerchantOrder(models.Model):
         return f"{self.order_no} - {self.merchant.shop_name}"
     
     def save(self, *args, **kwargs):
+        import time
         if not self.order_no:
-            import time, random
             timestamp = str(int(time.time()))[-8:]
             random_num = str(random.randint(100, 999))
             self.order_no = f"ORD{timestamp}{random_num}"
-        
+
         if not self.pickup_code and self.status in ['accepted', 'preparing']:
             self.pickup_code = str(random.randint(100000, 999999))
-            
+
         super().save(*args, **kwargs)
     
     def accept_order(self):

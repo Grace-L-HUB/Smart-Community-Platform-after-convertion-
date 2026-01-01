@@ -5,8 +5,10 @@ django-cors-headers
 python-dotenv
 mysqlclient
 drf-spectacular
-pytest 
+pytest
 pytest-django
+pytest-cov
+factory-boy
 requests
 pillow
 PyJWT

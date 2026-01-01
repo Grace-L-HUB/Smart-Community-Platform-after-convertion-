@@ -171,6 +171,19 @@ function convertParkingBindingToParking(binding: ParkingUserBinding): Parking {
     }
 }
 
+// 默认统计数据
+const mockPropertyStats = {
+    pendingWorkOrders: 0,
+    todayRepairs: 0,
+    totalResidents: 0,
+    feeCollectionRate: 0,
+    workOrderTrend: [] as Array<{ date: string; count: number }>,
+    repairTypeDistribution: [] as Array<{ type: string; value: number }>,
+}
+
+// 默认门禁日志数据
+const mockAccessLogs: AccessLog[] = []
+
 interface PropertyState {
     houses: House[]
     residents: Resident[]
@@ -184,6 +197,12 @@ interface PropertyState {
     parkingApplies: ParkingApply[]
     stats: typeof mockPropertyStats
     loading: boolean
+    accessLogsPagination?: {
+        currentPage: number
+        pageSize: number
+        total: number
+        totalPages: number
+    }
     // 新增：原始API数据存储
     houseBindingApplications: HouseBindingApplication[]
     parkingBindingApplications: ParkingBindingApplication[]
