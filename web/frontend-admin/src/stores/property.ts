@@ -331,7 +331,7 @@ export const usePropertyStore = defineStore('property', {
 
                 // 存储报修工单API数据
                 console.log('报修工单API响应:', repairOrdersResponse)
-                this.repairOrdersAPI = repairOrdersResponse.data || []
+                this.repairOrdersAPI = repairOrdersResponse.data?.list || []
                 this.repairEmployeesAPI = repairEmployeesResponse.data || []
                 
                 // 转换报修工单数据为前端格式
@@ -551,9 +551,12 @@ export const usePropertyStore = defineStore('property', {
                 if (response.code === 200) {
                     this.repairOrdersAPI = response.data?.list || []
                     this.workOrders = this.convertRepairOrdersToFrontend(this.repairOrdersAPI)
+                } else {
+                    throw new Error(response.message || '获取工单列表失败')
                 }
             } catch (error) {
                 console.error('重新加载工单列表失败:', error)
+                throw error
             }
         },
 
