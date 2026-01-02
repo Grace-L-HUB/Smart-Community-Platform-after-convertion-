@@ -554,9 +554,12 @@ class OrderCreateSerializer(serializers.ModelSerializer):
             total_amount = 0
             try:
                 print(f"DEBUG: 开始计算总金额，order_items_data = {order_items_data}")
+                from decimal import Decimal
                 for item_data in order_items_data:
-                    subtotal = item_data['price'] * item_data['quantity']
-                    total_amount += subtotal
+                    price = Decimal(str(item_data['price']))
+                    quantity = int(item_data['quantity'])
+                    subtotal = price * quantity
+                    total_amount += float(subtotal)
                 print(f"DEBUG: 计算总金额 = {total_amount}")
             except Exception as e:
                 print(f"DEBUG: 计算总金额失败: {e}")
@@ -638,17 +641,38 @@ class OrderCreateSerializer(serializers.ModelSerializer):
             try:
                 print(f"DEBUG: 开始创建订单项")
                 for item_data in order_items_data:
+                    # 先验证商品是否存在
+                    product_id = item_data.get('product_id')
+                    print(f"DEBUG: 验证商品ID: {product_id}")
+
+                    try:
+                        product = MerchantProduct.objects.get(id=product_id)
+                        print(f"DEBUG: 找到商品: {product.name}")
+                    except MerchantProduct.DoesNotExist:
+                        print(f"DEBUG: 商品不存在: {product_id}")
+                        raise serializers.ValidationError(f"商品ID {product_id} 不存在")
+
+                    # 如果前端没有提供 product_name，使用数据库中的名称
+                    product_name = item_data.get('product_name') or product.name
+
+                    # 转换价格类型
+                    item_price = Decimal(str(item_data['price']))
+                    item_quantity = int(item_data['quantity'])
+                    item_subtotal = item_price * item_quantity
+
                     item = MerchantOrderItem.objects.create(
                         order=order,
-                        product_id=item_data['product_id'],
-                        product_name=item_data['product_name'],
-                        product_price=item_data['price'],
-                        quantity=item_data['quantity'],
-                        subtotal=item_data['price'] * item_data['quantity']
+                        product=product,  # 使用 product 对象而不是 product_id
+                        product_name=product_name,
+                        product_price=item_price,
+                        quantity=item_quantity,
+                        subtotal=item_subtotal
                     )
                     print(f"DEBUG: 创建订单项 = {item}")
             except Exception as e:
                 print(f"DEBUG: 创建订单项失败: {e}")
+                import traceback
+                print(f"DEBUG: 错误堆栈: {traceback.format_exc()}")
                 raise
 
             # 标记优惠券为已使用

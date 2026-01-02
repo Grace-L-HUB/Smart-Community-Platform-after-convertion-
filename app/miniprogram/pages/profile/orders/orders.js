@@ -23,7 +23,17 @@ Page({
 
   loadOrders() {
     this.setData({ loading: true })
-    
+
+    const token = wx.getStorageSync('token')
+    if (!token) {
+      this.setData({ loading: false })
+      wx.showToast({
+        title: '请先登录',
+        icon: 'none'
+      })
+      return
+    }
+
     wx.request({
       url: API_BASE_URL + '/merchant/user/orders/',
       method: 'GET',
@@ -31,20 +41,26 @@ Page({
         status: this.data.activeTab !== 'all' ? this.data.activeTab : ''
       },
       header: {
-        'Authorization': 'Bearer ' + (wx.getStorageSync('token') || '')
+        'Authorization': 'Bearer ' + token
       },
       success: (res) => {
-        if (res.statusCode === 200 && res.data.code === 200) {
+        if (res.statusCode === 200 && res.data.success) {
           this.setData({
-            orders: res.data.data || [],
+            orders: res.data.data.items || [],
             loading: false
+          })
+        } else {
+          this.setData({ loading: false })
+          wx.showToast({
+            title: res.data.message || '加载失败',
+            icon: 'none'
           })
         }
       },
       fail: () => {
         this.setData({ loading: false })
         wx.showToast({
-          title: '加载失败',
+          title: '网络错误',
           icon: 'none'
         })
       }
@@ -66,19 +82,30 @@ Page({
       success: (res) => {
         if (res.confirm) {
           wx.request({
-            url: API_BASE_URL + '/merchant/user/orders/' + orderId + '/cancel/',
+            url: API_BASE_URL + '/merchant/user/orders/' + orderId + '/',
             method: 'POST',
             header: {
               'Authorization': 'Bearer ' + (wx.getStorageSync('token') || '')
             },
             success: (res) => {
-              if (res.statusCode === 200) {
+              if (res.statusCode === 200 && res.data.success) {
                 wx.showToast({
                   title: '取消成功',
                   icon: 'success'
                 })
                 this.loadOrders()
+              } else {
+                wx.showToast({
+                  title: res.data.message || '取消失败',
+                  icon: 'none'
+                })
               }
+            },
+            fail: () => {
+              wx.showToast({
+                title: '网络错误',
+                icon: 'none'
+              })
             }
           })
         }
