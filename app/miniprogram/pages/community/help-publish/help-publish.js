@@ -68,7 +68,7 @@ Page({
     this.setData({ loading: true })
 
     wx.request({
-      url: API_BASE_URL + '/community/posts/',
+      url: API_BASE_URL + '/community/help-posts/',
       method: 'POST',
       data: {
         title: title,

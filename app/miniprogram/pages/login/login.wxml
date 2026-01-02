@@ -19,7 +19,16 @@
         <view class="get-code-btn" bindtap="getVerificationCode">获取验证码</view>
       </view>
 
-      <button class="btn-primary" bindtap="handlePhoneLogin">登录</button>
+      <view class="user-not-exist-tip" wx:if="{{!isUserExists && phone.length === 11}}">
+        <text>该手机号未注册</text>
+      </view>
+
+      <view class="button-group" wx:if="{{isUserExists}}">
+        <button class="btn-primary" bindtap="handlePhoneLogin">登录</button>
+      </view>
+      <view class="button-group" wx:else>
+        <button class="btn-primary" bindtap="goToRegister">去注册</button>
+      </view>
     </view>
 
     <view class="divider">
@@ -34,29 +43,4 @@
       </button>
     </view>
   </view>
-
-  <!-- 用户信息完善区域 (类似 index 页面的逻辑) -->
-  <view class="profile-box" wx:else>
-    <view class="profile-header">
-      <text class="profile-title">完善个人信息</text>
-      <text class="profile-desc">新用户请完善头像和昵称</text>
-    </view>
-
-    <view class="avatar-section">
-      <button class="avatar-wrapper" open-type="chooseAvatar" bind:chooseavatar="onChooseAvatar">
-        <image class="avatar-img" src="{{userInfo.avatarUrl}}"></image>
-        <view class="avatar-edit-icon">+</view>
-      </button>
-      <text class="avatar-tip">点击修改头像</text>
-    </view>
-
-    <view class="nickname-section">
-      <text class="label">昵称</text>
-      <input type="nickname" class="input nickname-input" placeholder="请输入昵称" bind:change="onNicknameChange" value="{{userInfo.nickName}}"/>
-    </view>
-
-    <button class="btn-primary" bindtap="handleSubmitProfile">完成并登录</button>
-    <button class="btn-secondary" bindtap="cancelProfileUpdate">返回</button>
-  </view>
-
 </view>

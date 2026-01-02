@@ -25,7 +25,7 @@ Page({
     this.setData({ loading: true })
     
     wx.request({
-      url: API_BASE_URL + '/orders/',
+      url: API_BASE_URL + '/merchant/user/orders/',
       method: 'GET',
       data: {
         status: this.data.activeTab !== 'all' ? this.data.activeTab : ''
@@ -66,7 +66,7 @@ Page({
       success: (res) => {
         if (res.confirm) {
           wx.request({
-            url: API_BASE_URL + '/orders/' + orderId + '/cancel/',
+            url: API_BASE_URL + '/merchant/user/orders/' + orderId + '/cancel/',
             method: 'POST',
             header: {
               'Authorization': 'Bearer ' + (wx.getStorageSync('token') || '')

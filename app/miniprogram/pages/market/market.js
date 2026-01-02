@@ -1,5 +1,6 @@
 // pages/market/market.js
-const { API_BASE_URL } = require('../../config/api')
+const API_BASE_URL = require('../../config/api.js').API_BASE_URL
+const API_COMMUNITY_URL = API_BASE_URL + '/community'
 
 Page({
     data: {
@@ -15,7 +16,7 @@ Page({
         this.setData({ loading: true })
         
         wx.request({
-            url: API_BASE_URL + '/market-items/',
+            url: API_COMMUNITY_URL + '/market-items/',
             method: 'GET',
             header: {
                 'Authorization': 'Bearer ' + (wx.getStorageSync('token') || '')

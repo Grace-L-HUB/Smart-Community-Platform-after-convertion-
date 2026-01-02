@@ -39,7 +39,7 @@ Page({
         }
 
         wx.request({
-            url: API_BASE_URL + '/api/profile',
+            url: API_BASE_URL + '/profile',
             method: 'GET',
             data: {
                 user_id: storedUserInfo.user_id

@@ -1,17 +1,15 @@
-const API_BASE_URL = require('../../config/api.js').API_BASE_URL
+const API_BASE_URL = require('../../../config/api.js').API_BASE_URL
 
 Page({
   data: {
     orderType: '',
-    serviceId: '',
     productId: '',
+    merchantId: '',
     quantity: 1,
     form: {
       address: '',
       phone: '',
-      remark: '',
-      appointmentDate: '',
-      appointmentTime: ''
+      remark: ''
     },
     loading: false
   },
@@ -20,11 +18,11 @@ Page({
     if (options.type) {
       this.setData({ orderType: options.type })
     }
-    if (options.serviceId) {
-      this.setData({ serviceId: options.serviceId })
-    }
     if (options.productId) {
       this.setData({ productId: options.productId })
+    }
+    if (options.merchantId) {
+      this.setData({ merchantId: options.merchantId })
     }
     if (options.quantity) {
       this.setData({ quantity: parseInt(options.quantity) })
@@ -44,37 +42,25 @@ Page({
 
   onAddressChange(e) {
     this.setData({
-      'form.address': e.detail.value
+      'form.address': e.detail
     })
   },
 
   onPhoneChange(e) {
     this.setData({
-      'form.phone': e.detail.value
+      'form.phone': e.detail
     })
   },
 
   onRemarkChange(e) {
     this.setData({
-      'form.remark': e.detail.value
-    })
-  },
-
-  onDateChange(e) {
-    this.setData({
-      'form.appointmentDate': e.detail.value
-    })
-  },
-
-  onTimeChange(e) {
-    this.setData({
-      'form.appointmentTime': e.detail.value
+      'form.remark': e.detail
     })
   },
 
   onQuantityChange(e) {
     this.setData({
-      quantity: parseInt(e.detail.value) || 1
+      quantity: parseInt(e.detail) || 1
     })
   },
 
@@ -93,7 +79,7 @@ Page({
   },
 
   onSubmit() {
-    const { orderType, serviceId, productId, quantity, form } = this.data
+    const { productId, merchantId, quantity, form } = this.data
 
     if (!form.address || !form.phone) {
       wx.showToast({
@@ -103,33 +89,26 @@ Page({
       return
     }
 
+    if (!productId) {
+      wx.showToast({
+        title: '缺少商品信息',
+        icon: 'none'
+      })
+      return
+    }
+
     this.setData({ loading: true })
 
-    let url = ''
-    let data = {
-      address: form.address,
-      phone: form.phone,
-      remark: form.remark,
-      appointment_date: form.appointmentDate,
-      appointment_time: form.appointmentTime
-    }
-
-    if (orderType === 'decoration') {
-      url = API_BASE_URL + '/orders/decoration/'
-      data.service_id = serviceId
-    } else if (orderType === 'housekeeping') {
-      url = API_BASE_URL + '/orders/housekeeping/'
-      data.service_id = serviceId
-    } else if (orderType === 'shop') {
-      url = API_BASE_URL + '/orders/shop/'
-      data.product_id = productId
-      data.quantity = quantity
-    }
-
     wx.request({
-      url: url,
+      url: API_BASE_URL + '/merchant/orders/create/',
       method: 'POST',
-      data: data,
+      data: {
+        product_id: productId,
+        quantity: quantity,
+        address: form.address,
+        phone: form.phone,
+        remark: form.remark
+      },
       header: {
         'Authorization': 'Bearer ' + (wx.getStorageSync('token') || '')
       },
@@ -144,7 +123,18 @@ Page({
               url: '/pages/profile/orders/orders'
             })
           }, 1500)
+        } else {
+          wx.showToast({
+            title: res.data.message || '下单失败',
+            icon: 'none'
+          })
         }
+      },
+      fail: () => {
+        wx.showToast({
+          title: '网络错误',
+          icon: 'none'
+        })
       },
       complete: () => {
         this.setData({ loading: false })

@@ -20,7 +20,7 @@ Page({
     this.setData({ loading: true })
     
     wx.request({
-      url: API_BASE_URL + '/community/posts/' + id + '/',
+      url: API_BASE_URL + '/community/help-posts/' + id + '/',
       method: 'GET',
       header: {
         'Authorization': 'Bearer ' + (wx.getStorageSync('token') || '')

@@ -1,6 +1,46 @@
 <view class="container">
-  <view class="loading-container">
+  <view wx:if="{{loading}}" class="loading-container">
     <van-loading type="spinner" size="30px" />
     <view class="loading-text">正在检查车位信息...</view>
+  </view>
+
+  <view wx:else>
+    <view wx:if="{{parkingList.length === 0}}" class="empty-container">
+      <van-icon name="logistics" size="80px" color="#ccc" />
+      <view class="empty-text">暂无车位信息</view>
+      <van-button type="primary" size="small" bind:click="onAddParking">添加车位</van-button>
+    </view>
+
+    <view wx:else class="parking-list">
+      <view class="parking-item" wx:for="{{parkingList}}" wx:key="id" bindtap="onParkingClick" data-id="{{item.id}}">
+        <view class="parking-header">
+          <view class="parking-title">{{item.plate_number}}</view>
+          <view class="parking-status" wx:if="{{item.status === 'approved'}}">已认证</view>
+          <view class="parking-status pending" wx:elif="{{item.status === 'pending'}}">审核中</view>
+          <view class="parking-status rejected" wx:elif="{{item.status === 'rejected'}}">已拒绝</view>
+        </view>
+        <view class="parking-info">
+          <view class="info-item" wx:if="{{item.car_model}}">
+            <van-icon name="logistics" size="16px" />
+            <text>车型：{{item.car_model}}</text>
+          </view>
+          <view class="info-item">
+            <van-icon name="user-o" size="16px" />
+            <text>车主：{{item.owner_name}}</text>
+          </view>
+          <view class="info-item">
+            <van-icon name="phone-o" size="16px" />
+            <text>{{item.owner_phone}}</text>
+          </view>
+        </view>
+        <view class="parking-actions" wx:if="{{item.status === 'approved'}}">
+          <van-button size="mini" type="danger" catchtap="onUnbind" data-id="{{item.id}}">解绑</van-button>
+        </view>
+      </view>
+    </view>
+
+    <view class="add-button" wx:if="{{parkingList.length === 0}}">
+      <van-button type="primary" block bind:click="onAddParking">添加车位</van-button>
+    </view>
   </view>
 </view>

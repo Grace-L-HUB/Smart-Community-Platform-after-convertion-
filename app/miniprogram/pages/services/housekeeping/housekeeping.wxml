@@ -19,8 +19,8 @@
 
   <view class="form-section card">
     <view class="section-title">预约信息</view>
-    <van-field label="服务类型" value="{{selectedService}}" placeholder="请选择服务" is-link readonly bind:click="showServicePicker" required />
-    <van-field label="服务时间" value="{{serviceTime}}" placeholder="请选择时间" is-link readonly bind:click="showTimePicker" required />
+    <van-field label="服务类型" value="{{selectedService}}" placeholder="请选择服务" is-link readonly clickable bind:click-input="showServicePicker" bind:click="showServicePicker" required />
+    <van-field label="服务时间" value="{{serviceTime}}" placeholder="请选择时间" is-link readonly clickable bind:click-input="showTimePicker" bind:click="showTimePicker" required />
     <van-field label="服务地址" value="{{address}}" placeholder="请输入详细地址" bind:change="onAddressChange" required />
     <van-field label="联系电话" value="{{phone}}" type="number" placeholder="请输入联系电话" bind:change="onPhoneChange" required />
     <van-field label="特殊要求" value="{{remark}}" type="textarea" placeholder="选填" bind:change="onRemarkChange" autosize />
@@ -39,11 +39,17 @@
     </van-button>
   </view>
 
-  <van-popup show="{{showService}}" position="bottom" bind:close="closeServicePicker">
-    <van-picker columns="{{serviceNames}}" bind:confirm="onServiceConfirm" bind:cancel="closeServicePicker" />
+  <van-popup show="{{showService}}" position="bottom" round bind:close="closeServicePicker">
+    <van-picker
+      show-toolbar
+      title="请选择服务类型"
+      columns="{{serviceNames}}"
+      bind:confirm="onServiceConfirm"
+      bind:cancel="closeServicePicker"
+    />
   </van-popup>
 
-  <van-popup show="{{showTime}}" position="bottom" bind:close="closeTimePicker">
+  <van-popup show="{{showTime}}" position="bottom" round bind:close="closeTimePicker">
     <van-datetime-picker type="datetime" value="{{currentDate}}" min-date="{{minDate}}" bind:confirm="onTimeConfirm" bind:cancel="closeTimePicker" />
   </van-popup>
 </view>

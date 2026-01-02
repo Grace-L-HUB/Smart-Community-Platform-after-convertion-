@@ -3,7 +3,9 @@ const API_BASE_URL = require('../../../config/api.js').API_BASE_URL
 Page({
   data: {
     announcements: [],
-    loading: false
+    loading: false,
+    activeTab: 0,
+    allAnnouncements: []
   },
 
   onLoad() {
@@ -21,8 +23,10 @@ Page({
       },
       success: (res) => {
         if (res.statusCode === 200 && res.data.code === 200) {
+          const allData = res.data.data || []
           this.setData({
-            announcements: res.data.data || [],
+            allAnnouncements: allData,
+            announcements: allData,
             loading: false
           })
         }
@@ -47,5 +51,26 @@ Page({
   onPullDownRefresh() {
     this.loadAnnouncements()
     wx.stopPullDownRefresh()
+  },
+
+  onTabChange(e) {
+    const index = e.detail.index
+    this.setData({ activeTab: index })
+    
+    const categories = ['全部', 'property_notice', 'community_news', 'warm_tips']
+    const selectedCategory = categories[index]
+    
+    if (selectedCategory === '全部') {
+      this.setData({
+        announcements: this.data.allAnnouncements
+      })
+    } else {
+      const filtered = this.data.allAnnouncements.filter(item => {
+        return item.category === selectedCategory
+      })
+      this.setData({
+        announcements: filtered
+      })
+    }
   }
 })

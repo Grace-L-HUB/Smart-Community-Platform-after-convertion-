@@ -8,6 +8,8 @@
         "van-submit-bar": "@vant/weapp/submit-bar/index",
         "van-checkbox": "@vant/weapp/checkbox/index",
         "van-checkbox-group": "@vant/weapp/checkbox-group/index",
-        "van-tag": "@vant/weapp/tag/index"
+        "van-tag": "@vant/weapp/tag/index",
+        "van-loading": "@vant/weapp/loading/index",
+        "van-empty": "@vant/weapp/empty/index"
     }
 }

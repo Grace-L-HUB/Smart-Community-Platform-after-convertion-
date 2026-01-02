@@ -3,7 +3,7 @@
   <van-loading wx:if="{{ loading }}" type="spinner" size="20px">加载中...</van-loading>
   
   <!-- 头部金额卡片 -->
-  <view class="header-card">
+  <view class="header-card" wx:if="{{ !loading }}">
     <text class="label">待缴总额</text>
     <view class="amount-row">
       <text class="symbol">¥</text>
@@ -18,7 +18,7 @@
   </view>
 
   <!-- 账单列表 -->
-  <view wx:else class="bill-list">
+  <view wx:if="{{ !loading && bills.length > 0 }}" class="bill-list">
     <view class="list-header">
       <text class="list-title">待缴账单 ({{ bills.length }})</text>
       <text class="refresh-btn" bind:tap="onRefresh">刷新</text>
@@ -26,12 +26,12 @@
     
     <van-checkbox-group value="{{ selectedBills }}" bind:change="onBillChange">
       <view class="bill-item" wx:for="{{ bills }}" wx:key="id">
-        <van-checkbox name="{{ item.id }}" checked-color="#07c160" label-class="bill-checkbox-label">
+        <van-checkbox name="{{ item.id || '' }}" checked-color="#07c160" label-class="bill-checkbox-label">
           <view class="bill-content">
             <view class="bill-header">
               <view class="bill-title-section">
                 <text class="bill-name">{{ item.title }}</text>
-                <van-tag type="{{ item.fee_type }}" size="small">{{ item.fee_type_display }}</van-tag>
+                <van-tag type="{{ item.fee_type || 'primary' }}" size="small">{{ item.fee_type_display }}</van-tag>
               </view>
               <text class="bill-amount">¥{{ item.amount }}</text>
             </view>

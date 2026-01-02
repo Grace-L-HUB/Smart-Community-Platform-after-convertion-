@@ -1,5 +1,5 @@
 // pages/index/index.js
-const { API_BASE_URL } = require('../../config/api')
+const API_BASE_URL = require('../../config/api.js').API_BASE_URL
 const API_PROPERTY_URL = API_BASE_URL + '/property'
 
 Page({

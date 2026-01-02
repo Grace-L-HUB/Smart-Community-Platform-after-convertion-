@@ -55,22 +55,22 @@
       <van-field
         value="{{ carNo }}"
         label="车牌号"
-        placeholder="请输入车牌号码"
-        bind:change="onCarNoChange"
+        placeholder="请输入车牌号（如：京A12345）"
+        bind:input="onCarNoChange"
       />
 
       <van-field
         value="{{ carBrand }}"
         label="车辆品牌"
         placeholder="如：宝马、奔驰、特斯拉等"
-        bind:change="onCarBrandChange"
+        bind:input="onCarBrandChange"
       />
 
       <van-field
         value="{{ carColor }}"
         label="车辆颜色"
         placeholder="如：白色、黑色、银色等"
-        bind:change="onCarColorChange"
+        bind:input="onCarColorChange"
       />
 
       <van-divider contentPosition="left" customStyle="color: #999; border-color: #f5f5f5; font-size: 24rpx; margin: 40rpx 32rpx 20rpx;">车主信息</van-divider>
@@ -79,7 +79,7 @@
         value="{{ ownerName }}"
         label="车主姓名"
         placeholder="请输入车主姓名"
-        bind:change="onOwnerNameChange"
+        bind:input="onOwnerNameChange"
       />
 
       <van-field
@@ -87,7 +87,7 @@
         label="身份证号"
         placeholder="请输入身份证号码"
         maxlength="18"
-        bind:change="onIdCardChange"
+        bind:input="onIdCardChange"
       />
       
       <van-field
@@ -96,7 +96,7 @@
         placeholder="请输入联系电话"
         type="number"
         maxlength="11"
-        bind:change="onOwnerPhoneChange"
+        bind:input="onOwnerPhoneChange"
       />
     </van-cell-group>
 

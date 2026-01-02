@@ -1,16 +1,149 @@
 page {
-  background-color: var(--bg-color);
+  background-color: #f5f5f5;
 }
 
-.header-area {
+.container {
+  min-height: 100vh;
+  padding-bottom: 120rpx;
+}
+
+.header-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 40rpx 30rpx;
+  margin-bottom: 20rpx;
+}
+
+.header-card .label {
+  font-size: 28rpx;
+  color: rgba(255, 255, 255, 0.9);
+  display: block;
+  margin-bottom: 10rpx;
+}
+
+.header-card .amount-row {
+  display: flex;
+  align-items: baseline;
+}
+
+.header-card .symbol {
+  font-size: 40rpx;
+  color: #fff;
+  margin-right: 8rpx;
+}
+
+.header-card .total {
+  font-size: 72rpx;
+  color: #fff;
+  font-weight: bold;
+}
+
+.header-card .unit-info {
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.8);
+  display: block;
+  margin-top: 10rpx;
+}
+
+.empty-state {
+  padding: 200rpx 0;
+  text-align: center;
+}
+
+.bill-list {
+  padding: 0 30rpx;
+}
+
+.list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20rpx 0;
+}
+
+.list-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.refresh-btn {
+  font-size: 28rpx;
+  color: #667eea;
+}
+
+.bill-item {
   background: #fff;
-  padding: 20rpx 24rpx;
+  border-radius: 16rpx;
+  padding: 30rpx;
+  margin-bottom: 20rpx;
 }
 
-.goods-list {
-  padding: 24rpx;
+.bill-checkbox-label {
+  width: 100%;
 }
 
-.spacer {
-  height: 20rpx;
+.bill-content {
+  width: 100%;
+}
+
+.bill-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20rpx;
+}
+
+.bill-title-section {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.bill-name {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.bill-amount {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #f44;
+}
+
+.bill-detail {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-bottom: 16rpx;
+}
+
+.period-text {
+  font-size: 26rpx;
+  color: #666;
+}
+
+.house-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16rpx 0;
+  border-top: 1rpx solid #f0f0f0;
+  margin-bottom: 16rpx;
+}
+
+.house-address {
+  font-size: 26rpx;
+  color: #666;
+}
+
+.house-area {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.due-date {
+  font-size: 24rpx;
+  color: #999;
 }

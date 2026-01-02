@@ -17,8 +17,8 @@
           </view>
           <van-cell-group border="{{false}}">
             <van-cell title="手机号" value="{{item.phone}}" />
-            <van-cell title="访问日期" value="{{item.visitTime}}" />
-            <van-cell title="车牌号" value="{{item.carNumber || '无'}}" />
+            <van-cell title="访问日期" value="{{item.visit_time}}" />
+            <van-cell title="车牌号" value="{{item.car_number || '无'}}" />
           </van-cell-group>
           <view class="visitor-actions" wx:if="{{item.status === 'pending'}}">
             <van-button size="small" round bind:tap="onShowQR" data-id="{{item.id}}">查看二维码</van-button>
@@ -37,12 +37,12 @@
   <!-- Invite Visitor -->
   <view class="tab-content" wx:else>
     <view class="invite-form">
-      <van-field label="访客姓名" value="{{ visitorName }}" placeholder="请输入访客姓名" bind:change="onNameChange" required />
-      <van-field label="手机号" value="{{ visitorPhone }}" type="number" placeholder="请输入访客手机号" bind:change="onPhoneChange" required />
-      <van-field label="车牌号" value="{{ carNumber }}" placeholder="选填" bind:change="onCarChange" />
+      <van-field label="访客姓名" value="{{ form.name }}" placeholder="请输入访客姓名" bind:change="onNameChange" required />
+      <van-field label="手机号" value="{{ form.phone }}" type="number" placeholder="请输入访客手机号" bind:change="onPhoneChange" required />
+      <van-field label="车牌号" value="{{ form.carNumber }}" placeholder="选填" bind:change="onCarChange" />
       <van-field
         label="访问日期"
-        value="{{ visitTime }}"
+        value="{{ form.visitDate }}"
         placeholder="请选择访问日期"
         is-link
         readonly
@@ -50,7 +50,7 @@
         bind:tap="showTimePicker"
         required
       />
-      <van-field label="备注" value="{{ remark }}" type="textarea" placeholder="选填" bind:change="onRemarkChange" autosize />
+      <van-field label="备注" value="{{ form.reason }}" type="textarea" placeholder="选填" bind:change="onRemarkChange" autosize />
       
       <view class="submit-btn">
         <van-button 

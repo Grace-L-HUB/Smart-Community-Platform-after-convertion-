@@ -1,4 +1,4 @@
-const API_BASE_URL = require('../../config/api.js').API_BASE_URL
+const API_BASE_URL = require('../../../config/api.js').API_BASE_URL
 
 Page({
   data: {
@@ -25,7 +25,7 @@ Page({
     this.setData({ loading: true })
     
     wx.request({
-      url: `${API_BASE_URL}/coupons/my/`,
+      url: API_BASE_URL + '/merchant/user/coupons/',
       method: 'GET',
       data: {
         status: this.data.activeTab
@@ -55,6 +55,12 @@ Page({
     const couponId = e.currentTarget.dataset.id
     wx.navigateTo({
       url: `/pages/shop/product/product`
+    })
+  },
+
+  onGetMoreCoupons() {
+    wx.navigateTo({
+      url: '/pages/coupon/market/market'
     })
   },
 

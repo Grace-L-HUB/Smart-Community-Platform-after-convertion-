@@ -6,26 +6,17 @@ Page({
     data: {
         phone: '',
         code: '',
-
-        showProfileInput: false,
         userInfo: {
             avatarUrl: defaultAvatarUrl,
             nickName: '',
         },
-
-        isUserExists: true,
-        loginType: 'phone',
-        uploadedAvatarUrl: ''
+        uploadedAvatarUrl: '',
+        codeVerified: false,
+        countdown: 0
     },
 
     onPhoneInput(e) {
         this.setData({ phone: e.detail.value })
-    },
-
-    goToRegister() {
-        wx.navigateTo({
-            url: '/pages/register/register'
-        })
     },
 
     onCodeInput(e) {
@@ -33,114 +24,96 @@ Page({
     },
 
     getVerificationCode() {
+        console.log('getVerificationCode called')
+        console.log('Phone:', this.data.phone)
+        console.log('API_AUTH_URL:', API_AUTH_URL)
+        
         if (!this.data.phone || this.data.phone.length !== 11) {
             wx.showToast({ title: '请输入正确的手机号', icon: 'none' })
             return
         }
 
+        if (this.data.countdown > 0) {
+            return
+        }
+
         wx.showLoading({ title: '发送中...' })
 
+        const requestUrl = API_AUTH_URL + '/auth/send-sms-code'
+        console.log('Request URL:', requestUrl)
+        console.log('Request data:', { phone: this.data.phone })
+
         wx.request({
-            url: API_AUTH_URL + '/auth/send-sms-code',
+            url: requestUrl,
             method: 'POST',
             data: { phone: this.data.phone },
             success: (res) => {
                 wx.hideLoading()
+                console.log('Response:', res)
+                console.log('Response data:', res.data)
+                
                 if (res.statusCode === 200 && res.data.code === 200) {
                     wx.showToast({ title: '验证码已发送', icon: 'success' })
-                    const userExists = res.data.data.user_exists
-                    this.setData({ isUserExists: userExists })
-
-                    if (res.data.data.code) {
+                    
+                    if (res.data.data && res.data.data.code) {
                         console.log('DEV ONLY: SMS Code is', res.data.data.code)
                         wx.showModal({ title: '测试验证码', content: res.data.data.code, showCancel: false })
                     }
+
+                    this.startCountdown()
                 } else {
-                    wx.showToast({ title: res.data.message || '发送失败', icon: 'none' })
+                    console.error('Send code failed:', res.data)
+                    wx.showToast({ title: res.data?.message || '发送失败', icon: 'none' })
                 }
             },
             fail: (err) => {
                 wx.hideLoading()
+                console.error('Request failed:', err)
                 wx.showToast({ title: '网络请求失败', icon: 'none' })
             }
         })
     },
 
-    handlePhoneLogin() {
-        const { phone, code, isUserExists } = this.data
+    startCountdown() {
+        let countdown = 60
+        this.setData({ countdown })
+
+        const timer = setInterval(() => {
+            countdown--
+            this.setData({ countdown })
+
+            if (countdown <= 0) {
+                clearInterval(timer)
+            }
+        }, 1000)
+    },
+
+    verifyCode() {
+        const { phone, code } = this.data
 
         if (!phone || !code) {
             wx.showToast({ title: '请填写手机号和验证码', icon: 'none' })
             return
         }
 
-        if (!isUserExists) {
-            wx.showToast({ title: '请先注册账号', icon: 'none' })
-            return
-        }
+        wx.showLoading({ title: '验证中...' })
 
-        wx.showLoading({ title: '登录中...' })
-
-        this.performPhoneLogin()
-    },
-
-    performPhoneLogin() {
-        const { phone, code } = this.data
         wx.request({
-            url: API_AUTH_URL + '/auth/sms-login',
+            url: API_AUTH_URL + '/auth/verify-code',
             method: 'POST',
             data: { phone, code },
             success: (res) => {
                 wx.hideLoading()
                 if (res.statusCode === 200 && res.data.code === 200) {
-                    this.loginSuccess(res.data.data)
+                    this.setData({ codeVerified: true })
+                    wx.showToast({ title: '验证成功', icon: 'success' })
                 } else {
-                    wx.showToast({ title: res.data.message || '登录失败', icon: 'none' })
+                    wx.showToast({ title: res.data.message || '验证码错误', icon: 'none' })
                 }
             },
             fail: () => {
                 wx.hideLoading()
-                wx.showToast({ title: '登录请求失败', icon: 'none' })
-            }
-        })
-    },
-
-    handleWechatLogin() {
-        wx.showLoading({ title: '微信授权中...' })
-
-        wx.login({
-            success: (res) => {
-                if (res.code) {
-                    wx.request({
-                        url: API_AUTH_URL + '/auth/wechat-login',
-                        method: 'POST',
-                        data: { code: res.code },
-                        success: (apiRes) => {
-                            wx.hideLoading()
-                            if (apiRes.statusCode === 200 && apiRes.data.code === 200) {
-                                const data = apiRes.data.data
-                                if (data.need_profile) {
-                                    this.setData({
-                                        showProfileInput: true,
-                                        loginType: 'wechat'
-                                    })
-                                    wx.showToast({ title: '请完善信息', icon: 'none' })
-                                } else {
-                                    this.loginSuccess(data)
-                                }
-                            } else {
-                                wx.showToast({ title: apiRes.data.message || '登录失败', icon: 'none' })
-                            }
-                        },
-                        fail: () => {
-                            wx.hideLoading()
-                            wx.showToast({ title: '请求失败', icon: 'none' })
-                        }
-                    })
-                } else {
-                    wx.hideLoading()
-                    wx.showToast({ title: '获取code失败', icon: 'none' })
-                }
+                wx.showToast({ title: '验证请求失败', icon: 'none' })
             }
         })
     },
@@ -210,18 +183,19 @@ Page({
         })
     },
 
-    cancelProfileUpdate() {
-        this.setData({ 
-            showProfileInput: false,
-            uploadedAvatarUrl: '',
-            "userInfo.avatarUrl": defaultAvatarUrl,
-            "userInfo.nickName": ''
-        })
-    },
-
-    handleSubmitProfile() {
-        const { phone, code, loginType, uploadedAvatarUrl } = this.data
+    handleRegister() {
+        const { phone, code, uploadedAvatarUrl } = this.data
         const { avatarUrl, nickName } = this.data.userInfo
+
+        if (!phone || phone.length !== 11) {
+            wx.showToast({ title: '请输入正确的手机号', icon: 'none' })
+            return
+        }
+
+        if (!code || code.length !== 6) {
+            wx.showToast({ title: '请输入验证码', icon: 'none' })
+            return
+        }
 
         if (!nickName || nickName.trim() === '') {
             wx.showToast({ title: '请输入昵称', icon: 'none' })
@@ -240,40 +214,6 @@ Page({
             avatar_url: uploadedAvatarUrl || ''
         })
 
-        if (loginType === 'wechat') {
-            wx.showLoading({ title: '注册中...' })
-            wx.login({
-                success: (res) => {
-                    if (res.code) {
-                        wx.request({
-                            url: API_AUTH_URL + '/auth/wechat-register',
-                            method: 'POST',
-                            data: {
-                                code: res.code,
-                                nickname: nickName,
-                                avatar_url: this.data.uploadedAvatarUrl || ''
-                            },
-                            success: (apiRes) => {
-                                wx.hideLoading()
-                                console.log('微信注册响应:', apiRes)
-                                if (apiRes.statusCode === 200 && apiRes.data.code === 200) {
-                                    this.loginSuccess(apiRes.data.data)
-                                } else {
-                                    wx.showToast({ title: apiRes.data.message || '注册失败', icon: 'none' })
-                                }
-                            },
-                            fail: (err) => {
-                                wx.hideLoading()
-                                console.error('微信注册失败:', err)
-                                wx.showToast({ title: '请求失败', icon: 'none' })
-                            }
-                        })
-                    }
-                }
-            })
-            return
-        }
-
         wx.showLoading({ title: '注册中...' })
         wx.request({
             url: API_AUTH_URL + '/auth/sms-register',
@@ -282,7 +222,7 @@ Page({
                 phone,
                 code,
                 nickname: nickName,
-                avatar_url: this.data.uploadedAvatarUrl || ''
+                avatar_url: uploadedAvatarUrl || ''
             },
             success: (res) => {
                 wx.hideLoading()
@@ -307,10 +247,14 @@ Page({
         wx.setStorageSync('token', user.token)
         wx.setStorageSync('userInfo', user)
 
-        wx.showToast({ title: '登录成功', icon: 'success' })
+        wx.showToast({ title: '注册成功', icon: 'success' })
 
         setTimeout(() => {
             wx.reLaunch({ url: '/pages/index/index' })
         }, 1500)
+    },
+
+    goToLogin() {
+        wx.navigateBack()
     }
 })

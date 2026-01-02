@@ -1,6 +1,46 @@
 <view class="container">
-  <view class="loading-container">
+  <view wx:if="{{loading}}" class="loading-container">
     <van-loading type="spinner" size="30px" />
     <view class="loading-text">正在检查房屋信息...</view>
+  </view>
+
+  <view wx:else>
+    <view wx:if="{{houseList.length === 0}}" class="empty-container">
+      <van-icon name="home-o" size="80px" color="#ccc" />
+      <view class="empty-text">暂无房屋信息</view>
+      <van-button type="primary" size="small" bind:click="onAddHouse">添加房屋</van-button>
+    </view>
+
+    <view wx:else class="house-list">
+      <view class="house-item" wx:for="{{houseList}}" wx:key="id" bindtap="onHouseClick" data-id="{{item.id}}">
+        <view class="house-header">
+          <view class="house-title">{{item.house_info.building_name}} {{item.house_info.unit}}单元 {{item.house_info.floor}}层 {{item.house_info.room}}室</view>
+          <view class="house-status" wx:if="{{item.status === 'approved'}}">已认证</view>
+          <view class="house-status pending" wx:elif="{{item.status === 'pending'}}">审核中</view>
+          <view class="house-status rejected" wx:elif="{{item.status === 'rejected'}}">已拒绝</view>
+        </view>
+        <view class="house-info">
+          <view class="info-item">
+            <van-icon name="user-o" size="16px" />
+            <text>业主：{{item.house_info.owner_name}}</text>
+          </view>
+          <view class="info-item">
+            <van-icon name="phone-o" size="16px" />
+            <text>{{item.house_info.owner_phone}}</text>
+          </view>
+          <view class="info-item" wx:if="{{item.house_info.area}}">
+            <van-icon name="wap-home-o" size="16px" />
+            <text>{{item.house_info.area}}㎡</text>
+          </view>
+        </view>
+        <view class="house-actions" wx:if="{{item.status === 'approved'}}">
+          <van-button size="mini" type="danger" catchtap="onUnbind" data-id="{{item.id}}">解绑</van-button>
+        </view>
+      </view>
+    </view>
+
+    <view class="add-button" wx:if="{{houseList.length === 0}}">
+      <van-button type="primary" block bind:click="onAddHouse">添加房屋</van-button>
+    </view>
   </view>
 </view>

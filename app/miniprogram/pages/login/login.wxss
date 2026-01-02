@@ -107,6 +107,24 @@
   background: rgba(7, 193, 96, 0.2);
 }
 
+.user-not-exist-tip {
+  background: #fff3cd;
+  border: 2rpx solid #ffc107;
+  border-radius: 12rpx;
+  padding: 20rpx 24rpx;
+  margin-bottom: 30rpx;
+  text-align: center;
+}
+
+.user-not-exist-tip text {
+  font-size: 26rpx;
+  color: #856404;
+}
+
+.button-group {
+  margin-top: 50rpx;
+}
+
 .btn-primary {
   background: linear-gradient(135deg, #2ecc71 0%, #07c160 100%);
   color: #fff;

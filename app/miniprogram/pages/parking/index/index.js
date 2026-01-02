@@ -1,4 +1,4 @@
-const API_BASE_URL = require('../../config/api.js').API_BASE_URL
+const API_BASE_URL = require('../../../config/api.js').API_BASE_URL
 
 Page({
   data: {
@@ -17,8 +17,14 @@ Page({
   loadParkingList() {
     this.setData({ loading: true })
     
+    const userInfo = wx.getStorageSync('userInfo')
+    if (!userInfo || !userInfo.user_id) {
+      this.setData({ loading: false })
+      return
+    }
+
     wx.request({
-      url: API_BASE_URL + '/parking/list/',
+      url: API_BASE_URL + '/parking/my-parkings?user_id=' + userInfo.user_id,
       method: 'GET',
       header: {
         'Authorization': 'Bearer ' + (wx.getStorageSync('token') || '')
@@ -29,6 +35,8 @@ Page({
             parkingList: res.data.data || [],
             loading: false
           })
+        } else {
+          this.setData({ loading: false })
         }
       },
       fail: () => {
@@ -62,7 +70,7 @@ Page({
       success: (res) => {
         if (res.confirm) {
           wx.request({
-            url: API_BASE_URL + '/parking/unbind/' + id + '/',
+            url: API_BASE_URL + '/parking/binding/unbind/' + id,
             method: 'DELETE',
             header: {
               'Authorization': 'Bearer ' + (wx.getStorageSync('token') || '')

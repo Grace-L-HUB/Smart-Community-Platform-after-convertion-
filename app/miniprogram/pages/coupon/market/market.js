@@ -1,4 +1,4 @@
-const API_BASE_URL = require('../../config/api.js').API_BASE_URL
+const API_BASE_URL = require('../../../config/api.js').API_BASE_URL
 
 Page({
   data: {
@@ -14,7 +14,7 @@ Page({
     this.setData({ loading: true })
     
     wx.request({
-      url: API_BASE_URL + '/coupons/market/',
+      url: API_BASE_URL + '/merchant/coupons/public/',
       method: 'GET',
       header: {
         'Authorization': 'Bearer ' + (wx.getStorageSync('token') || '')
@@ -25,6 +25,8 @@ Page({
             coupons: res.data.data || [],
             loading: false
           })
+        } else {
+          this.setData({ loading: false })
         }
       },
       fail: () => {
@@ -40,8 +42,11 @@ Page({
   onReceiveCoupon(e) {
     const couponId = e.currentTarget.dataset.id
     wx.request({
-      url: API_BASE_URL + '/coupons/' + couponId + '/receive/',
+      url: API_BASE_URL + '/merchant/coupons/receive/',
       method: 'POST',
+      data: {
+        coupon_id: couponId
+      },
       header: {
         'Authorization': 'Bearer ' + (wx.getStorageSync('token') || '')
       },
@@ -52,7 +57,18 @@ Page({
             icon: 'success'
           })
           this.loadCoupons()
+        } else {
+          wx.showToast({
+            title: res.data.message || '领取失败',
+            icon: 'none'
+          })
         }
+      },
+      fail: () => {
+        wx.showToast({
+          title: '网络错误',
+          icon: 'none'
+        })
       }
     })
   },
@@ -60,5 +76,11 @@ Page({
   onPullDownRefresh() {
     this.loadCoupons()
     wx.stopPullDownRefresh()
+  },
+
+  onViewMyCoupons() {
+    wx.navigateTo({
+      url: '/pages/coupon/list/list'
+    })
   }
 })

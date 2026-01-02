@@ -6,63 +6,169 @@ Page({
       title: '',
       description: '',
       price: '',
-      category: 'other',
+      category: '其他',
       images: []
     },
-    loading: false
+    loading: false,
+    showCategory: false,
+    showCondition: false,
+    categoryText: '',
+    conditionText: '',
+    categories: [
+      { text: '家用电器', value: '家用电器' },
+      { text: '家具', value: '家具' },
+      { text: '数码产品', value: '数码产品' },
+      { text: '图书音像', value: '图书音像' },
+      { text: '服装鞋包', value: '服装鞋包' },
+      { text: '母婴用品', value: '母婴用品' },
+      { text: '运动户外', value: '运动户外' },
+      { text: '其他', value: '其他' }
+    ],
+    conditions: [
+      { text: '全新', value: '全新' },
+      { text: '99新', value: '99新' },
+      { text: '95新', value: '95新' },
+      { text: '9成新', value: '9成新' },
+      { text: '8成新', value: '8成新' },
+      { text: '7成新', value: '7成新' }
+    ],
+    fileList: [],
+    canSubmit: false
   },
 
   onLoad() {
   },
 
   onTitleChange(e) {
+    const value = e.detail || ''
     this.setData({
-      'form.title': e.detail.value
-    })
+      'form.title': value
+    }, this.checkCanSubmit)
   },
 
-  onDescriptionChange(e) {
+  onDescChange(e) {
+    const value = e.detail || ''
     this.setData({
-      'form.description': e.detail.value
-    })
+      'form.description': value
+    }, this.checkCanSubmit)
   },
 
   onPriceChange(e) {
+    const value = e.detail || ''
     this.setData({
-      'form.price': e.detail.value
-    })
+      'form.price': value
+    }, this.checkCanSubmit)
   },
 
-  onCategoryChange(e) {
+  showCategoryPicker() {
     this.setData({
-      'form.category': e.detail.value
+      showCategory: true
     })
   },
 
-  onChooseImage() {
-    wx.chooseImage({
-      count: 3,
-      sizeType: ['compressed'],
-      sourceType: ['album', 'camera'],
-      success: (res) => {
-        this.setData({
-          'form.images': this.data.form.images.concat(res.tempFilePaths)
-        })
-      }
-    })
-  },
-
-  onRemoveImage(e) {
-    const index = e.currentTarget.dataset.index
-    const images = this.data.form.images
-    images.splice(index, 1)
+  closeCategoryPicker() {
     this.setData({
-      'form.images': images
+      showCategory: false
     })
   },
 
-  onSubmit() {
-    const { title, description, price, category, images } = this.data.form
+  onCategoryConfirm(e) {
+    const { value, index } = e.detail
+    this.setData({
+      'form.category': value,
+      categoryText: this.data.categories[index].text,
+      showCategory: false
+    }, this.checkCanSubmit)
+  },
+
+  showConditionPicker() {
+    this.setData({
+      showCondition: true
+    })
+  },
+
+  closeConditionPicker() {
+    this.setData({
+      showCondition: false
+    })
+  },
+
+  onConditionConfirm(e) {
+    const { value, index } = e.detail
+    this.setData({
+      'form.condition': value,
+      conditionText: this.data.conditions[index].text,
+      showCondition: false
+    }, this.checkCanSubmit)
+  },
+
+  checkCanSubmit() {
+    const { title, description, price, category } = this.data.form
+    const canSubmit = !!(title && description && price && category)
+    this.setData({ canSubmit })
+  },
+
+  uploadImage(filePath) {
+    return new Promise((resolve, reject) => {
+      wx.uploadFile({
+        url: API_BASE_URL + '/upload/avatar',
+        filePath: filePath,
+        name: 'avatar',
+        header: {
+          'Authorization': 'Bearer ' + (wx.getStorageSync('token') || '')
+        },
+        success: (res) => {
+          if (res.statusCode === 200) {
+            const data = JSON.parse(res.data)
+            if (data.code === 200 && data.data && data.data.url) {
+              resolve(data.data.url)
+            } else {
+              wx.showToast({
+                title: '图片上传失败',
+                icon: 'none'
+              })
+              resolve(null)
+            }
+          } else {
+            wx.showToast({
+              title: '图片上传失败',
+              icon: 'none'
+            })
+            resolve(null)
+          }
+        },
+        fail: (err) => {
+          wx.showToast({
+            title: '图片上传失败',
+            icon: 'none'
+          })
+          reject(err)
+        }
+      })
+    })
+  },
+
+  afterRead(e) {
+    const { file } = e.detail
+    const fileList = this.data.fileList.concat(file)
+    this.setData({
+      fileList,
+      'form.images': fileList.map(item => item.url || item.path)
+    })
+  },
+
+  deleteImage(e) {
+    const { index } = e.detail
+    const fileList = this.data.fileList
+    fileList.splice(index, 1)
+    this.setData({
+      fileList,
+      'form.images': fileList.map(item => item.url || item.path)
+    })
+  },
+
+  async onSubmit() {
+    const { title, description, price, category, condition, images } = this.data.form
 
     if (!title || !description || !price) {
       wx.showToast({
@@ -74,33 +180,69 @@ Page({
 
     this.setData({ loading: true })
 
-    wx.request({
-      url: API_BASE_URL + '/market-items/',
-      method: 'POST',
-      data: {
-        title: title,
-        description: description,
-        price: parseFloat(price),
-        category: category,
-        images: images
-      },
-      header: {
-        'Authorization': 'Bearer ' + (wx.getStorageSync('token') || '')
-      },
-      success: (res) => {
-        if (res.statusCode === 200 && res.data.code === 200) {
+    try {
+      const token = wx.getStorageSync('token') || ''
+      
+      wx.uploadFile({
+        url: API_BASE_URL + '/community/market-items/',
+        filePath: images && images.length > 0 ? images[0] : '',
+        name: 'uploaded_images',
+        formData: {
+          title: title,
+          description: description,
+          price: price.toString(),
+          category: category,
+          condition: condition
+        },
+        header: {
+          'Authorization': 'Bearer ' + token
+        },
+        success: (res) => {
+          console.log('发布响应:', res)
+          if (res.statusCode === 201) {
+            wx.showToast({
+              title: '发布成功',
+              icon: 'success'
+            })
+            setTimeout(() => {
+              wx.navigateBack()
+            }, 1500)
+          } else {
+            try {
+              const data = JSON.parse(res.data)
+              console.error('发布失败:', data)
+              wx.showToast({
+                title: data.detail || data.message || '发布失败',
+                icon: 'none',
+                duration: 3000
+              })
+            } catch (e) {
+              console.error('解析响应失败:', res.data)
+              wx.showToast({
+                title: '发布失败',
+                icon: 'none'
+              })
+            }
+          }
+        },
+        fail: (err) => {
+          console.error('请求失败:', err)
           wx.showToast({
-            title: '发布成功',
-            icon: 'success'
+            title: '网络错误',
+            icon: 'none'
           })
-          setTimeout(() => {
-            wx.navigateBack()
-          }, 1500)
+        },
+        complete: () => {
+          this.setData({ loading: false })
         }
-      },
-      complete: () => {
-        this.setData({ loading: false })
-      }
-    })
+      })
+    } catch (error) {
+      console.error('异常:', error)
+      this.setData({ loading: false })
+      wx.showToast({
+        title: '发布失败',
+        icon: 'none'
+      })
+    }
   }
 })

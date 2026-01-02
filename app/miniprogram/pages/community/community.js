@@ -1,5 +1,5 @@
 // pages/community/community.js
-const { API_BASE_URL } = require('../../config/api')
+const API_BASE_URL = require('../../config/api.js').API_BASE_URL
 const API_COMMUNITY_URL = API_BASE_URL + '/community'
 
 Page({
@@ -67,7 +67,7 @@ Page({
         this.setData({ loading: true });
 
         wx.request({
-            url: API_BASE_URL + '/market-items/',
+            url: API_COMMUNITY_URL + '/market-items/',
             method: 'GET',
             header: {
                 'Authorization': 'Bearer ' + token,
@@ -129,7 +129,7 @@ Page({
         this.setData({ loading: true });
 
         wx.request({
-            url: API_BASE_URL + '/help-posts/',
+            url: API_BASE_URL + '/community/help-posts/',
             method: 'GET',
             header: {
                 'Authorization': 'Bearer ' + token,
@@ -175,7 +175,7 @@ Page({
         this.setData({ loading: true });
 
         wx.request({
-            url: API_BASE_URL + '/activities/',
+            url: API_BASE_URL + '/community/activities/',
             method: 'GET',
             header: {
                 'Content-Type': 'application/json'

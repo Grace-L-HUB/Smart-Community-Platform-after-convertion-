@@ -52,7 +52,7 @@
         value="{{ name }}"
         label="申请人姓名"
         placeholder="请输入申请人姓名"
-        bind:change="onNameChange"
+        bind:input="onNameChange"
       />
       
       <van-field
@@ -61,7 +61,7 @@
         placeholder="请输入预留手机号"
         type="number"
         maxlength="11"
-        bind:change="onPhoneChange"
+        bind:input="onPhoneChange"
       />
 
       <!-- 身份证号 -->
@@ -70,7 +70,7 @@
         label="身份证号"
         placeholder="请输入身份证号码"
         maxlength="18"
-        bind:change="onIdCardChange"
+        bind:input="onIdCardChange"
       />
     </van-cell-group>
 
