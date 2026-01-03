@@ -298,7 +298,7 @@ async function confirmComplete() {
 
     if (result.success) {
       // 检查验证的订单是否是当前要完成的订单
-      if (result.order && result.order.order_id === completingOrder.value!.id) {
+      if (result.order && result.order.id === completingOrder.value!.id) {
         // 验证成功，后端已经自动完成订单并重新加载了数据
         showSnackbar('success', '订单已完成')
         completeDialog.value = false

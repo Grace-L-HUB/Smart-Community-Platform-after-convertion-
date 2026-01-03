@@ -30,18 +30,16 @@
 
   <!-- 工单列表 -->
   <view class="order-list">
-    <view wx:if="{{ orderList.length === 0 && !loading }}" class="empty-state">
-      <image src="/assets/images/empty-repair.png" class="empty-image" />
-      <text class="empty-text">暂无报修记录</text>
-      <van-button 
-        type="primary" 
-        size="small" 
+    <van-empty wx:if="{{ orderList.length === 0 && !loading }}" description="暂无报修记录">
+      <van-button
+        type="primary"
+        size="small"
         bind:click="goToRepair"
-        class="empty-action-btn"
+        round
       >
         提交新报修
       </van-button>
-    </view>
+    </van-empty>
     
     <view wx:for="{{ orderList }}" wx:key="id" class="order-item" bind:tap="onOrderTap" data-order="{{ item }}">
       <view class="order-header">

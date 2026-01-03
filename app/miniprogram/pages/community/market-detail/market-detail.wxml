@@ -21,13 +21,13 @@
   <view class="card seller-section">
     <view class="seller-header">
       <view class="seller-info">
-        <image class="avatar" src="{{seller.avatar || '/image/default-avatar.png'}}"></image>
+        <image wx:if="{{seller.avatar}}" class="avatar" src="{{seller.avatar}}"></image>
+        <van-icon wx:else name="user-o" size="40px" color="#999" class="avatar-icon" />
         <view class="seller-details">
           <text class="seller-name">{{seller.name}}</text>
-          <text class="seller-location">{{seller.location}}</text>
         </view>
       </view>
-      <van-button size="small" round plain type="primary" bind:click="onContact">私聊</van-button>
+      <van-button size="small" round plain type="primary" bind:click="onContact">联系卖家</van-button>
     </view>
   </view>
 
@@ -49,22 +49,13 @@
 
   <!-- Bottom Action Bar -->
   <view class="action-bar">
-    <view class="action-left">
-      <van-icon name="star-o" size="24px" bind:click="onFavorite" />
-      <text class="action-text">收藏</text>
+    <view class="action-left" bind:tap="onFavorite">
+      <van-icon name="{{isFavorited ? 'star' : 'star-o'}}" size="24px" color="{{isFavorited ? '#ff6034' : ''}}" />
+      <text class="action-text" style="color: {{isFavorited ? '#ff6034' : ''}}">{{isFavorited ? '已收藏' : '收藏'}}</text>
     </view>
     <view class="action-buttons">
       <van-button round plain type="primary" bind:click="onContact">联系卖家</van-button>
       <van-button round color="#07c160" bind:click="onWant">我想要</van-button>
     </view>
   </view>
-
-  <van-action-sheet
-    show="{{ showContactSheet }}"
-    actions="{{ contactActions }}"
-    cancel-text="取消"
-    bind:close="onCloseContact"
-    bind:cancel="onCloseContact"
-    bind:select="onSelectContact"
-  />
 </view>

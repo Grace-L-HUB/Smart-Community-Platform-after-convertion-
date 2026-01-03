@@ -2,7 +2,8 @@
   <!-- Header -->
   <view class="card header-section">
     <view class="user-row">
-      <image class="avatar" src="{{publisher.avatar || '/image/default-avatar.png'}}"></image>
+      <image wx:if="{{publisher.avatar}}" class="avatar" src="{{publisher.avatar}}"></image>
+      <van-icon wx:else name="user-o" size="40px" color="#999" class="avatar-icon" />
       <view class="user-details">
         <text class="username">{{publisher.name}}</text>
         <text class="time">{{publishTime}}</text>
@@ -55,18 +56,19 @@
     <block wx:if="{{responses.length > 0}}">
       <view class="response-item" wx:for="{{responses}}" wx:key="id">
         <view class="response-user">
-          <image class="response-avatar" src="{{item.avatar || '/image/default-avatar.png'}}"></image>
+          <image wx:if="{{item.avatar}}" class="response-avatar" src="{{item.avatar}}"></image>
+          <van-icon wx:else name="user-o" size="32px" color="#999" class="response-avatar-icon" />
           <view class="response-info">
             <text class="response-name">{{item.name}}</text>
             <text class="response-time">{{item.time}}</text>
           </view>
         </view>
         <text class="response-content">{{item.message}}</text>
-        <van-button 
-          size="small" 
-          round 
-          plain 
-          type="primary" 
+        <van-button
+          size="small"
+          round
+          plain
+          type="primary"
           wx:if="{{isOwner}}"
           bind:click="onContact"
           data-id="{{item.id}}"

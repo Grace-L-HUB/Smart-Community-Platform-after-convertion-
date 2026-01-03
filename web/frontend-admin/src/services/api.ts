@@ -1,6 +1,5 @@
 // API 基础服务配置
-// 支持环境变量，构建时注入
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://139.224.17.154:8000/api'
+const API_BASE_URL = 'http://139.224.17.154:8000/api'
 
 // 请求响应接口
 interface ApiResponse<T = any> {
@@ -43,9 +42,9 @@ class ApiClient {
       }
 
       const result = await response.json()
-      
-      // 兼容后端返回格式：code=200 表示成功
-      if (result.code === 200) {
+
+      // 兼容后端返回格式：success=True 或 code=200 表示成功
+      if (result.success === true || result.code === 200) {
         return {
           success: true,
           message: result.message || '操作成功',
@@ -97,6 +96,9 @@ class ApiClient {
 
 // 创建 API 客户端实例
 export const apiClient = new ApiClient(API_BASE_URL)
+
+// 导出 API 基础 URL 供其他地方使用
+export { API_BASE_URL }
 
 // 导出类型
 export type { ApiResponse }

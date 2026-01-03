@@ -2,108 +2,210 @@ const API_BASE_URL = require('../../../config/api.js').API_BASE_URL
 
 Page({
   data: {
-    product: {},
+    shop: {},
+    products: [],
     loading: false,
-    quantity: 1,
-    selectedSpec: {}
+    productsLoading: false,
+    productsError: '',
+    error: '',
+    active: 0,
+    merchantId: null,
+    cartCount: 0
   },
 
   onLoad(options) {
     if (options.id) {
-      this.loadProductDetail(options.id)
+      this.setData({ merchantId: options.id })
+      this.loadMerchantDetail(options.id)
+      this.loadProducts(options.id)
+      this.loadCartCount()
     }
   },
 
-  loadProductDetail(id) {
+  onShow() {
+    this.loadCartCount()
+  },
+
+  // 加载商户详情
+  loadMerchantDetail(merchantId) {
     this.setData({ loading: true })
-    
+
     wx.request({
-      url: `${API_BASE_URL}/shop/products/${id}/`,
+      url: `${API_BASE_URL}/merchant/profile/${merchantId}/`,
       method: 'GET',
-      header: {
-        'Authorization': `Bearer ${wx.getStorageSync('token') || ''}`
-      },
       success: (res) => {
-        if (res.statusCode === 200 && res.data.code === 200) {
+        if (res.statusCode === 200 && res.data.success) {
+          const merchant = res.data.data
           this.setData({
-            product: res.data.data || {},
+            shop: {
+              id: merchant.id,
+              name: merchant.shop_name,
+              logo: merchant.shop_logo || 'https://img.yzcdn.cn/vant/logo.png',
+              bgImage: merchant.shop_logo || 'https://img.yzcdn.cn/vant/logo.png',
+              category: merchant.category_display,
+              address: merchant.shop_address,
+              phone: merchant.shop_phone,
+              businessHours: `${merchant.business_hours_start}-${merchant.business_hours_end}`,
+              description: merchant.shop_description,
+              monthlySales: merchant.total_orders || 0,
+              tags: ['优质商户', '诚信经营']
+            },
+            loading: false
+          })
+        } else {
+          this.setData({
+            error: res.data.message || '加载商户信息失败',
             loading: false
           })
         }
       },
       fail: () => {
-        this.setData({ loading: false })
+        this.setData({
+          error: '网络请求失败',
+          loading: false
+        })
+      }
+    })
+  },
+
+  // 加载商户商品列表
+  loadProducts(merchantId) {
+    this.setData({ productsLoading: true, productsError: '' })
+
+    wx.request({
+      url: `${API_BASE_URL}/merchant/products/public/${merchantId}/`,
+      method: 'GET',
+      success: (res) => {
+        if (res.statusCode === 200 && res.data.success) {
+          this.setData({
+            products: res.data.data || [],
+            productsLoading: false
+          })
+        } else {
+          this.setData({
+            productsError: res.data.message || '加载商品失败',
+            productsLoading: false
+          })
+        }
+      },
+      fail: () => {
+        this.setData({
+          productsError: '网络请求失败',
+          productsLoading: false
+        })
+      }
+    })
+  },
+
+  // 点击商品卡片 - 进入商品详情
+  onProductClick(e) {
+    const productId = e.currentTarget.dataset.id
+    wx.navigateTo({
+      url: `/pages/shop/product/product?id=${productId}`
+    })
+  },
+
+  // 加购物车
+  onAddToCart(e) {
+    const productId = e.currentTarget.dataset.id
+    const product = this.data.products.find(p => p.id === productId)
+
+    if (!product || product.stock <= 0) {
+      wx.showToast({
+        title: '商品库存不足',
+        icon: 'none'
+      })
+      return
+    }
+
+    wx.request({
+      url: `${API_BASE_URL}/merchant/cart/add/`,
+      method: 'POST',
+      data: {
+        product_id: productId,
+        quantity: 1
+      },
+      header: {
+        'Authorization': 'Bearer ' + (wx.getStorageSync('token') || '')
+      },
+      success: (res) => {
+        if (res.statusCode === 200 && res.data.success) {
+          wx.showToast({
+            title: '已加入购物车',
+            icon: 'success'
+          })
+          this.loadCartCount()
+        } else {
+          wx.showToast({
+            title: res.data?.message || '添加失败',
+            icon: 'none'
+          })
+        }
+      },
+      fail: () => {
         wx.showToast({
-          title: '加载失败',
+          title: '添加失败',
           icon: 'none'
         })
       }
     })
   },
 
-  onQuantityChange(e) {
-    this.setData({
-      quantity: parseInt(e.detail.value) || 1
-    })
-  },
-
-  onDecrease() {
-    if (this.data.quantity > 1) {
-      this.setData({
-        quantity: this.data.quantity - 1
-      })
-    }
-  },
-
-  onIncrease() {
-    this.setData({
-      quantity: this.data.quantity + 1
-    })
-  },
-
-  onSpecChange(e) {
-    const spec = e.currentTarget.dataset.spec
-    this.setData({
-      selectedSpec: spec
-    })
-  },
-
-  onAddToCart() {
-    const { product, quantity, selectedSpec } = this.data
-    
+  // 加载购物车数量
+  loadCartCount() {
     wx.request({
-      url: `${API_BASE_URL}/shop/cart/`,
-      method: 'POST',
-      data: {
-        product_id: product.id,
-        quantity,
-        spec: selectedSpec
-      },
+      url: `${API_BASE_URL}/merchant/cart/`,
+      method: 'GET',
       header: {
-        'Authorization': `Bearer ${wx.getStorageSync('token') || ''}`
+        'Authorization': 'Bearer ' + (wx.getStorageSync('token') || '')
       },
       success: (res) => {
-        if (res.statusCode === 200 && res.data.code === 200) {
-          wx.showToast({
-            title: '已加入购物车',
-            icon: 'success'
+        if (res.statusCode === 200 && res.data.success) {
+          const cartItems = res.data.data || []
+          let count = 0
+          cartItems.forEach(merchant => {
+            count += merchant.items.length
           })
+          this.setData({ cartCount: count })
         }
       }
     })
   },
 
-  onBuyNow() {
-    const { product, quantity, selectedSpec } = this.data
-    
+  // 进入购物车
+  onGoCart() {
     wx.navigateTo({
-      url: `/pages/order/create/create?type=shop&productId=${product.id}&quantity=${quantity}`
+      url: '/pages/shop/cart/cart'
     })
   },
 
-  onShare() {
-    wx.showShareMenu({
-      withShareTicket: true
+  // 立即购买 - 直接进入订单创建页面
+  onBuyNow(e) {
+    const productId = e.currentTarget.dataset.id
+    wx.navigateTo({
+      url: `/pages/order/create/create?type=shop&productId=${productId}&quantity=1`
     })
+  },
+
+  // 联系商家
+  callShop() {
+    const { shop } = this.data
+    if (shop.phone) {
+      wx.makePhoneCall({
+        phoneNumber: shop.phone
+      })
+    } else {
+      wx.showToast({
+        title: '商家暂无电话',
+        icon: 'none'
+      })
+    }
+  },
+
+  onRefresh() {
+    if (this.data.merchantId) {
+      this.loadMerchantDetail(this.data.merchantId)
+      this.loadProducts(this.data.merchantId)
+    }
   }
 })

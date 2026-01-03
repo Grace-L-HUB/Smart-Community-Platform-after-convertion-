@@ -17,9 +17,16 @@
   <view wx:else>
     <!-- 商品图片轮播 -->
     <swiper indicator-dots autoplay circular class="product-image">
-      <block wx:for="{{ product.images }}" wx:key="*this">
+      <block wx:if="{{ product.images && product.images.length > 0 }}">
+        <block wx:for="{{ product.images }}" wx:key="*this">
+          <swiper-item>
+            <image src="{{ item }}" mode="aspectFill" class="product-image" />
+          </swiper-item>
+        </block>
+      </block>
+      <block wx:else>
         <swiper-item>
-          <image src="{{ item }}" mode="aspectFill" class="product-image" />
+          <image src="{{ product.image || 'https://img.yzcdn.cn/vant/logo.png' }}" mode="aspectFill" class="product-image" />
         </swiper-item>
       </block>
     </swiper>
@@ -28,12 +35,12 @@
     <view class="product-info-card">
       <view class="product-price-row">
         <text class="currency-symbol">¥</text>
-        <text class="current-price">{{ product.price }}</text>
+        <text class="current-price">{{ product.price || '0.00' }}</text>
         <text class="original-price" wx:if="{{ product.originalPrice }}">¥{{ product.originalPrice }}</text>
       </view>
-      <view class="product-title">{{ product.name }}</view>
-      <view class="product-desc">{{ product.description }}</view>
-      
+      <view class="product-title">{{ product.name || '商品名称' }}</view>
+      <view class="product-desc">{{ product.description || '暂无描述' }}</view>
+
       <!-- 商品标签 -->
       <view class="product-tags">
         <van-tag plain type="primary" wx:if="{{ product.category }}">{{ product.category }}</van-tag>
@@ -45,12 +52,12 @@
       <!-- 服务时段（适用于家政服务等） -->
       <view wx:if="{{ product.serviceTimeSlots && product.serviceTimeSlots.length > 0 }}" class="service-slots">
         <text class="slots-label">可预约时段：</text>
-        <van-tag 
-          wx:for="{{ product.serviceTimeSlots }}" 
-          wx:for-item="slot" 
-          wx:key="*this" 
-          size="small" 
-          plain 
+        <van-tag
+          wx:for="{{ product.serviceTimeSlots }}"
+          wx:for-item="slot"
+          wx:key="*this"
+          size="small"
+          plain
           type="primary"
           class="slot-tag"
         >
@@ -101,17 +108,17 @@
   >
     <view class="sku-popup">
       <view class="sku-header">
-        <image src="{{ product.image }}" class="sku-thumb" mode="aspectFill" />
+        <image src="{{ product.image || 'https://img.yzcdn.cn/vant/logo.png' }}" class="sku-thumb" mode="aspectFill" />
         <view class="sku-info">
-          <view class="sku-price">¥{{ product.price }}</view>
-          <view class="sku-stock">剩余 {{ product.stock }} 件</view>
+          <view class="sku-price">¥{{ product.price || '0.00' }}</view>
+          <view class="sku-stock">剩余 {{ product.stock || 0 }} 件</view>
         </view>
       </view>
 
       <view class="sku-body">
         <view class="sku-stepper">
           <view class="sku-section-title">购买数量</view>
-          <van-stepper value="{{ buyCount }}" min="1" max="{{ product.stock }}" integer />
+          <van-stepper value="{{ buyCount }}" min="1" max="{{ product.stock || 999 }}" integer />
         </view>
       </view>
 
@@ -131,14 +138,20 @@
   >
     <view class="sku-popup">
        <view class="section-title text-center">优惠券</view>
-       <block wx:for="{{ coupons }}" wx:key="id">
-         <van-cell 
-           title="{{ item.amount }}元券 - {{ item.name }}" 
-           label="{{ item.condition }}"
-         >
-           <van-button size="small" type="danger" round data-id="{{ item.id }}" bind:click="onGetCoupon">领取</van-button>
-         </van-cell>
+       <block wx:if="{{ coupons.length > 0 }}">
+         <block wx:for="{{ coupons }}" wx:key="id">
+           <van-cell
+             title="{{ item.name }}"
+             label="{{ item.description || (item.minAmount ? '满' + item.minAmount + '元可用' : '无门槛') }}"
+           >
+             <view slot="right-icon" style="display: flex; align-items: center; gap: 8px;">
+               <text style="color: #ee0a24; font-weight: bold;">¥{{ item.amount }}</text>
+               <van-button size="small" type="danger" round data-id="{{ item.id }}" bind:click="onGetCoupon">领取</van-button>
+             </view>
+           </van-cell>
+         </block>
        </block>
+       <van-empty wx:else description="暂无优惠券" />
        <view style="height: 50px;"></view>
     </view>
   </van-popup>

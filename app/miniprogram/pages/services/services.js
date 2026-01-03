@@ -95,9 +95,9 @@ Page({
     },
 
     onShopClick(event) {
-        const shopId = event.currentTarget.dataset.id;
+        const merchantId = event.currentTarget.dataset.id;
         wx.navigateTo({
-            url: '/pages/shop/detail/detail?id=' + shopId
+            url: '/pages/shop/detail/detail?id=' + merchantId
         });
     }
 });

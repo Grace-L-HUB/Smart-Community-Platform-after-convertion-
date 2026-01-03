@@ -8,7 +8,7 @@ from django.db import transaction, models
 from datetime import timedelta
 from .models import (
     MerchantApplication, MerchantProfile, MerchantProduct,
-    MerchantOrder, MerchantOrderItem, MerchantCoupon, UserCoupon
+    MerchantOrder, MerchantOrderItem, MerchantCoupon, UserCoupon, CartItem
 )
 from .serializers import (
     MerchantApplicationSerializer, MerchantApplicationCreateSerializer,
@@ -17,7 +17,8 @@ from .serializers import (
     MerchantProductCreateUpdateSerializer, MerchantOrderSerializer,
     MerchantCouponSerializer, UserCouponSerializer, CouponReceiveSerializer,
     CouponVerifySerializer, OrderStatusUpdateSerializer, PickupCodeVerifySerializer,
-    OrderCreateSerializer, LogoUploadSerializer
+    OrderCreateSerializer, LogoUploadSerializer, CartItemSerializer,
+    CartItemAddSerializer
 )
 import logging
 from django.contrib.auth.hashers import make_password
@@ -632,8 +633,12 @@ class MerchantProductListView(APIView):
             )
             
             if serializer.is_valid():
-                product = serializer.save(merchant=merchant_profile)
-                
+                # 如果有通过 URL 上传的图片路径，手动设置
+                if hasattr(serializer, '_image_url_path') and serializer._image_url_path:
+                    product = serializer.save(merchant=merchant_profile, image=serializer._image_url_path)
+                else:
+                    product = serializer.save(merchant=merchant_profile)
+
                 return Response({
                     'success': True,
                     'message': '商品创建成功',
@@ -716,21 +721,28 @@ class MerchantProductDetailView(APIView):
                 }, status=status.HTTP_404_NOT_FOUND)
             
             serializer = MerchantProductCreateUpdateSerializer(
-                product, 
-                data=request.data, 
+                product,
+                data=request.data,
                 partial=True,
                 context={'request': request}
             )
-            
+
             if serializer.is_valid():
-                product = serializer.save()
-                
+                # 如果有通过 URL 上传的图片路径，手动设置
+                if hasattr(serializer, '_image_url_path') and serializer._image_url_path:
+                    product.image = serializer._image_url_path
+                    product.save()
+                else:
+                    product = serializer.save()
+
                 return Response({
                     'success': True,
                     'message': '商品更新成功',
                     'data': MerchantProductSerializer(product, context={'request': request}).data
                 })
-            
+
+            # 记录验证错误
+            logger.error(f"商品数据验证失败: {serializer.errors}")
             return Response({
                 'success': False,
                 'message': '数据验证失败',
@@ -1401,13 +1413,6 @@ class CouponReceiveView(APIView):
                     'message': '优惠券已失效或数量不足'
                 }, status=status.HTTP_400_BAD_REQUEST)
             
-            # 检查用户是否已经领取过
-            if UserCoupon.objects.filter(user=request.user, coupon=coupon).exists():
-                return Response({
-                    'success': False,
-                    'message': '您已经领取过该优惠券'
-                }, status=status.HTTP_400_BAD_REQUEST)
-            
             # 检查用户领取数量限制
             user_received_count = UserCoupon.objects.filter(user=request.user, coupon=coupon).count()
             if user_received_count >= coupon.per_user_limit:
@@ -1453,12 +1458,22 @@ class UserCouponListView(APIView):
             # 获取查询参数
             status_filter = request.GET.get('status', '')
             merchant_id = request.GET.get('merchant_id', '')
-            
+
+            # 状态映射：前端使用的状态 -> 后端数据库状态
+            status_mapping = {
+                'valid': 'unused',      # 有效 = 未使用
+                'unused': 'unused',
+                'used': 'used',
+                'expired': 'expired',
+            }
+
             # 构建查询
             queryset = UserCoupon.objects.filter(user=request.user).select_related('coupon', 'coupon__merchant')
-            
+
             if status_filter:
-                queryset = queryset.filter(status=status_filter)
+                # 映射前端状态到后端状态
+                mapped_status = status_mapping.get(status_filter, status_filter)
+                queryset = queryset.filter(status=mapped_status)
             if merchant_id:
                 queryset = queryset.filter(coupon__merchant_id=merchant_id)
             
@@ -1892,4 +1907,285 @@ class MerchantLogoUploadView(APIView):
             return Response({
                 'code': 400,
                 'message': 'Logo上传失败，请重试'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ProductImageUploadView(APIView):
+    """商品图片上传接口"""
+
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        """上传商品图片"""
+        try:
+            logger.info("=== 开始上传商品图片 ===")
+            logger.info(f"请求用户ID: {request.user.id}, 角色: {request.user.role}")
+
+            # 检查用户是否为商户
+            if request.user.role != 2:  # 商户角色
+                return Response({
+                    'code': 403,
+                    'message': '权限不足'
+                }, status=status.HTTP_403_FORBIDDEN)
+
+            # 获取上传的文件
+            if 'image' not in request.FILES:
+                logger.error("未找到image字段")
+                logger.info(f"请求FILES: {list(request.FILES.keys())}")
+                return Response({
+                    'code': 400,
+                    'message': '请选择图片文件'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            image_file = request.FILES['image']
+            logger.info(f"接收到图片文件: {image_file.name}, 大小: {image_file.size}")
+
+            # 生成唯一的文件名
+            import uuid
+            import os
+            file_ext = os.path.splitext(image_file.name)[1].lower()
+            new_filename = f"{uuid.uuid4().hex}{file_ext}"
+
+            # 使用临时MerchantProduct实例来保存文件（不保存到数据库）
+            # save=False: 只保存文件到磁盘，不保存模型记录到数据库
+            temp_product = MerchantProduct()
+            temp_product.image.save(new_filename, image_file, save=False)
+
+            logger.info(f"图片已保存到: {temp_product.image.name}")
+            logger.info(f"图片路径: {temp_product.image.path}")
+
+            # 构建完整的URL
+            image_url = request.build_absolute_uri(temp_product.image.url)
+            logger.info(f"返回的图片URL: {image_url}")
+
+            return Response({
+                'code': 200,
+                'message': '图片上传成功',
+                'data': {
+                    'image_url': image_url,
+                    'filename': new_filename
+                }
+            })
+
+        except Exception as e:
+            logger.error(f"商品图片上传失败: {str(e)}", exc_info=True)
+            return Response({
+                'code': 400,
+                'message': '图片上传失败，请重试'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# =============================================================================
+# 购物车相关视图
+# =============================================================================
+
+class CartListView(APIView):
+    """购物车列表接口"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        """获取购物车列表（按商户分组）"""
+        try:
+            cart_items = CartItem.objects.filter(user=request.user).select_related(
+                'merchant', 'product'
+            ).order_by('-created_at')
+
+            serializer = CartItemSerializer(cart_items, many=True)
+
+            # 按商户分组
+            from collections import defaultdict
+            grouped = defaultdict(list)
+            for item in serializer.data:
+                merchant_id = item['merchantId']
+                grouped[merchant_id].append({
+                    'id': item['id'],
+                    'productId': item['productId'],
+                    'productName': item['productName'],
+                    'productPrice': item['productPrice'],
+                    'productImage': item['productImage'],
+                    'quantity': item['quantity'],
+                    'subtotal': item['subtotal']
+                })
+
+            # 构建返回数据
+            result = []
+            for merchant_id, items in grouped.items():
+                merchant = cart_items.filter(merchant_id=merchant_id).first().merchant
+                result.append({
+                    'merchantId': merchant_id,
+                    'merchantName': merchant.shop_name,
+                    'items': items,
+                    'total': sum(item['subtotal'] for item in items)
+                })
+
+            return Response({
+                'success': True,
+                'data': result
+            })
+
+        except Exception as e:
+            logger.error(f"获取购物车失败: {str(e)}", exc_info=True)
+            return Response({
+                'success': False,
+                'message': '获取购物车失败'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class CartAddView(APIView):
+    """添加商品到购物车"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        """添加或更新购物车条目"""
+        try:
+            serializer = CartItemAddSerializer(data=request.data)
+            if not serializer.is_valid():
+                return Response({
+                    'success': False,
+                    'message': '数据验证失败',
+                    'errors': serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            product_id = serializer.validated_data['product_id']
+            quantity = serializer.validated_data['quantity']
+
+            product = MerchantProduct.objects.get(id=product_id)
+
+            # 获取图片完整 URL
+            image_url = ''
+            if product.image and hasattr(product.image, 'url'):
+                image_url = request.build_absolute_uri(product.image.url)
+
+            # 检查购物车中是否已有该商品
+            cart_item, created = CartItem.objects.get_or_create(
+                user=request.user,
+                merchant=product.merchant,
+                product=product,
+                defaults={
+                    'product_name': product.name,
+                    'product_price': product.price,
+                    'product_image': image_url,
+                    'quantity': quantity
+                }
+            )
+
+            if not created:
+                # 已存在，更新数量和图片
+                cart_item.quantity = quantity
+                cart_item.product_name = product.name
+                cart_item.product_price = product.price
+                cart_item.product_image = image_url
+                cart_item.save()
+
+            return Response({
+                'success': True,
+                'message': '已添加到购物车',
+                'data': CartItemSerializer(cart_item).data
+            })
+
+        except MerchantProduct.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': '商品不存在'
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"添加购物车失败: {str(e)}", exc_info=True)
+            return Response({
+                'success': False,
+                'message': '添加购物车失败'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class CartUpdateView(APIView):
+    """更新购物车条目"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def put(self, request, item_id):
+        """更新购物车条目数量"""
+        try:
+            cart_item = CartItem.objects.get(id=item_id, user=request.user)
+            quantity = request.data.get('quantity', 1)
+
+            if quantity < 1:
+                return Response({
+                    'success': False,
+                    'message': '数量必须大于0'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            cart_item.quantity = quantity
+            cart_item.save()
+
+            return Response({
+                'success': True,
+                'data': CartItemSerializer(cart_item).data
+            })
+
+        except CartItem.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': '购物车条目不存在'
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"更新购物车失败: {str(e)}", exc_info=True)
+            return Response({
+                'success': False,
+                'message': '更新购物车失败'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class CartDeleteView(APIView):
+    """删除购物车条目"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def delete(self, request, item_id):
+        """删除购物车条目"""
+        try:
+            cart_item = CartItem.objects.get(id=item_id, user=request.user)
+            cart_item.delete()
+
+            return Response({
+                'success': True,
+                'message': '已删除'
+            })
+
+        except CartItem.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': '购物车条目不存在'
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"删除购物车失败: {str(e)}", exc_info=True)
+            return Response({
+                'success': False,
+                'message': '删除购物车失败'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class CartClearView(APIView):
+    """清空购物车"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        """清空用户购物车"""
+        try:
+            merchant_id = request.data.get('merchant_id')
+
+            if merchant_id:
+                # 清空指定商户的购物车
+                CartItem.objects.filter(user=request.user, merchant_id=merchant_id).delete()
+            else:
+                # 清空全部购物车
+                CartItem.objects.filter(user=request.user).delete()
+
+            return Response({
+                'success': True,
+                'message': '购物车已清空'
+            })
+
+        except Exception as e:
+            logger.error(f"清空购物车失败: {str(e)}", exc_info=True)
+            return Response({
+                'success': False,
+                'message': '清空购物车失败'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -27,42 +27,30 @@
 
     <!-- 统计卡片 -->
     <v-row class="mb-6">
-      <v-col cols="12" sm="6" lg="3">
+      <v-col cols="12" sm="6" lg="4">
         <stat-card
           title="待处理工单"
           :value="stats.pendingWorkOrders"
           icon="mdi-clipboard-alert"
           color="warning"
-          :trend="{ value: 12, type: 'up' }"
           @click="$router.push('/property/work-orders?status=pending')"
         />
       </v-col>
-      <v-col cols="12" sm="6" lg="3">
+      <v-col cols="12" sm="6" lg="4">
         <stat-card
           title="今日报修"
           :value="stats.todayRepairs"
           icon="mdi-wrench"
           color="info"
-          :trend="{ value: 5, type: 'down' }"
         />
       </v-col>
-      <v-col cols="12" sm="6" lg="3">
+      <v-col cols="12" sm="6" lg="4">
         <stat-card
           title="小区住户"
           :value="stats.totalResidents"
           suffix="户"
           icon="mdi-account-group"
           color="success"
-        />
-      </v-col>
-      <v-col cols="12" sm="6" lg="3">
-        <stat-card
-          title="物业费收缴率"
-          :value="(stats.feeCollectionRate * 100).toFixed(1)"
-          suffix="%"
-          icon="mdi-cash-check"
-          color="primary"
-          :trend="{ value: 3.2, type: 'up' }"
         />
       </v-col>
     </v-row>

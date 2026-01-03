@@ -24,9 +24,7 @@
           <view class="shop-text">
             <text class="shop-name">{{ shop.name }}</text>
             <view class="shop-rate">
-              <van-icon name="star" color="#ff976a" />
-              <text class="rate-score">{{ shop.score }}</text>
-              <text class="rate-sales">月售 {{ shop.monthlySales }}+</text>
+              <text class="rate-sales">月售 {{ shop.monthlySales || 0 }}</text>
             </view>
           </view>
         </view>
@@ -146,7 +144,7 @@
     <!-- Bottom Action -->
     <van-goods-action>
       <van-goods-action-icon icon="chat-o" text="客服" bindtap="callShop" />
-      <van-goods-action-icon icon="cart-o" text="购物车" info="0" />
+      <van-goods-action-icon icon="cart-o" text="购物车" info="{{ cartCount > 0 ? cartCount : '' }}" bindtap="onGoCart" />
       <van-goods-action-button text="联系商家" type="warning" bindtap="callShop" />
       <van-goods-action-button text="查看商品" />
     </van-goods-action>

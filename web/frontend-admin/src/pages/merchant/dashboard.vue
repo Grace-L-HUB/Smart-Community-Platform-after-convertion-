@@ -4,12 +4,12 @@
     <div class="d-flex align-center mb-6">
       <div>
         <h1 class="text-h4 font-weight-bold">经营概览</h1>
-        <p class="text-body-2 text-grey mt-1">{{ shopSettings.name }}</p>
+        <p class="text-body-2 text-grey mt-1">{{ shopSettings?.name || '商户店铺' }}</p>
       </div>
       <v-spacer />
       <v-chip color="success" variant="tonal" size="small">
         <v-icon start icon="mdi-clock-outline" />
-        营业中 {{ shopSettings.businessHours.start }} - {{ shopSettings.businessHours.end }}
+        营业中 {{ shopSettings?.businessHours?.start || '08:00' }} - {{ shopSettings?.businessHours?.end || '22:00' }}
       </v-chip>
     </div>
 

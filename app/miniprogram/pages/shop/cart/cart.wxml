@@ -1,0 +1,77 @@
+<view class="cart-container">
+  <!-- 加载状态 -->
+  <van-loading wx:if="{{ loading }}" type="spinner" color="#1989fa" vertical size="24px" class="loading-container">
+    加载中...
+  </van-loading>
+
+  <!-- 空购物车 -->
+  <van-empty wx:elif="{{ isEmpty }}" class="empty-container" description="购物车是空的">
+    <van-button round type="primary" class="bottom-button" bind:click="onGoShop">
+      去逛逛
+    </van-button>
+  </van-empty>
+
+  <!-- 购物车列表 -->
+  <block wx:else>
+    <view class="cart-header">
+      <text class="cart-title">购物车</text>
+      <text class="clear-btn" bind:tap="onClearCart">清空</text>
+    </view>
+
+    <block wx:for="{{ cartItems }}" wx:key="merchantId">
+      <!-- 商户分组 -->
+      <view class="merchant-group">
+        <view class="merchant-header" bind:tap="onSelectMerchant" data-merchant-index="{{ index }}">
+          <van-checkbox value="{{ item.allSelected }}" readonly></van-checkbox>
+          <text class="merchant-name">{{ item.merchantName }}</text>
+        </view>
+
+        <!-- 商品列表 -->
+        <view class="merchant-items">
+          <block wx:for="{{ item.items }}" wx:for-item="product" wx:for-index="itemIndex" wx:key="id">
+            <view class="cart-item">
+              <van-checkbox
+                value="{{ product.selected }}"
+                bind:change="onSelectItem"
+                data-merchant-index="{{ index }}"
+                data-item-index="{{ itemIndex }}"
+              ></van-checkbox>
+
+              <image src="{{ product.productImage || 'https://img.yzcdn.cn/vant/logo.png' }}" class="product-image" mode="aspectFill" />
+
+              <view class="product-info">
+                <text class="product-name">{{ product.productName }}</text>
+                <view class="product-footer">
+                  <text class="product-price">¥{{ product.productPrice }}</text>
+                  <van-stepper
+                    value="{{ product.quantity }}"
+                    min="1"
+                    integer
+                    bind:change="onQuantityChange"
+                    data-merchant-index="{{ index }}"
+                    data-item-index="{{ itemIndex }}"
+                  />
+                </view>
+              </view>
+
+              <view class="delete-btn" bind:tap="onDeleteItem" data-merchant-index="{{ index }}" data-item-index="{{ itemIndex }}">
+                <van-icon name="delete" size="18px" />
+              </view>
+            </view>
+          </block>
+        </view>
+      </view>
+    </block>
+
+    <!-- 底部结算栏 -->
+    <view class="checkout-bar">
+      <view class="checkout-left">
+        <text class="total-label">合计：</text>
+        <text class="total-price">¥{{ totalPrice }}</text>
+      </view>
+      <van-button round color="#07c160" type="primary" bind:click="onCheckout">
+        去结算 ({{ selectedCount }})
+      </van-button>
+    </view>
+  </block>
+</view>
