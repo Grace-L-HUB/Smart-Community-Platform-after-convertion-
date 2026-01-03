@@ -632,8 +632,12 @@ class MerchantProductListView(APIView):
             )
             
             if serializer.is_valid():
-                product = serializer.save(merchant=merchant_profile)
-                
+                # 如果有通过 URL 上传的图片路径，手动设置
+                if hasattr(serializer, '_image_url_path') and serializer._image_url_path:
+                    product = serializer.save(merchant=merchant_profile, image=serializer._image_url_path)
+                else:
+                    product = serializer.save(merchant=merchant_profile)
+
                 return Response({
                     'success': True,
                     'message': '商品创建成功',
@@ -716,21 +720,28 @@ class MerchantProductDetailView(APIView):
                 }, status=status.HTTP_404_NOT_FOUND)
             
             serializer = MerchantProductCreateUpdateSerializer(
-                product, 
-                data=request.data, 
+                product,
+                data=request.data,
                 partial=True,
                 context={'request': request}
             )
-            
+
             if serializer.is_valid():
-                product = serializer.save()
-                
+                # 如果有通过 URL 上传的图片路径，手动设置
+                if hasattr(serializer, '_image_url_path') and serializer._image_url_path:
+                    product.image = serializer._image_url_path
+                    product.save()
+                else:
+                    product = serializer.save()
+
                 return Response({
                     'success': True,
                     'message': '商品更新成功',
                     'data': MerchantProductSerializer(product, context={'request': request}).data
                 })
-            
+
+            # 记录验证错误
+            logger.error(f"商品数据验证失败: {serializer.errors}")
             return Response({
                 'success': False,
                 'message': '数据验证失败',
@@ -1401,13 +1412,6 @@ class CouponReceiveView(APIView):
                     'message': '优惠券已失效或数量不足'
                 }, status=status.HTTP_400_BAD_REQUEST)
             
-            # 检查用户是否已经领取过
-            if UserCoupon.objects.filter(user=request.user, coupon=coupon).exists():
-                return Response({
-                    'success': False,
-                    'message': '您已经领取过该优惠券'
-                }, status=status.HTTP_400_BAD_REQUEST)
-            
             # 检查用户领取数量限制
             user_received_count = UserCoupon.objects.filter(user=request.user, coupon=coupon).count()
             if user_received_count >= coupon.per_user_limit:
@@ -1453,12 +1457,22 @@ class UserCouponListView(APIView):
             # 获取查询参数
             status_filter = request.GET.get('status', '')
             merchant_id = request.GET.get('merchant_id', '')
-            
+
+            # 状态映射：前端使用的状态 -> 后端数据库状态
+            status_mapping = {
+                'valid': 'unused',      # 有效 = 未使用
+                'unused': 'unused',
+                'used': 'used',
+                'expired': 'expired',
+            }
+
             # 构建查询
             queryset = UserCoupon.objects.filter(user=request.user).select_related('coupon', 'coupon__merchant')
-            
+
             if status_filter:
-                queryset = queryset.filter(status=status_filter)
+                # 映射前端状态到后端状态
+                mapped_status = status_mapping.get(status_filter, status_filter)
+                queryset = queryset.filter(status=mapped_status)
             if merchant_id:
                 queryset = queryset.filter(coupon__merchant_id=merchant_id)
             
@@ -1892,4 +1906,70 @@ class MerchantLogoUploadView(APIView):
             return Response({
                 'code': 400,
                 'message': 'Logo上传失败，请重试'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ProductImageUploadView(APIView):
+    """商品图片上传接口"""
+
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        """上传商品图片"""
+        try:
+            logger.info("=== 开始上传商品图片 ===")
+            logger.info(f"请求用户ID: {request.user.id}, 角色: {request.user.role}")
+
+            # 检查用户是否为商户
+            if request.user.role != 2:  # 商户角色
+                return Response({
+                    'code': 403,
+                    'message': '权限不足'
+                }, status=status.HTTP_403_FORBIDDEN)
+
+            # 获取上传的文件
+            if 'image' not in request.FILES:
+                logger.error("未找到image字段")
+                logger.info(f"请求FILES: {list(request.FILES.keys())}")
+                return Response({
+                    'code': 400,
+                    'message': '请选择图片文件'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            image_file = request.FILES['image']
+            logger.info(f"接收到图片文件: {image_file.name}, 大小: {image_file.size}")
+
+            # 生成唯一的文件名
+            import uuid
+            import os
+            file_ext = os.path.splitext(image_file.name)[1].lower()
+            new_filename = f"{uuid.uuid4().hex}{file_ext}"
+
+            # 使用临时MerchantProduct实例来保存文件（不保存到数据库）
+            # save=False: 只保存文件到磁盘，不保存模型记录到数据库
+            temp_product = MerchantProduct()
+            temp_product.image.save(new_filename, image_file, save=False)
+
+            logger.info(f"图片已保存到: {temp_product.image.name}")
+            logger.info(f"图片路径: {temp_product.image.path}")
+
+            # 构建完整的URL
+            image_url = request.build_absolute_uri(temp_product.image.url)
+            logger.info(f"返回的图片URL: {image_url}")
+
+            return Response({
+                'code': 200,
+                'message': '图片上传成功',
+                'data': {
+                    'image_url': image_url,
+                    'filename': new_filename
+                }
+            })
+
+        except Exception as e:
+            logger.error(f"商品图片上传失败: {str(e)}", exc_info=True)
+            return Response({
+                'code': 400,
+                'message': '图片上传失败，请重试'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

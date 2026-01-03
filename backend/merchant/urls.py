@@ -12,7 +12,7 @@ from .views import (
     PublicCouponListView, CouponReceiveView,
     UserCouponListView, CouponVerifyView, OrderCreateView,
     UserOrderListView, UserOrderDetailView, MerchantStatsView,
-    MerchantLogoUploadView
+    MerchantLogoUploadView, ProductImageUploadView
 )
 
 urlpatterns = [
@@ -28,6 +28,7 @@ urlpatterns = [
     # 商户档案相关
     path('profile/', MerchantProfileView.as_view(), name='merchant_profile'),
     path('upload/logo/', MerchantLogoUploadView.as_view(), name='merchant_logo_upload'),
+    path('upload/product-image/', ProductImageUploadView.as_view(), name='product_image_upload'),
     
     # 商品管理相关
     path('products/', MerchantProductListView.as_view(), name='merchant_products'),

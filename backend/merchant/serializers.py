@@ -185,33 +185,72 @@ class MerchantProductSerializer(serializers.ModelSerializer):
 
 class MerchantProductCreateUpdateSerializer(serializers.ModelSerializer):
     """商品创建/更新序列化器"""
-    
+
+    # 覆盖 image 字段：在更新时允许字符串路径（因为图片已经上传）
+    image = serializers.ImageField(required=False, allow_null=True)
+
     class Meta:
         model = MerchantProduct
         fields = [
-            'name', 'description', 'image', 'category', 'price', 'original_price', 
+            'name', 'description', 'image', 'category', 'price', 'original_price',
             'stock', 'status', 'service_time_slots'
         ]
-    
+
+    def to_internal_value(self, data):
+        """
+        处理图片字段：如果是 URL 字符串，提取相对路径
+        """
+        # 保存原始的图片 URL（用于后续在视图中设置）
+        self._image_url_path = None
+
+        # 创建数据的可变副本（QueryDict 在 PUT 请求中是不可变的）
+        from django.http import QueryDict
+        if isinstance(data, QueryDict):
+            # 必须转换为普通 dict，因为 QueryDict.copy() 返回的仍是 QueryDict
+            data = dict(data.items())
+
+        # 处理 image 字段
+        if 'image' in data:
+            image_value = data['image']
+            # 空字符串转换为 None
+            if not image_value or image_value == '':
+                data['image'] = None
+            # 如果是完整的 URL，提取相对路径并保存，从 data 中移除
+            elif isinstance(image_value, str) and (image_value.startswith('http://') or image_value.startswith('https://')):
+                from urllib.parse import urlparse
+                parsed = urlparse(image_value)
+                # 提取路径部分（如 /media/merchant/products/xxx.jpg）
+                # 去掉开头的 /media/，因为 Django ImageField 会自动添加
+                path = parsed.path
+                if path.startswith('/media/'):
+                    path = path[7:]  # 去掉 '/media/' (7个字符)
+                elif path.startswith('/'):
+                    path = path[1:]  # 去掉开头的 '/'
+                self._image_url_path = path
+                # 从 data 中移除 image 字段，让 ImageField 跳过验证
+                del data['image']
+
+        return super().to_internal_value(data)
+
     def validate_price(self, value):
         """验证价格"""
         if value <= 0:
             raise serializers.ValidationError("价格必须大于0")
         return value
-    
+
     def validate_stock(self, value):
         """验证库存"""
         if value < 0:
             raise serializers.ValidationError("库存不能为负数")
         return value
-    
+
     def validate(self, data):
         """验证数据"""
         # 如果设置了原价，原价应该大于售价
         if data.get('original_price') and data.get('price'):
             if data['original_price'] <= data['price']:
                 raise serializers.ValidationError("原价应该大于售价")
-        
+
         return data
 
 
@@ -271,21 +310,34 @@ class MerchantOrderSerializer(serializers.ModelSerializer):
 
 class MerchantCouponSerializer(serializers.ModelSerializer):
     """商户优惠券序列化器"""
-    
+
     merchant_name = serializers.CharField(source='merchant.shop_name', read_only=True)
     type_display = serializers.CharField(source='get_coupon_type_display', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     remaining_count = serializers.ReadOnlyField()
     is_valid = serializers.ReadOnlyField()
+
+    # 小程序使用的驼峰命名别名
+    merchantId = serializers.IntegerField(source='merchant.id', read_only=True)
+    merchantName = serializers.CharField(source='merchant.shop_name', read_only=True)
+    typeDisplay = serializers.CharField(source='get_coupon_type_display', read_only=True)
+    minAmount = serializers.FloatField(source='min_amount', read_only=True)
+    startDate = serializers.DateTimeField(source='start_date', read_only=True)
+    endDate = serializers.DateTimeField(source='end_date', read_only=True)
+    remainingCount = serializers.IntegerField(source='remaining_count', read_only=True)
+    totalCount = serializers.IntegerField(source='total_count', read_only=True)
+    perUserLimit = serializers.IntegerField(source='per_user_limit', read_only=True)
     
     class Meta:
         model = MerchantCoupon
         fields = [
-            'id', 'merchant', 'merchant_name', 'name', 'description',
-            'coupon_type', 'type_display', 'amount', 'min_amount',
-            'total_count', 'used_count', 'remaining_count', 'per_user_limit',
-            'start_date', 'end_date', 'status', 'status_display',
-            'is_valid', 'created_at', 'updated_at'
+            'id', 'merchant', 'merchant_name', 'merchantId', 'merchantName',
+            'name', 'description', 'coupon_type', 'type_display', 'typeDisplay',
+            'amount', 'min_amount', 'minAmount',
+            'total_count', 'used_count', 'remaining_count', 'remainingCount',
+            'totalCount', 'per_user_limit', 'perUserLimit',
+            'start_date', 'end_date', 'startDate', 'endDate',
+            'status', 'status_display', 'is_valid', 'created_at', 'updated_at'
         ]
         read_only_fields = ['merchant', 'used_count', 'created_at', 'updated_at']
     

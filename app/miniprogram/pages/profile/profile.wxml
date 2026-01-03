@@ -55,9 +55,9 @@
   <view class="section-card" style="margin-top: -80rpx; position: relative; margin-left: 30rpx; margin-right: 30rpx;">
     <view class="card-title" style="padding: 20rpx 0 0 20rpx;">我的资产</view>
     <van-grid column-num="3" border="{{ false }}">
-      <van-grid-item icon="wap-home-o" text="我的房屋" info="1" link-type="navigateTo" url="/pages/house/index/index" />
-      <van-grid-item icon="logistics" text="我的车位" info="1" link-type="navigateTo" url="/pages/parking/index/index" />
-      <van-grid-item icon="coupon-o" text="我的优惠券" info="500" link-type="navigateTo" url="/pages/coupon/list/list" />
+      <van-grid-item icon="wap-home-o" text="我的房屋" link-type="navigateTo" url="/pages/house/index/index" />
+      <van-grid-item icon="logistics" text="我的车位" link-type="navigateTo" url="/pages/parking/index/index" />
+      <van-grid-item icon="coupon-o" text="我的优惠券" link-type="navigateTo" url="/pages/coupon/list/list" />
     </van-grid>
   </view>
 

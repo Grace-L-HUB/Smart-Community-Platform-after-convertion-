@@ -1,11 +1,13 @@
 from django.shortcuts import get_object_or_404
 from django.db.models import Q, F
 from django.utils import timezone
+from django.contrib.auth import get_user_model
 from rest_framework import generics, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.exceptions import NotFound
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
 
@@ -28,6 +30,27 @@ class StandardResultsSetPagination(PageNumberPagination):
     page_size = 10
     page_size_query_param = 'page_size'
     max_page_size = 100
+
+    def paginate_queryset(self, queryset, request, view=None):
+        """重写分页方法，避免404错误"""
+        try:
+            return super().paginate_queryset(queryset, request, view)
+        except NotFound:
+            # 如果页码超出范围，设置空结果
+            self.page = None
+            return []
+
+    def get_paginated_response(self, data):
+        """重写响应方法，处理空页面的情况"""
+        if self.page is None:
+            # 返回空分页响应
+            return Response({
+                'count': 0,
+                'next': None,
+                'previous': None,
+                'results': []
+            })
+        return super().get_paginated_response(data)
 
 
 # =============================================================================
@@ -412,14 +435,16 @@ def send_message(request, conversation_id):
 @permission_classes([IsAuthenticated])
 def start_conversation(request):
     """开始新会话"""
-    
+
+    User = get_user_model()
+
     target_user_id = request.data.get('target_user_id')
     market_item_id = request.data.get('market_item_id')
-    
+
     if not target_user_id:
-        return Response({'error': '缺少目标用户ID'}, 
+        return Response({'error': '缺少目标用户ID'},
                        status=status.HTTP_400_BAD_REQUEST)
-    
+
     target_user = get_object_or_404(User, pk=target_user_id)
     market_item = None
     

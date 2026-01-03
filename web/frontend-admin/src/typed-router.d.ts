@@ -20,7 +20,8 @@ declare module 'vue-router/auto-routes' {
   export interface RouteNamedMap {
     '/': RouteRecordInfo<'/', '/', Record<never, never>, Record<never, never>>,
     '/login': RouteRecordInfo<'/login', '/login', Record<never, never>, Record<never, never>>,
-    '/merchant': RouteRecordInfo<'/merchant', '/merchant', Record<never, never>, Record<never, never>, '/merchant/dashboard' | '/merchant/orders' | '/merchant/products' | '/merchant/settings'>,
+    '/merchant': RouteRecordInfo<'/merchant', '/merchant', Record<never, never>, Record<never, never>, '/merchant/coupons' | '/merchant/dashboard' | '/merchant/orders' | '/merchant/products' | '/merchant/settings'>,
+    '/merchant/coupons': RouteRecordInfo<'/merchant/coupons', '/merchant/coupons', Record<never, never>, Record<never, never>>,
     '/merchant/dashboard': RouteRecordInfo<'/merchant/dashboard', '/merchant/dashboard', Record<never, never>, Record<never, never>>,
     '/merchant/orders': RouteRecordInfo<'/merchant/orders', '/merchant/orders', Record<never, never>, Record<never, never>>,
     '/merchant/products': RouteRecordInfo<'/merchant/products', '/merchant/products', Record<never, never>, Record<never, never>>,
@@ -62,8 +63,12 @@ declare module 'vue-router/auto-routes' {
       views: never
     }
     'src/pages/merchant.vue': {
-      routes: '/merchant' | '/merchant/dashboard' | '/merchant/orders' | '/merchant/products' | '/merchant/settings'
+      routes: '/merchant' | '/merchant/coupons' | '/merchant/dashboard' | '/merchant/orders' | '/merchant/products' | '/merchant/settings'
       views: 'default'
+    }
+    'src/pages/merchant/coupons.vue': {
+      routes: '/merchant/coupons'
+      views: never
     }
     'src/pages/merchant/dashboard.vue': {
       routes: '/merchant/dashboard'

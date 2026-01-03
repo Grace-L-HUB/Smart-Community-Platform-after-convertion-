@@ -187,16 +187,16 @@
       <block wx:for="{{ availableCoupons }}" wx:key="id">
         <view class="coupon-item" bindtap="onCouponSelect" data-coupon="{{ item }}">
           <van-cell
-            title="{{ item.name }}"
-            label="{{ item.description }}"
+            title="{{ item.coupon_info.name }}"
+            label="{{ item.coupon_info.description }}"
             clickable
             border="{{ false }}"
             class="{{ selectedCoupon && selectedCoupon.id === item.id ? 'coupon-item-selected' : '' }}"
           >
             <view slot="right-icon">
               <view class="coupon-amount-info">
-                <text class="coupon-amount">¥{{ item.amount }}</text>
-                <text class="coupon-condition">满{{ item.minAmount }}可用</text>
+                <text class="coupon-amount">¥{{ item.coupon_info.amount }}</text>
+                <text class="coupon-condition">满{{ item.coupon_info.min_amount }}可用</text>
               </view>
               <van-checkbox value="{{ selectedCoupon && selectedCoupon.id === item.id }}" />
             </view>

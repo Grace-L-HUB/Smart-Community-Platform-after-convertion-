@@ -9,7 +9,7 @@
 
   <!-- Tab切换 -->
   <van-tabs active="{{ activeTab }}" color="#07c160" bind:change="onTabChange">
-    <van-tab wx:for="{{ tabs }}" wx:key="status" title="{{ item.title }}">
+    <van-tab wx:for="{{ tabs }}" wx:key="status" title="{{ item.title }}" data-status="{{ item.status }}">
       <!-- 加载状态 -->
       <van-loading wx:if="{{ loading }}" type="spinner" color="#1989fa" vertical class="loading-container">
         加载中...
@@ -35,9 +35,9 @@
         </view>
         
         <view wx:else>
-          <view 
-            wx:for="{{ coupons }}" 
-            wx:key="id" 
+          <view
+            wx:for="{{ coupons }}"
+            wx:key="id"
             class="coupon-card {{ item.status === 'used' || item.isExpired ? 'coupon-disabled' : '' }}"
             data-id="{{ item.id }}"
             bindtap="onCouponClick"
@@ -47,23 +47,23 @@
               <!-- 左侧金额区域 -->
               <view class="coupon-amount">
                 <text class="amount-symbol">¥</text>
-                <text class="amount-value">{{ item.amount }}</text>
-                <text class="amount-condition">满{{ item.minAmount }}可用</text>
+                <text class="amount-value">{{ item.coupon_info.amount }}</text>
+                <text class="amount-condition">满{{ item.coupon_info.min_amount }}可用</text>
               </view>
-              
+
               <!-- 中间信息区域 -->
               <view class="coupon-info">
-                <view class="coupon-name">{{ item.name }}</view>
-                <view class="coupon-desc">{{ item.description }}</view>
+                <view class="coupon-name">{{ item.coupon_info.name }}</view>
+                <view class="coupon-desc">{{ item.coupon_info.description }}</view>
                 <view class="coupon-merchant">
                   <van-icon name="shop-o" size="12px" />
-                  <text class="merchant-name">{{ item.merchantName }}</text>
+                  <text class="merchant-name">{{ item.merchant_info.name }}</text>
                 </view>
                 <view class="coupon-time">
-                  有效期至 {{ item.endDate.split('T')[0] }}
+                  有效期至 {{ item.coupon_info.end_date.split('T')[0] }}
                 </view>
               </view>
-              
+
               <!-- 右侧状态/操作区域 -->
               <view class="coupon-action">
                 <view wx:if="{{ item.status === 'unused' }}" class="action-button">
@@ -78,23 +78,23 @@
                 </view>
               </view>
             </view>
-            
+
             <!-- 优惠券底部（显示核销码） -->
             <view wx:if="{{ item.status === 'unused' }}" class="coupon-footer">
-              <text class="verification-code">核销码：{{ item.verificationCode }}</text>
+              <text class="verification-code">核销码：{{ item.verification_code }}</text>
               <van-button
                 size="mini"
                 type="primary"
-                data-merchant-id="{{ item.merchantId }}"
+                data-merchant-id="{{ item.merchant_info.id }}"
                 catchtap="onUseCoupon"
               >
                 去商户
               </van-button>
             </view>
-            
+
             <!-- 使用时间显示 -->
-            <view wx:if="{{ item.status === 'used' && item.usedAt }}" class="coupon-footer">
-              <text class="used-time">使用时间：{{ item.usedAt.split('T')[0] }}</text>
+            <view wx:if="{{ item.status === 'used' && item.used_at }}" class="coupon-footer">
+              <text class="used-time">使用时间：{{ item.used_at.split('T')[0] }}</text>
             </view>
           </view>
         </view>

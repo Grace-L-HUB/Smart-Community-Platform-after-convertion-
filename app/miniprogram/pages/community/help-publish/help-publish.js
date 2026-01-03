@@ -6,60 +6,60 @@ Page({
       title: '',
       content: '',
       category: 'help',
+      phone: '',
+      location: '',
       images: []
     },
+    tags: ['紧急求助', '物品借借', '技能互助', '拼车出行', '其他'],
+    selectedTag: '紧急求助',
     loading: false
   },
 
-  onLoad() {
+  onLoad(options) {
+    // 如果有预分类，使用预分类
+    if (options.category) {
+      this.setData({
+        selectedTag: options.category
+      })
+    }
   },
 
-  onTitleChange(e) {
-    this.setData({
-      'form.title': e.detail.value
-    })
-  },
-
-  onContentChange(e) {
+  // 内容输入
+  onInput(e) {
     this.setData({
       'form.content': e.detail.value
     })
   },
 
-  onCategoryChange(e) {
+  // 电话输入
+  onPhoneInput(e) {
     this.setData({
-      'form.category': e.detail.value
+      'form.phone': e.detail.value
     })
   },
 
-  onChooseImage() {
-    wx.chooseImage({
-      count: 3,
-      sizeType: ['compressed'],
-      sourceType: ['album', 'camera'],
-      success: (res) => {
-        this.setData({
-          'form.images': this.data.form.images.concat(res.tempFilePaths)
-        })
-      }
+  // 位置输入
+  onLocationInput(e) {
+    this.setData({
+      'form.location': e.detail.value
     })
   },
 
-  onRemoveImage(e) {
-    const index = e.currentTarget.dataset.index
-    const images = this.data.form.images
-    images.splice(index, 1)
+  // 标签选择
+  onTagSelect(e) {
+    const tag = e.currentTarget.dataset.tag
     this.setData({
-      'form.images': images
+      selectedTag: tag
     })
   },
 
   onSubmit() {
-    const { title, content, category, images } = this.data.form
+    const { content, phone, location } = this.data.form
+    const { selectedTag } = this.data
 
-    if (!title || !content) {
+    if (!content) {
       wx.showToast({
-        title: '请填写完整信息',
+        title: '请填写求助内容',
         icon: 'none'
       })
       return
@@ -71,16 +71,17 @@ Page({
       url: API_BASE_URL + '/community/help-posts/',
       method: 'POST',
       data: {
-        title: title,
+        title: selectedTag, // 使用标签作为标题
         content: content,
-        category: category,
-        images: images
+        category: 'help',
+        phone: phone,
+        location: location
       },
       header: {
         'Authorization': 'Bearer ' + (wx.getStorageSync('token') || '')
       },
       success: (res) => {
-        if (res.statusCode === 200 && res.data.code === 200) {
+        if (res.statusCode === 201 || (res.statusCode === 200 && res.data.code === 200)) {
           wx.showToast({
             title: '发布成功',
             icon: 'success'
@@ -88,7 +89,18 @@ Page({
           setTimeout(() => {
             wx.navigateBack()
           }, 1500)
+        } else {
+          wx.showToast({
+            title: res.data?.message || '发布失败',
+            icon: 'none'
+          })
         }
+      },
+      fail: () => {
+        wx.showToast({
+          title: '发布失败',
+          icon: 'none'
+        })
       },
       complete: () => {
         this.setData({ loading: false })

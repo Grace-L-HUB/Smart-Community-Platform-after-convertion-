@@ -26,11 +26,11 @@
     <view wx:if="{{ coupons.length === 0 }}" class="empty-container">
       <van-empty description="暂无可领取的优惠券" />
     </view>
-    
+
     <view wx:else>
-      <view 
-        wx:for="{{ coupons }}" 
-        wx:key="id" 
+      <view
+        wx:for="{{ coupons }}"
+        wx:key="id"
         class="coupon-card"
       >
         <!-- 优惠券主体 -->
@@ -41,12 +41,12 @@
             <text class="amount-value">{{ item.amount }}</text>
             <text class="amount-condition">满{{ item.minAmount }}可用</text>
           </view>
-          
+
           <!-- 中间信息区域 -->
           <view class="coupon-info">
             <view class="coupon-name">{{ item.name }}</view>
             <view class="coupon-desc">{{ item.description }}</view>
-            <view 
+            <view
               class="coupon-merchant"
               data-merchant-id="{{ item.merchantId }}"
               bindtap="onMerchantClick"
@@ -56,26 +56,27 @@
               <van-icon name="arrow" size="12px" />
             </view>
             <view class="coupon-time">
-              有效期：{{ item.startDate.split('T')[0] }} 至 {{ item.endDate.split('T')[0] }}
+              有效期：{{ item.startDate }} 至 {{ item.endDate }}
             </view>
           </view>
-          
-          <!-- 右侧领取按钮 -->
-          <view class="coupon-action">
-            <van-button 
-              size="small" 
-              type="primary" 
-              round
-              loading="{{ receivingCouponId === item.id }}"
-              disabled="{{ item.remainingCount <= 0 }}"
-              data-id="{{ item.id }}"
-              bindtap="onReceiveCoupon"
-            >
-              {{ item.remainingCount <= 0 ? '已抢完' : '立即领取' }}
-            </van-button>
-          </view>
         </view>
-        
+
+        <!-- 领取按钮区域 -->
+        <view class="coupon-action-wrapper">
+          <van-button
+            size="small"
+            type="primary"
+            round
+            loading="{{ receivingCouponId === item.id }}"
+            disabled="{{ item.remainingCount <= 0 }}"
+            data-id="{{ item.id }}"
+            bindtap="onReceiveCoupon"
+            custom-class="receive-button"
+          >
+            {{ item.remainingCount <= 0 ? '已抢完' : '立即领取' }}
+          </van-button>
+        </view>
+
         <!-- 优惠券底部信息 -->
         <view class="coupon-footer">
           <view class="coupon-stats">

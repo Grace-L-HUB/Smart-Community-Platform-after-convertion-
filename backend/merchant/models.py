@@ -290,7 +290,6 @@ class UserCoupon(models.Model):
     class Meta:
         verbose_name = "用户优惠券"
         verbose_name_plural = "用户优惠券"
-        unique_together = ['user', 'coupon']
         ordering = ['-received_at']
         indexes = [
             models.Index(fields=['user', 'status']),

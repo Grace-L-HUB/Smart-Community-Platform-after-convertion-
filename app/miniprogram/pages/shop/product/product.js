@@ -80,13 +80,33 @@ Page({
 
   // 显示优惠券弹窗
   showCouponPopup() {
-    // TODO: 加载优惠券列表
+    this.loadCoupons()
     this.setData({ showCoupon: true })
   },
 
   // 关闭优惠券弹窗
   onCloseCoupon() {
     this.setData({ showCoupon: false })
+  },
+
+  // 加载优惠券列表
+  loadCoupons() {
+    const { product } = this.data
+    if (!product.merchant) {
+      return
+    }
+
+    wx.request({
+      url: `${API_BASE_URL}/merchant/coupons/public/${product.merchant}/`,
+      method: 'GET',
+      success: (res) => {
+        if (res.statusCode === 200 && res.data.success) {
+          this.setData({
+            coupons: res.data.data || []
+          })
+        }
+      }
+    })
   },
 
   // 显示SKU弹窗
@@ -108,9 +128,37 @@ Page({
   // 领取优惠券
   onGetCoupon(e) {
     const couponId = e.currentTarget.dataset.id
-    wx.showToast({
-      title: '领取成功',
-      icon: 'success'
+
+    wx.request({
+      url: `${API_BASE_URL}/merchant/coupons/receive/`,
+      method: 'POST',
+      data: {
+        coupon_id: couponId
+      },
+      header: {
+        'Authorization': 'Bearer ' + (wx.getStorageSync('token') || '')
+      },
+      success: (res) => {
+        if (res.statusCode === 200 || res.statusCode === 201) {
+          wx.showToast({
+            title: '领取成功',
+            icon: 'success'
+          })
+          // 重新加载优惠券列表以更新状态
+          this.loadCoupons()
+        } else {
+          wx.showToast({
+            title: res.data?.message || '领取失败',
+            icon: 'none'
+          })
+        }
+      },
+      fail: () => {
+        wx.showToast({
+          title: '领取失败',
+          icon: 'none'
+        })
+      }
     })
   },
 

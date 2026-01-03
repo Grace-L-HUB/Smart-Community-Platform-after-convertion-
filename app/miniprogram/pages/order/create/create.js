@@ -53,6 +53,8 @@ Page({
       this.setData({ quantity: parseInt(options.quantity) })
     }
     this.loadUserInfo()
+    // 加载可用优惠券
+    this.loadAvailableCoupons()
   },
 
   // 加载商品详情
@@ -175,12 +177,45 @@ Page({
     this.calculateAmount()
   },
 
+  // 加载可用优惠券
+  loadAvailableCoupons() {
+    const token = wx.getStorageSync('token')
+    if (!token) {
+      return
+    }
+
+    wx.request({
+      url: `${API_BASE_URL}/merchant/user/coupons/`,
+      method: 'GET',
+      data: {
+        status: 'valid'  // 获取有效的（未使用的）优惠券
+      },
+      header: {
+        'Authorization': `Bearer ${token}`
+      },
+      success: (res) => {
+        console.log('可用优惠券响应:', res.data)
+        if (res.statusCode === 200 && res.data.success) {
+          const coupons = res.data.data || []
+          console.log('可用优惠券列表:', coupons)
+          this.setData({ availableCoupons: coupons })
+        }
+      },
+      fail: (err) => {
+        console.error('加载优惠券失败:', err)
+      }
+    })
+  },
+
   // 计算金额
   calculateAmount() {
     const { product, quantity, selectedCoupon } = this.data
     const price = parseFloat(product.price) || 0
     const total = price * quantity
-    const discount = selectedCoupon ? parseFloat(selectedCoupon.amount || 0) : 0
+    // 优惠券数据是嵌套结构，需要从 coupon_info 中获取金额
+    const discount = selectedCoupon && selectedCoupon.coupon_info
+      ? parseFloat(selectedCoupon.coupon_info.amount || 0)
+      : 0
     this.setData({
       totalAmount: total.toFixed(2),
       discountAmount: discount.toFixed(2),

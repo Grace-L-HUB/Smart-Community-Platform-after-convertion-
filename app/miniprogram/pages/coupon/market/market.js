@@ -20,9 +20,24 @@ Page({
         'Authorization': 'Bearer ' + (wx.getStorageSync('token') || '')
       },
       success: (res) => {
-        if (res.statusCode === 200 && res.data.code === 200) {
+        console.log('优惠券数据:', res.data)
+        if (res.statusCode === 200 && (res.data.code === 200 || res.data.success === true)) {
+          // 格式化日期
+          const coupons = (res.data.data || []).map(item => {
+            // 处理 startDate - 支持驼峰和蛇形命名
+            const startDate = item.startDate || item.start_date
+            const endDate = item.endDate || item.end_date
+
+            return {
+              ...item,
+              startDate: startDate ? this.formatDate(startDate) : '',
+              endDate: endDate ? this.formatDate(endDate) : ''
+            }
+          })
+
+          console.log('优惠券列表:', coupons)
           this.setData({
-            coupons: res.data.data || [],
+            coupons: coupons,
             loading: false
           })
         } else {
@@ -51,7 +66,8 @@ Page({
         'Authorization': 'Bearer ' + (wx.getStorageSync('token') || '')
       },
       success: (res) => {
-        if (res.statusCode === 200 && res.data.code === 200) {
+        console.log('领取优惠券响应:', res.data)
+        if (res.statusCode === 200 && (res.data.success === true || res.data.code === 200)) {
           wx.showToast({
             title: '领取成功',
             icon: 'success'
@@ -82,5 +98,12 @@ Page({
     wx.navigateTo({
       url: '/pages/coupon/list/list'
     })
+  },
+
+  // 格式化日期：将 ISO 格式转换为 YYYY-MM-DD
+  formatDate(dateStr) {
+    if (!dateStr) return ''
+    // 去掉 T 和 Z，只保留日期部分
+    return dateStr.split('T')[0]
   }
 })

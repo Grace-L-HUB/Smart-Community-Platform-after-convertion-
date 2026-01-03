@@ -12,12 +12,12 @@ User = get_user_model()
 
 class UserSimpleSerializer(serializers.ModelSerializer):
     """用户简化序列化器"""
-    
+
     display_name = serializers.ReadOnlyField()
-    
+
     class Meta:
         model = User
-        fields = ['id', 'nickname', 'avatar', 'display_name']
+        fields = ['id', 'nickname', 'avatar', 'display_name', 'phone']
 
 
 class MarketItemImageSerializer(serializers.ModelSerializer):

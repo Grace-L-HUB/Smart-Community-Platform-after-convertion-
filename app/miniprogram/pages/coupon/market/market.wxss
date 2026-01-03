@@ -90,7 +90,6 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  margin-right: 20rpx;
 }
 
 .coupon-name {
@@ -128,11 +127,19 @@
   color: #999;
 }
 
-/* 右侧操作区域 */
-.coupon-action {
+/* 领取按钮区域 */
+.coupon-action-wrapper {
+  padding: 0 30rpx 20rpx 30rpx;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
+}
+
+.receive-button {
+  min-width: 140rpx !important;
+  height: 60rpx !important;
+  line-height: 60rpx !important;
+  font-size: 26rpx !important;
+  padding: 0 30rpx !important;
 }
 
 /* 底部区域 */
