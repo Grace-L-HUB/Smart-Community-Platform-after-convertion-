@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 import random
 from .models import (
     MerchantApplication, MerchantProfile, MerchantProduct,
-    MerchantCoupon, UserCoupon, MerchantOrder, MerchantOrderItem
+    MerchantCoupon, UserCoupon, MerchantOrder, MerchantOrderItem, CartItem
 )
 
 User = get_user_model()
@@ -101,6 +101,8 @@ class MerchantProfileSerializer(serializers.ModelSerializer):
     user_info = serializers.SerializerMethodField()
     category_display = serializers.CharField(source='get_shop_category_display', read_only=True)
     shop_logo_url = serializers.SerializerMethodField()
+    total_orders = serializers.SerializerMethodField()  # 改为实时计算
+    total_revenue = serializers.SerializerMethodField()  # 改为实时计算
     
     class Meta:
         model = MerchantProfile
@@ -110,7 +112,7 @@ class MerchantProfileSerializer(serializers.ModelSerializer):
             'shop_announcement', 'business_hours_start', 'business_hours_end',
             'is_active', 'total_orders', 'total_revenue', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['user', 'total_orders', 'total_revenue']
+        read_only_fields = ['user']
     
     def get_user_info(self, obj):
         """获取用户信息"""
@@ -142,6 +144,21 @@ class MerchantProfileSerializer(serializers.ModelSerializer):
                 return obj.shop_logo.url
             return f'/media/{obj.shop_logo}' if obj.shop_logo else None
         return None
+
+    def get_total_orders(self, obj):
+        """实时计算总订单数"""
+        from .models import MerchantOrder
+        return MerchantOrder.objects.filter(merchant=obj).count()
+
+    def get_total_revenue(self, obj):
+        """实时计算总收入"""
+        from .models import MerchantOrder
+        from django.db.models import Sum
+        result = MerchantOrder.objects.filter(
+            merchant=obj,
+            status='completed'
+        ).aggregate(total=Sum('actual_amount'))
+        return float(result['total'] or 0)
 
 
 class MerchantProfileUpdateSerializer(serializers.ModelSerializer):
@@ -755,3 +772,42 @@ class OrderCreateSerializer(serializers.ModelSerializer):
             import traceback
             print(f"DEBUG: 完整错误堆栈: {traceback.format_exc()}")
             raise
+
+
+class CartItemSerializer(serializers.ModelSerializer):
+    """购物车序列化器"""
+
+    merchantName = serializers.CharField(source='merchant.shop_name', read_only=True)
+    merchantId = serializers.IntegerField(source='merchant.id', read_only=True)
+    productId = serializers.IntegerField(source='product.id', read_only=True)
+    productName = serializers.CharField(source='product_name', read_only=True)
+    productPrice = serializers.FloatField(source='product_price', read_only=True)
+    productImage = serializers.CharField(source='product_image', read_only=True)
+    subtotal = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CartItem
+        fields = [
+            'id', 'user', 'merchant', 'merchantName', 'merchantId',
+            'product', 'productId', 'productName', 'productPrice',
+            'productImage', 'quantity', 'subtotal', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['user', 'merchant', 'productName', 'productPrice', 'productImage']
+
+    def get_subtotal(self, obj):
+        return float(obj.product_price * obj.quantity)
+
+
+class CartItemAddSerializer(serializers.Serializer):
+    """添加商品到购物车序列化器"""
+
+    product_id = serializers.IntegerField(write_only=True)
+    quantity = serializers.IntegerField(default=1, min_value=1)
+
+    def validate_product_id(self, value):
+        from .models import MerchantProduct
+        try:
+            MerchantProduct.objects.get(id=value, status='online')
+        except MerchantProduct.DoesNotExist:
+            raise serializers.ValidationError("商品不存在或已下架")
+        return value

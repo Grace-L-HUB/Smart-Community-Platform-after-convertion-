@@ -9,7 +9,8 @@ Page({
     productsError: '',
     error: '',
     active: 0,
-    merchantId: null
+    merchantId: null,
+    cartCount: 0
   },
 
   onLoad(options) {
@@ -17,7 +18,12 @@ Page({
       this.setData({ merchantId: options.id })
       this.loadMerchantDetail(options.id)
       this.loadProducts(options.id)
+      this.loadCartCount()
     }
+  },
+
+  onShow() {
+    this.loadCartCount()
   },
 
   // 加载商户详情
@@ -41,8 +47,7 @@ Page({
               phone: merchant.shop_phone,
               businessHours: `${merchant.business_hours_start}-${merchant.business_hours_end}`,
               description: merchant.shop_description,
-              score: 4.8,
-              monthlySales: 100,
+              monthlySales: merchant.total_orders || 0,
               tags: ['优质商户', '诚信经营']
             },
             loading: false
@@ -102,10 +107,75 @@ Page({
 
   // 加购物车
   onAddToCart(e) {
-    // TODO: 实现购物车功能
-    wx.showToast({
-      title: '购物车功能待实现',
-      icon: 'none'
+    const productId = e.currentTarget.dataset.id
+    const product = this.data.products.find(p => p.id === productId)
+
+    if (!product || product.stock <= 0) {
+      wx.showToast({
+        title: '商品库存不足',
+        icon: 'none'
+      })
+      return
+    }
+
+    wx.request({
+      url: `${API_BASE_URL}/merchant/cart/add/`,
+      method: 'POST',
+      data: {
+        product_id: productId,
+        quantity: 1
+      },
+      header: {
+        'Authorization': 'Bearer ' + (wx.getStorageSync('token') || '')
+      },
+      success: (res) => {
+        if (res.statusCode === 200 && res.data.success) {
+          wx.showToast({
+            title: '已加入购物车',
+            icon: 'success'
+          })
+          this.loadCartCount()
+        } else {
+          wx.showToast({
+            title: res.data?.message || '添加失败',
+            icon: 'none'
+          })
+        }
+      },
+      fail: () => {
+        wx.showToast({
+          title: '添加失败',
+          icon: 'none'
+        })
+      }
+    })
+  },
+
+  // 加载购物车数量
+  loadCartCount() {
+    wx.request({
+      url: `${API_BASE_URL}/merchant/cart/`,
+      method: 'GET',
+      header: {
+        'Authorization': 'Bearer ' + (wx.getStorageSync('token') || '')
+      },
+      success: (res) => {
+        if (res.statusCode === 200 && res.data.success) {
+          const cartItems = res.data.data || []
+          let count = 0
+          cartItems.forEach(merchant => {
+            count += merchant.items.length
+          })
+          this.setData({ cartCount: count })
+        }
+      }
+    })
+  },
+
+  // 进入购物车
+  onGoCart() {
+    wx.navigateTo({
+      url: '/pages/shop/cart/cart'
     })
   },
 

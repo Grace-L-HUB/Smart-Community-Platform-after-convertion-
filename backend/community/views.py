@@ -59,21 +59,21 @@ class StandardResultsSetPagination(PageNumberPagination):
 
 class MarketItemListCreateView(generics.ListCreateAPIView):
     """商品列表和发布"""
-    
-    queryset = MarketItem.objects.filter(is_active=True)
+
+    queryset = MarketItem.objects.filter(is_active=True, is_sold=False)
     pagination_class = StandardResultsSetPagination
     permission_classes = [IsAuthenticated]
-    
+
     def get_serializer_class(self):
         if self.request.method == 'POST':
             return MarketItemDetailSerializer
         return MarketItemListSerializer
-    
+
     def get_queryset(self):
         queryset = super().get_queryset()
         category = self.request.query_params.get('category')
         search = self.request.query_params.get('search')
-        
+
         if category:
             queryset = queryset.filter(category=category)
         
@@ -137,12 +137,12 @@ class MarketItemDetailView(generics.RetrieveAPIView):
 @permission_classes([IsAuthenticated])
 def toggle_favorite(request, pk):
     """收藏/取消收藏商品"""
-    
+
     item = get_object_or_404(MarketItem, pk=pk, is_active=True)
     favorite, created = MarketItemFavorite.objects.get_or_create(
         user=request.user, item=item
     )
-    
+
     if not created:
         favorite.delete()
         # 减少收藏计数
@@ -156,6 +156,46 @@ def toggle_favorite(request, pk):
             favorite_count=F('favorite_count') + 1
         )
         return Response({'favorited': True, 'message': '已收藏'})
+
+
+@extend_schema(
+    summary="标记商品已售",
+    description="买家标记想要购买商品，商品将被标记为已售"
+)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def mark_item_sold(request, pk):
+    """标记商品已售"""
+    try:
+        item = get_object_or_404(MarketItem, pk=pk, is_active=True)
+
+        # 检查是否已经是卖家本人
+        if item.seller == request.user:
+            return Response(
+                {'success': False, 'message': '不能购买自己的商品'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 检查是否已售出
+        if item.is_sold:
+            return Response(
+                {'success': False, 'message': '商品已售出'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 标记为已售
+        MarketItem.objects.filter(pk=item.pk).update(is_sold=True)
+
+        return Response({
+            'success': True,
+            'message': '已标记为已售，请联系卖家完成交易'
+        })
+
+    except Exception as e:
+        return Response(
+            {'success': False, 'message': f'操作失败: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 
 # =============================================================================

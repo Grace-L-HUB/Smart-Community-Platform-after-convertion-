@@ -49,9 +49,9 @@
 
   <!-- Bottom Action Bar -->
   <view class="action-bar">
-    <view class="action-left">
-      <van-icon name="star-o" size="24px" bind:click="onFavorite" />
-      <text class="action-text">收藏</text>
+    <view class="action-left" bind:tap="onFavorite">
+      <van-icon name="{{isFavorited ? 'star' : 'star-o'}}" size="24px" color="{{isFavorited ? '#ff6034' : ''}}" />
+      <text class="action-text" style="color: {{isFavorited ? '#ff6034' : ''}}">{{isFavorited ? '已收藏' : '收藏'}}</text>
     </view>
     <view class="action-buttons">
       <van-button round plain type="primary" bind:click="onContact">联系卖家</van-button>

@@ -36,9 +36,9 @@
   <!-- Quick Actions -->
   <view class="section-title">快捷服务</view>
   <van-grid column-num="4" border="{{ false }}" gutter="10">
-    <van-grid-item icon="repair" text="报事报修" bind:click="onQuickAction" data-action="repair" />
-    <van-grid-item icon="friends" text="访客邀请" link-type="navigateTo" url="/pages/services/visitor/visitor" />
+    <van-grid-item icon="setting-o" text="报事报修" bind:click="onQuickAction" data-action="repair" />
+    <van-grid-item icon="friends-o" text="访客邀请" link-type="navigateTo" url="/pages/services/visitor/visitor" />
     <van-grid-item icon="logistics" text="快递代收" link-type="navigateTo" url="/pages/express/express" />
-    <van-grid-item icon="phone" text="常用电话" bind:click="onQuickAction" data-action="call" />
+    <van-grid-item icon="phone-o" text="常用电话" bind:click="onQuickAction" data-action="call" />
   </van-grid>
 </view>

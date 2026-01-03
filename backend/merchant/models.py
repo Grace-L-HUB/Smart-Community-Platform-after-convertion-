@@ -430,8 +430,37 @@ class MerchantOrderItem(models.Model):
     
     def __str__(self):
         return f"{self.order.order_no} - {self.product_name}"
-    
+
     def save(self, *args, **kwargs):
         # 自动计算小计
         self.subtotal = self.product_price * self.quantity
         super().save(*args, **kwargs)
+
+
+class CartItem(models.Model):
+    """购物车条目模型"""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='cart_items', verbose_name="用户")
+    merchant = models.ForeignKey(MerchantProfile, on_delete=models.CASCADE, related_name='cart_items', verbose_name="商户")
+    product = models.ForeignKey(MerchantProduct, on_delete=models.CASCADE, verbose_name="商品")
+
+    quantity = models.PositiveIntegerField(default=1, verbose_name="数量")
+
+    # 商品信息快照
+    product_name = models.CharField(max_length=100, verbose_name="商品名称")
+    product_price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="商品单价")
+    product_image = models.CharField(max_length=500, blank=True, verbose_name="商品图片")
+
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="添加时间")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="更新时间")
+
+    class Meta:
+        db_table = 'merchant_cart_item'
+        verbose_name = "购物车条目"
+        verbose_name_plural = "购物车管理"
+        # 同一用户对同一商户的同一商品只能有一条记录
+        unique_together = [['user', 'merchant', 'product']]
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.display_name} - {self.product_name}"

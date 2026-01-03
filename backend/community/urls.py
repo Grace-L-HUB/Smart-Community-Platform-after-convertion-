@@ -1,16 +1,16 @@
 from django.urls import path
 from .views import (
     # 二手闲置相关
-    MarketItemListCreateView, MarketItemDetailView, toggle_favorite,
-    
+    MarketItemListCreateView, MarketItemDetailView, toggle_favorite, mark_item_sold,
+
     # 邻居互助相关
-    HelpPostListCreateView, HelpPostDetailView, 
+    HelpPostListCreateView, HelpPostDetailView,
     create_help_response, resolve_help_post,
-    
+
     # 私聊相关
     ConversationListView, ConversationMessagesView,
     send_message, start_conversation, poll_messages,
-    
+
     # 社区活动相关
     ActivityListCreateView, ActivityDetailView, register_activity,
     cancel_registration, activity_participants, my_activities
@@ -26,9 +26,12 @@ urlpatterns = [
     
     # 商品详情
     path('market-items/<int:pk>/', MarketItemDetailView.as_view(), name='market_item_detail'),
-    
+
     # 收藏/取消收藏
     path('market-items/<int:pk>/favorite/', toggle_favorite, name='toggle_favorite'),
+
+    # 标记商品已售
+    path('market-items/<int:pk>/sold/', mark_item_sold, name='mark_item_sold'),
     
     # =============================================================================
     # 邻居互助相关路由

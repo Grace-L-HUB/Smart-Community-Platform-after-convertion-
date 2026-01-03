@@ -12,7 +12,8 @@ from .views import (
     PublicCouponListView, CouponReceiveView,
     UserCouponListView, CouponVerifyView, OrderCreateView,
     UserOrderListView, UserOrderDetailView, MerchantStatsView,
-    MerchantLogoUploadView, ProductImageUploadView
+    MerchantLogoUploadView, ProductImageUploadView,
+    CartListView, CartAddView, CartUpdateView, CartDeleteView, CartClearView
 )
 
 urlpatterns = [
@@ -65,4 +66,11 @@ urlpatterns = [
     path('user/orders/', UserOrderListView.as_view(), name='user_orders'),
     path('user/orders/<int:order_id>/', UserOrderDetailView.as_view(), name='user_order_detail'),
     path('user/orders/<int:order_id>/cancel/', UserOrderDetailView.as_view(), name='user_order_cancel'),
+
+    # 购物车接口（供小程序使用）
+    path('cart/', CartListView.as_view(), name='cart_list'),
+    path('cart/add/', CartAddView.as_view(), name='cart_add'),
+    path('cart/<int:item_id>/update/', CartUpdateView.as_view(), name='cart_update'),
+    path('cart/<int:item_id>/delete/', CartDeleteView.as_view(), name='cart_delete'),
+    path('cart/clear/', CartClearView.as_view(), name='cart_clear'),
 ]

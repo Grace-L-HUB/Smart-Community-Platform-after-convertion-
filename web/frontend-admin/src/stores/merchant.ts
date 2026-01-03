@@ -1,23 +1,36 @@
 // 商户管理 Store
 import { defineStore } from 'pinia'
-import { merchantProductApi, type Product } from '@/services/merchant'
+import { merchantProductApi, merchantOrderApi, merchantStatsApi, type Product, type Order } from '@/services/merchant'
 
 // 使用与后端API一致的Product类型
 export type MerchantProduct = Product
 
+// UI页面使用的订单格式（转换后）
 export interface MerchantOrder {
     id: number
-    order_no: string
-    merchant_name: string
-    total_amount: number
-    actual_amount: number
-    status: 'new' | 'accepted' | 'preparing' | 'ready' | 'completed' | 'cancelled'
-    pickup_type: 'pickup' | 'delivery'
-    contact_name: string
-    contact_phone: string
+    orderNo: string
+    merchantName: string
+    totalAmount: number
+    actualAmount: number
+    status: 'new' | 'accepted' | 'preparing' | 'ready' | 'completed' | 'cancelled' | 'refunded'
+    pickupType: 'pickup' | 'delivery'
+    customerName: string
+    customerPhone: string
     address: string
-    created_at: string
+    note?: string
+    pickupCode?: string
+    products: Array<{
+        name: string
+        quantity: number
+        price: number
+    }>
+    createdAt: string
+    acceptedAt?: string
+    completedAt?: string
 }
+
+// 原始API订单格式
+type ApiOrder = Order
 
 export interface MerchantCoupon {
     id: number
@@ -56,6 +69,32 @@ interface MerchantState {
     loading: boolean
 }
 
+// 将API订单格式转换为UI格式
+function transformOrder(apiOrder: ApiOrder): MerchantOrder {
+    return {
+        id: apiOrder.id,
+        orderNo: apiOrder.order_no,
+        merchantName: apiOrder.merchant_name,
+        totalAmount: Number(apiOrder.total_amount) || 0,
+        actualAmount: Number(apiOrder.actual_amount) || 0,
+        status: apiOrder.status,
+        pickupType: apiOrder.pickup_type,
+        customerName: apiOrder.user_info?.display_name || apiOrder.contact_name,
+        customerPhone: apiOrder.contact_phone,
+        address: apiOrder.address || '',
+        note: apiOrder.note,
+        pickupCode: apiOrder.pickup_code,
+        products: apiOrder.items.map(item => ({
+            name: item.product_name,
+            quantity: item.quantity,
+            price: Number(item.product_price) || 0
+        })),
+        createdAt: apiOrder.created_at,
+        acceptedAt: apiOrder.accepted_at,
+        completedAt: apiOrder.completed_at
+    }
+}
+
 export const useMerchantStore = defineStore('merchant', {
     state: (): MerchantState => ({
         products: [],
@@ -88,10 +127,21 @@ export const useMerchantStore = defineStore('merchant', {
         async loadAll() {
             this.loading = true
             try {
-                // 从API加载商品列表
-                const response = await merchantProductApi.getProducts()
-                if (response.success && response.data) {
-                    this.products = response.data
+                // 并行加载商品和订单
+                const [productsResponse, ordersResponse] = await Promise.all([
+                    merchantProductApi.getProducts(),
+                    merchantOrderApi.getOrders()
+                ])
+
+                if (productsResponse.success && productsResponse.data) {
+                    this.products = productsResponse.data
+                }
+
+                if (ordersResponse.success && ordersResponse.data) {
+                    const data = ordersResponse.data
+                    // 处理分页数据或数组数据
+                    const orderList = Array.isArray(data) ? data : (data.items || [])
+                    this.orders = orderList.map(transformOrder)
                 }
             } catch (error) {
                 console.error('加载数据失败:', error)
@@ -100,9 +150,30 @@ export const useMerchantStore = defineStore('merchant', {
             }
         },
 
+        // 单独加载订单
+        async loadOrders() {
+            try {
+                const response = await merchantOrderApi.getOrders()
+                if (response.success && response.data) {
+                    const data = response.data
+                    const orderList = Array.isArray(data) ? data : (data.items || [])
+                    this.orders = orderList.map(transformOrder)
+                }
+            } catch (error) {
+                console.error('加载订单失败:', error)
+            }
+        },
+
         // 加载统计数据
         async loadStats() {
-            // TODO: 从API加载统计数据
+            try {
+                const response = await merchantStatsApi.getStats()
+                if (response.success && response.data) {
+                    this.stats = response.data
+                }
+            } catch (error) {
+                console.error('加载统计数据失败:', error)
+            }
         },
 
         // 商品操作
@@ -190,9 +261,76 @@ export const useMerchantStore = defineStore('merchant', {
 
         // 订单操作
         async updateOrderStatus(orderId: number, status: MerchantOrder['status']) {
-            const order = this.orders.find(o => o.id === orderId)
-            if (order) {
-                order.status = status
+            try {
+                const response = await merchantOrderApi.updateOrderStatus(orderId, { status })
+                if (response.success && response.data) {
+                    // 更新本地订单状态
+                    const index = this.orders.findIndex(o => o.id === orderId)
+                    if (index > -1) {
+                        const updated = transformOrder(response.data)
+                        this.orders[index] = updated
+                    }
+                }
+            } catch (error) {
+                console.error('更新订单状态失败:', error)
+                throw error
+            }
+        },
+
+        // 接单
+        async acceptOrder(orderId: number) {
+            return this.updateOrderStatus(orderId, 'accepted')
+        },
+
+        // 拒单
+        async rejectOrder(orderId: number, reason: string) {
+            try {
+                const response = await merchantOrderApi.updateOrderStatus(orderId, {
+                    status: 'cancelled',
+                    reject_reason: reason
+                })
+                if (response.success && response.data) {
+                    // 更新本地订单状态
+                    const index = this.orders.findIndex(o => o.id === orderId)
+                    if (index > -1) {
+                        const updated = transformOrder(response.data)
+                        this.orders[index] = updated
+                    }
+                }
+            } catch (error) {
+                console.error('拒单失败:', error)
+                throw error
+            }
+        },
+
+        // 验证取餐码
+        async verifyPickupCode(pickupCode: string): Promise<{
+            success: boolean
+            message: string
+            order?: MerchantOrder
+        }> {
+            try {
+                const response = await merchantOrderApi.verifyPickupCode(pickupCode)
+                if (response.success && response.data) {
+                    // 重新加载订单列表
+                    await this.loadOrders()
+                    const orderId = response.data?.order_id
+                    return {
+                        success: true,
+                        message: '验证成功',
+                        order: orderId ? this.orders.find(o => o.id === orderId) : undefined
+                    }
+                }
+                return {
+                    success: false,
+                    message: response.message || '验证失败'
+                }
+            } catch (error) {
+                console.error('验证取餐码失败:', error)
+                return {
+                    success: false,
+                    message: '验证失败，请重试'
+                }
             }
         },
 

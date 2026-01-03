@@ -5,7 +5,8 @@ Page({
   data: {
     item: {},
     loading: false,
-    quantity: 1
+    quantity: 1,
+    isFavorited: false
   },
 
   onLoad(options) {
@@ -60,6 +61,7 @@ Page({
               name: seller.nickname || seller.display_name || '未知用户',
               phone: seller.phone
             },
+            isFavorited: item.is_favorited || false,
             loading: false
           })
         } else {
@@ -115,16 +117,83 @@ Page({
   },
 
   onWant() {
-    wx.showToast({
-      title: '功能开发中',
-      icon: 'none'
+    const { item } = this.data
+
+    if (!item.id) {
+      wx.showToast({
+        title: '商品信息错误',
+        icon: 'none'
+      })
+      return
+    }
+
+    wx.showModal({
+      title: '确认购买',
+      content: `确认要购买「${item.title}」吗？\n确认后商品将被标记为已售，请联系卖家完成交易。`,
+      success: (res) => {
+        if (res.confirm) {
+          wx.request({
+            url: API_COMMUNITY_URL + '/market-items/' + item.id + '/sold/',
+            method: 'POST',
+            header: {
+              'Authorization': 'Bearer ' + (wx.getStorageSync('token') || '')
+            },
+            success: (res) => {
+              if (res.statusCode === 200 && res.data.success) {
+                wx.showModal({
+                  title: '购买成功',
+                  content: res.data.message || '请联系卖家完成交易',
+                  showCancel: false,
+                  success: () => {
+                    wx.navigateBack()
+                  }
+                })
+              } else {
+                wx.showToast({
+                  title: res.data?.message || '操作失败',
+                  icon: 'none'
+                })
+              }
+            },
+            fail: () => {
+              wx.showToast({
+                title: '网络请求失败',
+                icon: 'none'
+              })
+            }
+          })
+        }
+      }
     })
   },
 
   onFavorite() {
-    wx.showToast({
-      title: '功能开发中',
-      icon: 'none'
+    const { item, isFavorited } = this.data
+
+    wx.request({
+      url: API_COMMUNITY_URL + '/market-items/' + item.id + '/favorite/',
+      method: 'POST',
+      header: {
+        'Authorization': 'Bearer ' + (wx.getStorageSync('token') || '')
+      },
+      success: (res) => {
+        if (res.statusCode === 200) {
+          const favorited = res.data.favorited
+          this.setData({
+            isFavorited: favorited
+          })
+          wx.showToast({
+            title: favorited ? '已收藏' : '已取消收藏',
+            icon: 'success'
+          })
+        }
+      },
+      fail: () => {
+        wx.showToast({
+          title: '操作失败',
+          icon: 'none'
+        })
+      }
     })
   },
 

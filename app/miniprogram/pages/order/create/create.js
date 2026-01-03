@@ -3,15 +3,19 @@ const API_BASE_URL = require('../../../config/api.js').API_BASE_URL
 Page({
   data: {
     // 基本信息
-    orderType: '',
+    orderType: '', // shop: 单商品购买, cart: 购物车结算
     productId: '',
     merchantId: '',
     quantity: 1,
     loading: false,
 
-    // 商品和商户信息
+    // 商品和商户信息（单商品）
     product: {},
     shop: {},
+
+    // 购物车商品列表
+    cartProducts: [],
+    cartItemsData: [], // 购物车传来的原始数据 {productId, quantity}
 
     // 取餐方式
     pickupType: 'pickup', // pickup: 到店自提, delivery: 外卖配送
@@ -39,22 +43,128 @@ Page({
   },
 
   onLoad(options) {
+    this.setData({ loading: true })
+
     if (options.type) {
       this.setData({ orderType: options.type })
     }
-    if (options.productId) {
+
+    // 处理购物车结算
+    if (options.type === 'cart' && options.data) {
+      try {
+        const cartData = JSON.parse(decodeURIComponent(options.data))
+        this.setData({ cartItemsData: cartData })
+        this.loadCartProducts(cartData)
+      } catch (e) {
+        console.error('解析购物车数据失败:', e)
+        wx.showToast({
+          title: '数据错误',
+          icon: 'none'
+        })
+        this.setData({ loading: false })
+      }
+    }
+    // 处理单商品购买
+    else if (options.productId) {
       this.setData({ productId: options.productId })
       this.loadProductDetail(options.productId)
+    } else {
+      this.setData({ loading: false })
     }
+
     if (options.merchantId) {
       this.setData({ merchantId: options.merchantId })
     }
     if (options.quantity) {
       this.setData({ quantity: parseInt(options.quantity) })
     }
+
     this.loadUserInfo()
     // 加载可用优惠券
     this.loadAvailableCoupons()
+  },
+
+  // 加载购物车商品信息
+  loadCartProducts(cartData) {
+    if (!cartData || cartData.length === 0) {
+      wx.showToast({
+        title: '没有选择商品',
+        icon: 'none'
+      })
+      setTimeout(() => {
+        wx.navigateBack()
+      }, 1500)
+      return
+    }
+
+    const productIds = cartData.map(item => item.productId)
+    const promises = productIds.map(id => {
+      return new Promise((resolve) => {
+        wx.request({
+          url: `${API_BASE_URL}/merchant/product/public/${id}/`,
+          method: 'GET',
+          success: (res) => {
+            if (res.statusCode === 200 && res.data.success) {
+              const product = res.data.data
+              const cartItem = cartData.find(c => c.productId === id)
+              resolve({
+                ...product,
+                cartQuantity: cartItem.quantity
+              })
+            } else {
+              resolve(null)
+            }
+          },
+          fail: () => resolve(null)
+        })
+      })
+    })
+
+    Promise.all(promises).then(products => {
+      const validProducts = products.filter(p => p !== null)
+      if (validProducts.length === 0) {
+        wx.showToast({
+          title: '商品信息加载失败',
+          icon: 'none'
+        })
+        setTimeout(() => {
+          wx.navigateBack()
+        }, 1500)
+        return
+      }
+
+      this.setData({
+        cartProducts: validProducts,
+        loading: false
+      })
+
+      // 计算总价
+      this.calculateCartAmount()
+
+      // 加载商户信息（使用第一个商品的商户）
+      if (validProducts[0].merchant) {
+        this.loadMerchantInfo(validProducts[0].merchant)
+      }
+    })
+  },
+
+  // 计算购物车商品总价
+  calculateCartAmount() {
+    const { cartProducts, selectedCoupon } = this.data
+    let total = 0
+    cartProducts.forEach(p => {
+      total += (parseFloat(p.price) || 0) * p.cartQuantity
+    })
+
+    const discount = selectedCoupon && selectedCoupon.coupon_info
+      ? parseFloat(selectedCoupon.coupon_info.amount || 0)
+      : 0
+
+    this.setData({
+      totalAmount: total.toFixed(2),
+      discountAmount: discount.toFixed(2),
+      actualAmount: Math.max(0, total - discount).toFixed(2)
+    })
   },
 
   // 加载商品详情
@@ -69,8 +179,8 @@ Page({
           const product = res.data.data || {}
           this.setData({
             product: product,
-            totalAmount: (product.price || 0) * this.data.quantity,
-            actualAmount: (product.price || 0) * this.data.quantity,
+            totalAmount: ((product.price || 0) * this.data.quantity).toFixed(2),
+            actualAmount: ((product.price || 0) * this.data.quantity).toFixed(2),
             loading: false
           })
           // 如果有商户ID，加载商户信息
@@ -253,13 +363,18 @@ Page({
     this.setData({
       selectedCoupon: coupon || null
     })
-    this.calculateAmount()
+    // 根据订单类型计算金额
+    if (this.data.orderType === 'cart') {
+      this.calculateCartAmount()
+    } else {
+      this.calculateAmount()
+    }
     this.hideCouponPopup()
   },
 
   // 提交订单
   onSubmitOrder() {
-    const { productId, quantity, pickupType, contactName, contactPhone, address, note, selectedCoupon, shop, product } = this.data
+    const { orderType, productId, quantity, pickupType, contactName, contactPhone, address, note, selectedCoupon, shop, product, cartProducts } = this.data
 
     // 验证表单
     if (!contactName || !contactPhone) {
@@ -279,7 +394,14 @@ Page({
     }
 
     // 检查商户ID
-    const merchantId = shop.id || product.merchant
+    let merchantId = shop.id
+    if (!merchantId && orderType === 'shop') {
+      merchantId = product.merchant
+    }
+    if (!merchantId && orderType === 'cart' && cartProducts.length > 0) {
+      merchantId = cartProducts[0].merchant
+    }
+
     if (!merchantId) {
       wx.showToast({
         title: '商户信息缺失',
@@ -291,16 +413,31 @@ Page({
     this.setData({ submitting: true })
 
     // 构建订单数据 - 按照后端 API 格式
-    const orderData = {
-      merchant_id: merchantId,
-      order_items: [
+    let orderItems = []
+
+    if (orderType === 'cart') {
+      // 购物车结算
+      orderItems = cartProducts.map(p => ({
+        product_id: p.id,
+        product_name: p.name || '未知商品',
+        quantity: p.cartQuantity,
+        price: p.price || 0
+      }))
+    } else {
+      // 单商品购买
+      orderItems = [
         {
           product_id: productId,
           product_name: product.name || '未知商品',
           quantity: quantity,
           price: product.price || 0
         }
-      ],
+      ]
+    }
+
+    const orderData = {
+      merchant_id: merchantId,
+      order_items: orderItems,
       pickup_type: pickupType,
       contact_name: contactName,
       contact_phone: contactPhone,

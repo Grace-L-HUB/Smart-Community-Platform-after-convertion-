@@ -164,10 +164,44 @@ Page({
 
   // 加购物车
   onAddToCart() {
-    // TODO: 实现购物车功能
-    wx.showToast({
-      title: '购物车功能待实现',
-      icon: 'none'
+    const { product } = this.data
+    if (!product || !product.id) {
+      wx.showToast({
+        title: '商品信息错误',
+        icon: 'none'
+      })
+      return
+    }
+
+    wx.request({
+      url: `${API_BASE_URL}/merchant/cart/add/`,
+      method: 'POST',
+      data: {
+        product_id: product.id,
+        quantity: this.data.quantity || 1
+      },
+      header: {
+        'Authorization': 'Bearer ' + (wx.getStorageSync('token') || '')
+      },
+      success: (res) => {
+        if (res.statusCode === 200 && res.data.success) {
+          wx.showToast({
+            title: '已加入购物车',
+            icon: 'success'
+          })
+        } else {
+          wx.showToast({
+            title: res.data?.message || '添加失败',
+            icon: 'none'
+          })
+        }
+      },
+      fail: () => {
+        wx.showToast({
+          title: '添加失败',
+          icon: 'none'
+        })
+      }
     })
   },
 

@@ -39,7 +39,8 @@
     "pages/coupon/list/list",
     "pages/coupon/market/market",
     "pages/order/create/create",
-    "pages/profile/home/home"
+    "pages/profile/home/home",
+    "pages/shop/cart/cart"
   ],
   "window": {
     "navigationBarTextStyle": "black",
