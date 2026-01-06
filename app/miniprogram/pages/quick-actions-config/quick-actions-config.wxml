@@ -1,0 +1,36 @@
+<view class="container">
+  <view class="header">
+    <view class="title">快捷服务配置</view>
+    <view class="subtitle">请选择您常用的快捷服务（最多{{maxSelected}}个）</view>
+  </view>
+
+  <view class="actions-list">
+    <view
+      class="{{item.selected ? 'action-item selected' : 'action-item'}}"
+      wx:for="{{allActions}}"
+      wx:key="id"
+      bindtap="onToggleAction"
+      data-id="{{item.id}}"
+    >
+      <view class="{{item.selected ? 'action-icon selected' : 'action-icon'}}">
+        <van-icon name="{{item.icon}}" size="24px" color="{{item.selected ? '#fff' : '#999'}}" />
+      </view>
+      <view class="action-info">
+        <view class="{{item.selected ? 'action-name selected' : 'action-name'}}">{{item.name}}</view>
+      </view>
+      <view class="{{item.selected ? 'action-check selected' : 'action-check'}}">
+        <van-icon
+          name="checked"
+          size="20px"
+          color="#fff"
+          wx:if="{{item.selected}}"
+        />
+      </view>
+    </view>
+  </view>
+
+  <view class="footer">
+    <view class="selected-count">已选择 {{selectedIds.length}}/{{maxSelected}}</view>
+    <van-button type="primary" block round bind:click="onSave">保存</van-button>
+  </view>
+</view>

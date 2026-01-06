@@ -1082,7 +1082,6 @@ class DashboardStatsView(APIView):
                 created_at__date=today
             ).count()
             
-            # 模拟费收缴率
             fee_collection_rate = round((occupied_houses / total_houses if total_houses > 0 else 0) * 0.85, 3)
             
             # 近7天数据（从数据库获取）

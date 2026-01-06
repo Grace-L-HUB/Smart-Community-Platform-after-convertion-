@@ -24,26 +24,33 @@ Page({
     },
 
     onShow() {
-        if (this.data.active === 0) {
-            this.loadMarketItems(true);
-        } else if (this.data.active === 1) {
-            this.loadHelpPosts(true);
-        } else if (this.data.active === 2) {
-            this.loadActivities(true);
-        }
+        this.refreshCurrentTab();
     },
 
     onTabChange(e) {
         const active = parseInt(e.detail.name);
         this.setData({ active: active });
-        
-        if (active === 0 && this.data.marketItems.length === 0) {
-            this.loadMarketItems();
-        } else if (active === 1 && this.data.helpPosts.length === 0) {
-            this.loadHelpPosts();
-        } else if (active === 2 && this.data.activities.length === 0) {
-            this.loadActivities();
+
+        // 切换到空数据的tab时加载数据
+        const tabDataMap = [
+            { hasMore: 'hasMoreMarket', items: 'marketItems', loader: 'loadMarketItems' },
+            { hasMore: 'hasMoreHelp', items: 'helpPosts', loader: 'loadHelpPosts' },
+            { hasMore: 'hasMoreActivity', items: 'activities', loader: 'loadActivities' }
+        ];
+
+        const tabConfig = tabDataMap[active];
+        if (this.data[tabConfig.items].length === 0) {
+            this[tabConfig.loader]();
         }
+    },
+
+    refreshCurrentTab() {
+        const refreshMap = {
+            0: () => this.loadMarketItems(true),
+            1: () => this.loadHelpPosts(true),
+            2: () => this.loadActivities(true)
+        };
+        refreshMap[this.data.active]?.();
     },
 
     getUserToken() {
@@ -51,106 +58,118 @@ Page({
         return userInfo ? userInfo.token : null;
     },
 
+    // ========== 二手闲置 ==========
     loadMarketItems(refresh = false) {
-        if (this.data.loading) return;
-        
-        const token = this.getUserToken();
-        if (!token) {
-            wx.showToast({ title: '请先登录', icon: 'none' });
-            return;
-        }
-
-        if (refresh) {
-            this.setData({ marketPage: 1, hasMoreMarket: true });
-        }
-
-        this.setData({ loading: true });
-
-        wx.request({
+        this.loadData({
             url: API_COMMUNITY_URL + '/market-items/',
-            method: 'GET',
-            header: {
-                'Authorization': 'Bearer ' + token,
-                'Content-Type': 'application/json'
-            },
-            data: {
-                page: refresh ? 1 : this.data.marketPage,
-                page_size: 10
-            },
-            success: (res) => {
-                if (res.statusCode === 200 && res.data.results) {
-                    const newItems = res.data.results.map((item) => ({
-                        id: item.id,
-                        user: item.seller.display_name || item.seller.nickname,
-                        avatar: item.seller.avatar || '',
-                        time: item.time_ago,
-                        title: item.title,
-                        image: item.first_image || '',
-                        price: item.price.toString()
-                    }));
-
-                    if (refresh) {
-                        this.setData({ marketItems: newItems });
-                    } else {
-                        this.setData({ marketItems: this.data.marketItems.concat(newItems) });
-                    }
-
-                    this.setData({
-                        marketPage: this.data.marketPage + 1,
-                        hasMoreMarket: res.data.next !== null
-                    });
-                } else {
-                    wx.showToast({ title: '加载失败', icon: 'none' });
-                }
-            },
-            fail: () => {
-                wx.showToast({ title: '网络错误', icon: 'none' });
-            },
-            complete: () => {
-                this.setData({ loading: false });
-                wx.stopPullDownRefresh();
-            }
+            refresh: refresh,
+            pageKey: 'marketPage',
+            hasMoreKey: 'hasMoreMarket',
+            itemsKey: 'marketItems',
+            processData: (res) => res.data.results.map((item) => ({
+                id: item.id,
+                user: item.seller.display_name || item.seller.nickname,
+                avatar: item.seller.avatar || '',
+                time: item.time_ago,
+                title: item.title,
+                image: item.first_image || '',
+                price: item.price.toString()
+            })),
+            needToken: true
         });
     },
 
+    // ========== 邻居互助 ==========
     loadHelpPosts(refresh = false) {
+        this.loadData({
+            url: API_BASE_URL + '/community/help-posts/',
+            refresh: refresh,
+            pageKey: 'helpPage',
+            hasMoreKey: 'hasMoreHelp',
+            itemsKey: 'helpPosts',
+            processData: (res) => res.data.results,
+            needToken: true
+        });
+    },
+
+    // ========== 社区活动 ==========
+    loadActivities(refresh = false) {
+        this.loadData({
+            url: API_BASE_URL + '/community/activities/',
+            refresh: refresh,
+            pageKey: 'activityPage',
+            hasMoreKey: 'hasMoreActivity',
+            itemsKey: 'activities',
+            processData: (res) => res.data.data.map((item) => ({
+                id: item.id,
+                title: item.title,
+                description: item.description,
+                location: item.location,
+                start_time: item.start_time,
+                end_time: item.end_time,
+                status: item.status,
+                current_participants: item.current_participants || 0,
+                max_participants: item.max_participants || 0,
+                registration_progress: item.registration_progress || 0,
+                can_register: item.can_register || false,
+                user_registered: item.user_registered || false,
+                organizer: item.organizer,
+                banner: 'https://picsum.photos/seed/' + item.id + '/400/200',
+                time_display: this.formatDateTime(item.start_time, item.end_time),
+                status_text: this.getStatusText(item.status),
+                status_color: this.getStatusColor(item.status)
+            })),
+            needToken: true,
+            isPublic: true  // 活动列表是公开的，不需要token也能访问
+        });
+    },
+
+    // ========== 通用加载方法 ==========
+    loadData(config) {
         if (this.data.loading) return;
-        
+
         const token = this.getUserToken();
-        if (!token) {
+        if (config.needToken && !token && !config.isPublic) {
             wx.showToast({ title: '请先登录', icon: 'none' });
             return;
         }
 
-        if (refresh) {
-            this.setData({ helpPage: 1, hasMoreHelp: true });
+        if (config.refresh) {
+            this.setData({ [config.pageKey]: 1, [config.hasMoreKey]: true });
         }
 
         this.setData({ loading: true });
 
+        const header = { 'Content-Type': 'application/json' };
+        if (token) {
+            header['Authorization'] = 'Bearer ' + token;
+        }
+
         wx.request({
-            url: API_BASE_URL + '/community/help-posts/',
+            url: config.url,
             method: 'GET',
-            header: {
-                'Authorization': 'Bearer ' + token,
-                'Content-Type': 'application/json'
-            },
+            header: header,
             data: {
-                page: refresh ? 1 : this.data.helpPage,
+                page: config.refresh ? 1 : this.data[config.pageKey],
                 page_size: 10
             },
             success: (res) => {
-                if (res.statusCode === 200 && res.data.results) {
-                    if (refresh) {
-                        this.setData({ helpPosts: res.data.results });
-                    } else {
-                        this.setData({ helpPosts: this.data.helpPosts.concat(res.data.results) });
-                    }
+                const isSuccess = res.statusCode === 200 &&
+                    (res.data.code === 200 || res.data.results !== undefined);
+
+                if (isSuccess && config.processData) {
+                    const newItems = config.processData(res);
+                    const currentItems = this.data[config.itemsKey];
 
                     this.setData({
-                        helpPage: this.data.helpPage + 1,
-                        hasMoreHelp: res.data.next !== null
+                        [config.itemsKey]: config.refresh ? newItems : [...currentItems, ...newItems],
+                        [config.pageKey]: this.data[config.pageKey] + 1
                     });
+
+                    // 判断是否还有更多数据
+                    const hasMore = res.data.next !== null ||
+                        (res.data.total && res.data.total > this.data[config.itemsKey].length);
+                    this.setData({ [config.hasMoreKey]: hasMore });
                 } else {
                     wx.showToast({ title: '加载失败', icon: 'none' });
                 }
@@ -165,88 +184,24 @@ Page({
         });
     },
 
-    loadActivities(refresh = false) {
-        if (this.data.loading) return;
-
-        if (refresh) {
-            this.setData({ activityPage: 1, hasMoreActivity: true });
-        }
-
-        this.setData({ loading: true });
-
-        wx.request({
-            url: API_BASE_URL + '/community/activities/',
-            method: 'GET',
-            header: {
-                'Content-Type': 'application/json'
-            },
-            data: {
-                page: refresh ? 1 : this.data.activityPage,
-                page_size: 10
-            },
-            success: (res) => {
-                if (res.statusCode === 200 && res.data.code === 200) {
-                    const newActivities = res.data.data.map((item) => ({
-                        id: item.id,
-                        title: item.title,
-                        description: item.description,
-                        location: item.location,
-                        start_time: item.start_time,
-                        end_time: item.end_time,
-                        status: item.status,
-                        current_participants: item.current_participants,
-                        max_participants: item.max_participants,
-                        registration_progress: item.registration_progress,
-                        can_register: item.can_register,
-                        user_registered: item.user_registered,
-                        organizer: item.organizer,
-                        banner: 'https://picsum.photos/seed/' + item.id + '/400/200',
-                        time_display: this.formatDateTime(item.start_time, item.end_time),
-                        status_text: this.getStatusText(item.status),
-                        status_color: this.getStatusColor(item.status)
-                    }));
-
-                    if (refresh) {
-                        this.setData({ activities: newActivities });
-                    } else {
-                        this.setData({ activities: this.data.activities.concat(newActivities) });
-                    }
-
-                    this.setData({
-                        activityPage: this.data.activityPage + 1,
-                        hasMoreActivity: res.data.total > this.data.activities.length + newActivities.length
-                    });
-                } else {
-                    wx.showToast({ title: '加载失败', icon: 'none' });
-                }
-            },
-            fail: () => {
-                wx.showToast({ title: '网络错误', icon: 'none' });
-            },
-            complete: () => {
-                this.setData({ loading: false });
-                wx.stopPullDownRefresh();
-            }
-        });
-    },
-
+    // ========== 工具方法 ==========
     formatDateTime(startTime, endTime) {
         const start = new Date(startTime);
         const end = new Date(endTime);
         const now = new Date();
-        
+
         const startMonth = start.getMonth() + 1;
         const startDay = start.getDate();
         const startHour = start.getHours().toString().padStart(2, '0');
         const startMin = start.getMinutes().toString().padStart(2, '0');
         const endHour = end.getHours().toString().padStart(2, '0');
         const endMin = end.getMinutes().toString().padStart(2, '0');
-        
+
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const startDate = new Date(start.getFullYear(), start.getMonth(), start.getDate());
         const diffTime = startDate.getTime() - today.getTime();
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        
+
         if (diffDays === 0) {
             return '今天 ' + startHour + ':' + startMin + '-' + endHour + ':' + endMin;
         } else if (diffDays === 1) {
@@ -279,26 +234,25 @@ Page({
         return colorMap[status] || 'default';
     },
 
+    // ========== 下拉刷新 & 上拉加载 ==========
     onPullDownRefresh() {
-        if (this.data.active === 0) {
-            this.loadMarketItems(true);
-        } else if (this.data.active === 1) {
-            this.loadHelpPosts(true);
-        } else if (this.data.active === 2) {
-            this.loadActivities(true);
-        }
+        this.refreshCurrentTab();
     },
 
     onReachBottom() {
-        if (this.data.active === 0 && this.data.hasMoreMarket) {
-            this.loadMarketItems();
-        } else if (this.data.active === 1 && this.data.hasMoreHelp) {
-            this.loadHelpPosts();
-        } else if (this.data.active === 2 && this.data.hasMoreActivity) {
-            this.loadActivities();
+        const tabActionMap = [
+            { hasMore: 'hasMoreMarket', loader: 'loadMarketItems' },
+            { hasMore: 'hasMoreHelp', loader: 'loadHelpPosts' },
+            { hasMore: 'hasMoreActivity', loader: 'loadActivities' }
+        ];
+
+        const config = tabActionMap[this.data.active];
+        if (this.data[config.hasMore]) {
+            this[config.loader]();
         }
     },
 
+    // ========== 事件处理 ==========
     onMarketItemClick(e) {
         const id = e.currentTarget.dataset.id;
         wx.navigateTo({
@@ -307,10 +261,7 @@ Page({
     },
 
     onChatClick(_e) {
-        wx.showToast({
-            title: '打开聊天窗口',
-            icon: 'none'
-        });
+        wx.showToast({ title: '打开聊天窗口', icon: 'none' });
     },
 
     onHelpClick(e) {

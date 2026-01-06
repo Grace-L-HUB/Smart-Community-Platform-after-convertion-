@@ -341,8 +341,8 @@ class Activity(models.Model):
     def can_register(self):
         """检查是否可以报名"""
         return (
-            self.is_active and 
-            self.status == 'upcoming' and
+            self.is_active and
+            self.status in ('upcoming', 'ongoing') and
             self.current_participants < self.max_participants
         )
     
