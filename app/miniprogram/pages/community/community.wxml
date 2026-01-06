@@ -19,9 +19,6 @@
                  <text class="price">¥ {{item.price}}</text>
               </view>
             </view>
-            <view class="actions">
-               <van-button size="mini" icon="chat-o" catch:tap="onChatClick">私聊</van-button>
-            </view>
           </view>
         </block>
       </view>

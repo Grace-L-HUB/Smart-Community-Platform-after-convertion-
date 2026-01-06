@@ -8,6 +8,7 @@ Page({
         selectedBills: [],
         houseInfo: null,
         totalAmount: 0,
+        selectedAmount: 0,
         hasOverdueBills: false,
         overdueBillsCount: 0
     },
@@ -127,14 +128,19 @@ Page({
             return;
         }
 
+        // 计算所有待缴账单的总金额
+        let totalAmount = 0;
+        for (var i = 0; i < bills.length; i++) {
+            totalAmount += parseFloat(bills[i].amount) || 0;
+        }
+
+        // 计算已选中账单的总金额
         const selectedBillObjects = bills.filter(function(bill) {
-            // 处理类型不一致：将 bill.id 转为字符串比较
             return selectedBills.indexOf(String(bill.id)) !== -1 || selectedBills.indexOf(bill.id) !== -1;
         });
-
-        let totalAmount = 0;
-        for (var i = 0; i < selectedBillObjects.length; i++) {
-            totalAmount += parseFloat(selectedBillObjects[i].amount) || 0;
+        let selectedAmount = 0;
+        for (var j = 0; j < selectedBillObjects.length; j++) {
+            selectedAmount += parseFloat(selectedBillObjects[j].amount) || 0;
         }
 
         const overdueBills = bills.filter(function(bill) {
@@ -144,6 +150,7 @@ Page({
 
         this.setData({
             totalAmount: totalAmount * 100,
+            selectedAmount: selectedAmount * 100,
             hasOverdueBills: hasOverdueBills,
             overdueBillsCount: overdueBills.length
         });

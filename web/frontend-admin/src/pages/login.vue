@@ -104,7 +104,7 @@
                   closable
                 >
                   <div v-if="selectedRole === 'property'">
-                    物业端：任意用户名和密码即可登录
+                    物业端：使用物业端账户登录
                   </div>
                   <div v-else>
                     商户端：只有审核通过的商户才能登录<br>
