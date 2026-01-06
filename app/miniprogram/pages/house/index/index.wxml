@@ -14,10 +14,10 @@
     <view wx:else class="house-list">
       <view class="house-item" wx:for="{{houseList}}" wx:key="id" bindtap="onHouseClick" data-id="{{item.id}}">
         <view class="house-header">
-          <view class="house-title">{{item.house_info.building_name}} {{item.house_info.unit}}单元 {{item.house_info.floor}}层 {{item.house_info.room}}室</view>
-          <view class="house-status" wx:if="{{item.status === 'approved'}}">已认证</view>
-          <view class="house-status pending" wx:elif="{{item.status === 'pending'}}">审核中</view>
-          <view class="house-status rejected" wx:elif="{{item.status === 'rejected'}}">已拒绝</view>
+          <view class="house-title">{{item.house_info.full_address}}</view>
+          <view class="house-status" wx:if="{{item.status === 1}}">已认证</view>
+          <view class="house-status pending" wx:elif="{{item.status === 0}}">审核中</view>
+          <view class="house-status rejected" wx:elif="{{item.status === 2}}">已拒绝</view>
         </view>
         <view class="house-info">
           <view class="info-item">
@@ -33,7 +33,7 @@
             <text>{{item.house_info.area}}㎡</text>
           </view>
         </view>
-        <view class="house-actions" wx:if="{{item.status === 'approved'}}">
+        <view class="house-actions">
           <van-button size="mini" type="danger" catchtap="onUnbind" data-id="{{item.id}}">解绑</van-button>
         </view>
       </view>

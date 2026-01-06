@@ -274,6 +274,176 @@
       </v-card>
     </v-dialog>
 
+    <!-- 账单详情弹窗 -->
+    <v-dialog v-model="detailDialog" max-width="800">
+      <v-card v-if="selectedBill">
+        <v-card-title class="d-flex align-center bg-grey-lighten-4">
+          <v-icon start icon="mdi-receipt" />
+          账单详情
+          <v-spacer />
+          <v-chip :color="selectedBill.status === 'paid' ? 'success' : (selectedBill.is_overdue ? 'error' : 'warning')" size="small">
+            {{ selectedBill.status_display }}
+          </v-chip>
+        </v-card-title>
+
+        <v-card-text class="pt-4">
+          <v-row>
+            <!-- 左侧：账单信息 -->
+            <v-col cols="12" md="7">
+              <div class="text-subtitle-2 font-weight-bold mb-3 d-flex align-center">
+                <v-icon icon="mdi-file-document-outline" size="small" class="mr-2" />
+                账单信息
+              </div>
+
+              <v-table density="compact" class="mb-4">
+                <tbody>
+                  <tr>
+                    <td class="text-right font-weight-medium" style="width: 120px;">账单编号</td>
+                    <td><v-chip size="small" color="info" variant="tonal">{{ selectedBill.bill_no }}</v-chip></td>
+                  </tr>
+                  <tr>
+                    <td class="text-right font-weight-medium">账单标题</td>
+                    <td>{{ selectedBill.title }}</td>
+                  </tr>
+                  <tr>
+                    <td class="text-right font-weight-medium">收费类型</td>
+                    <td>
+                      <v-chip size="small" :color="getTypeColor(selectedBill.fee_type)" variant="tonal">
+                        {{ selectedBill.fee_type_display }}
+                      </v-chip>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="text-right font-weight-medium">计费周期</td>
+                    <td>{{ selectedBill.period_display }}</td>
+                  </tr>
+                  <tr>
+                    <td class="text-right font-weight-medium">账单金额</td>
+                    <td class="text-h6 font-weight-bold success--text">¥{{ Number(selectedBill.amount).toFixed(2) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="text-right font-weight-medium">应付金额</td>
+                    <td class="text-h6 font-weight-bold success--text">
+                      ¥{{ selectedBill.paid_amount ? Number(selectedBill.paid_amount).toFixed(2) : Number(selectedBill.amount).toFixed(2) }}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="text-right font-weight-medium">到期日期</td>
+                    <td>
+                      <v-chip :color="selectedBill.is_overdue ? 'error' : 'default'" size="small" variant="outlined">
+                        {{ selectedBill.due_date ? dayjs(selectedBill.due_date).format('YYYY-MM-DD') : '-' }}
+                      </v-chip>
+                      <v-icon v-if="selectedBill.is_overdue" icon="mdi-alert" color="error" size="small" class="ml-1" />
+                    </td>
+                  </tr>
+                  <tr v-if="selectedBill.status === 'paid'">
+                    <td class="text-right font-weight-medium">缴费时间</td>
+                    <td>{{ selectedBill.paid_at ? dayjs(selectedBill.paid_at).format('YYYY-MM-DD HH:mm:ss') : '-' }}</td>
+                  </tr>
+                  <tr v-if="selectedBill.status === 'paid'">
+                    <td class="text-right font-weight-medium">支付方式</td>
+                    <td>
+                      <v-chip size="small" variant="tonal">
+                        <v-icon start icon="mdi-wechat" />{{ selectedBill.payment_method_display || '-' }}
+                      </v-chip>
+                    </td>
+                  </tr>
+                  <tr v-if="selectedBill.payment_reference">
+                    <td class="text-right font-weight-medium">流水号</td>
+                    <td class="text-caption text-grey">{{ selectedBill.payment_reference }}</td>
+                  </tr>
+                </tbody>
+              </v-table>
+            </v-col>
+
+            <!-- 右侧：房屋和业主信息 -->
+            <v-col cols="12" md="5">
+              <!-- 房屋信息 -->
+              <div class="text-subtitle-2 font-weight-bold mb-3 d-flex align-center">
+                <v-icon icon="mdi-home-outline" size="small" class="mr-2" />
+                房屋信息
+              </div>
+
+              <v-card variant="outlined" class="mb-4">
+                <v-card-text class="pa-3">
+                  <div class="mb-2">
+                    <v-icon icon="mdi-map-marker" size="small" color="primary" class="mr-1" />
+                    <span class="font-weight-medium">{{ selectedBill.house_info?.address || '-' }}</span>
+                  </div>
+                  <div v-if="selectedBill.house_info?.area" class="text-caption text-grey">
+                    建筑面积：{{ selectedBill.house_info.area }} ㎡
+                  </div>
+                </v-card-text>
+              </v-card>
+
+              <!-- 业主信息 -->
+              <div class="text-subtitle-2 font-weight-bold mb-3 d-flex align-center">
+                <v-icon icon="mdi-account-outline" size="small" class="mr-2" />
+                业主信息
+              </div>
+
+              <v-card variant="outlined" class="mb-4">
+                <v-card-text class="pa-3">
+                  <div class="mb-2">
+                    <v-icon icon="mdi-account" size="small" color="primary" class="mr-1" />
+                    <span class="font-weight-medium">{{ selectedBill.user_info?.name || '-' }}</span>
+                  </div>
+                  <div v-if="selectedBill.user_info?.phone" class="text-caption text-grey">
+                    <v-icon icon="mdi-phone" size="small" class="mr-1" />
+                    {{ selectedBill.user_info.phone }}
+                  </div>
+                </v-card-text>
+              </v-card>
+
+              <!-- 状态提醒 -->
+              <v-alert
+                v-if="selectedBill.status === 'unpaid'"
+                :type="selectedBill.is_overdue ? 'error' : 'warning'"
+                variant="tonal"
+                density="compact"
+                class="mb-2"
+              >
+                <template v-slot prepend>
+                  <v-icon icon="mdi-information" />
+                </template>
+                <span class="text-caption">
+                  {{ selectedBill.is_overdue ? '此账单已逾期，请尽快催缴' : '此账单待缴费' }}
+                </span>
+              </v-alert>
+
+              <v-alert
+                v-if="selectedBill.status === 'paid'"
+                type="success"
+                variant="tonal"
+                density="compact"
+              >
+                <template v-slot prepend>
+                  <v-icon icon="mdi-check-circle" />
+                </template>
+                <span class="text-caption">此账单已完成缴费</span>
+              </v-alert>
+            </v-col>
+          </v-row>
+        </v-card-text>
+
+        <v-divider />
+
+        <v-card-actions class="bg-grey-lighten-5">
+          <v-spacer />
+          <v-btn variant="text" @click="detailDialog = false">关闭</v-btn>
+          <v-btn
+            v-if="selectedBill.status === 'unpaid'"
+            color="warning"
+            variant="tonal"
+            prepend-icon="mdi-message-alert"
+            @click="sendReminder(selectedBill); detailDialog = false"
+          >
+            催缴
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <v-snackbar v-model="snackbar" :color="snackbarColor" location="top">
       {{ snackbarText }}
     </v-snackbar>
@@ -292,10 +462,14 @@ interface Bill {
   fee_type: string;
   fee_type_display: string;
   amount: number;
+  paid_amount?: number;
   status: string;
   status_display: string;
   due_date: string;
   paid_at?: string;
+  payment_method?: string;
+  payment_method_display?: string;
+  payment_reference?: string;
   house_info?: {
     address: string;
     area: string;
@@ -353,12 +527,34 @@ const statusOptions = [
   { title: '已逾期', value: 'overdue' },
 ]
 
-const buildingOptions = ref(['1栋', '2栋', '3栋', '4栋'])
+const buildingOptions = ref<string[]>([])
 const yearOptions = (() => {
   const currentYear = new Date().getFullYear()
   return Array.from({ length: 5 }, (_, i) => currentYear - 2 + i)
 })()
 const monthOptions = Array.from({ length: 12 }, (_, i) => i + 1)
+
+// 加载楼栋选项
+async function loadBuildingOptions() {
+  try {
+    const response = await fetch('http://139.224.17.154:8000/api/property/house/options/buildings')
+    const result = await response.json()
+
+    if (result.code === 200 && result.data) {
+      // result.data 可能是字符串数组或对象数组
+      if (Array.isArray(result.data)) {
+        buildingOptions.value = result.data.map((item: any) =>
+          typeof item === 'string' ? item : item.name || item.value
+        )
+      }
+      console.log('✅ 楼栋选项加载成功:', buildingOptions.value)
+    }
+  } catch (error) {
+    console.error('❌ 加载楼栋选项失败:', error)
+    // 失败时使用默认值
+    buildingOptions.value = ['1栋', '2栋', '3栋', '4栋']
+  }
+}
 
 // 表格
 const headers = [
@@ -630,6 +826,10 @@ const newBill = reactive({
   target_buildings: [] as string[],
 })
 
+// 详情弹窗
+const detailDialog = ref(false)
+const selectedBill = ref<Bill | null>(null)
+
 async function handleGenerate() {
   if (!newBill.fee_standard_id) {
     showSnackbar('error', '请选择收费标准')
@@ -671,17 +871,16 @@ async function refreshData() {
   await Promise.all([
     loadAllBills(), // 刷新时加载所有数据
     loadStats(),
-    loadFeeStandards()
+    loadFeeStandards(),
+    loadBuildingOptions()
   ])
   showSnackbar('success', '数据刷新成功')
 }
 
 // 查看账单详情
 function viewBillDetail(bill: Bill) {
-  // 这里可以实现查看账单详情的功能
-  // 可以跳转到详情页面或打开详情弹窗
-  console.log('查看账单详情:', bill)
-  showSnackbar('info', `账单详情：${bill.bill_no}`)
+  selectedBill.value = bill
+  detailDialog.value = true
 }
 
 // 提示
@@ -700,7 +899,8 @@ onMounted(async () => {
   await Promise.all([
     loadAllBills(),
     loadStats(),
-    loadFeeStandards()
+    loadFeeStandards(),
+    loadBuildingOptions()
   ])
 })
 

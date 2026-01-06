@@ -646,7 +646,7 @@ export const usePropertyStore = defineStore('property', {
                     target_buildings: announcementData.targetBuildings,
                     action: announcementData.action || (announcementData.status === 'published' ? 'publish' : 'draft'),
                     author: announcementData.author,
-                    user_id: 1 // TODO: 从auth store获取真实用户ID
+                    user_id: 1 
                 }
 
                 const response = await propertyAPI.createAnnouncement(createData)
@@ -676,7 +676,7 @@ export const usePropertyStore = defineStore('property', {
                     scope: announcementData.scope!,
                     target_buildings: announcementData.targetBuildings,
                     action: announcementData.action === 'save' ? 'draft' : (announcementData.action || 'draft'),
-                    user_id: 1 // TODO: 从auth store获取真实用户ID
+                    user_id: 1
                 }
 
                 const response = await propertyAPI.updateAnnouncement(id, updateData)

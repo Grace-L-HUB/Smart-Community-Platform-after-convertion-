@@ -100,7 +100,7 @@ class HouseBindingApplicationView(APIView):
 
     def post(self, request):
         """提交房屋绑定申请"""
-        # TODO: 后续添加JWT认证后，从token获取用户
+       
         # user = request.user
         
         # 临时处理：从请求参数获取用户ID
@@ -158,7 +158,7 @@ class HouseBindingApplicationView(APIView):
 
     def get(self, request):
         """获取用户的房屋绑定申请列表"""
-        # TODO: 后续添加JWT认证后，从token获取用户
+       
         user_id = request.GET.get('user_id')
         if not user_id:
             return Response({
@@ -255,7 +255,7 @@ class VisitorInviteView(APIView):
 
     def post(self, request):
         """创建访客邀请"""
-        # TODO: 后续添加JWT认证后，从token获取用户
+       
         user_id = request.data.get('user_id')
         if not user_id:
             return Response({
@@ -508,7 +508,7 @@ class ParkingBindingApplicationView(APIView):
 
     def post(self, request):
         """提交车位绑定申请"""
-        # TODO: 后续添加JWT认证后，从token获取用户
+       
         user_id = request.data.get('user_id')
         if not user_id:
             return Response({
@@ -575,7 +575,7 @@ class ParkingBindingApplicationView(APIView):
 
     def get(self, request):
         """获取用户的车位绑定申请列表"""
-        # TODO: 后续添加JWT认证后，从token获取用户
+       
         user_id = request.GET.get('user_id')
         if not user_id:
             return Response({
@@ -698,7 +698,6 @@ class HouseBindingAuditView(APIView):
             # 通过申请
             application.status = 1
             application.audit_time = timezone.now()
-            # TODO: 从JWT获取审核人
             # application.auditor = request.user
             application.audit_remark = request.data.get('remark', '')
             application.save()
@@ -1554,7 +1553,7 @@ class AnnouncementCreateView(APIView):
             from .serializers import AnnouncementCreateSerializer
             
             # 获取作者信息
-            # TODO: 后续添加JWT认证后，从token获取用户
+           
             user_id = request.data.get('user_id')  # 临时从请求中获取用户ID
             author = None
             author_name = request.data.get('author', '管理员')  # 默认作者名
@@ -1854,7 +1853,7 @@ class RepairOrderView(APIView):
 
     def post(self, request):
         """提交报修工单"""
-        # TODO: 后续添加JWT认证后，从token获取用户
+       
         user_id = request.data.get('user_id')
         if not user_id:
             return Response({
@@ -2005,7 +2004,6 @@ class RepairOrderAssignView(APIView):
             if serializer.is_valid():
                 assignee = serializer.validated_data['assignee']
                 
-                # TODO: 后续从JWT获取当前用户
                 assigned_by_user_id = request.data.get('assigned_by_user_id')
                 assigned_by_user = None
                 if assigned_by_user_id:
