@@ -79,7 +79,14 @@
 
 .seller-actions {
   display: flex;
-  gap: 16rpx;
+  gap: 12rpx;
+}
+
+.seller-actions van-button {
+  padding: 0 8rpx !important;
+  height: 56rpx !important;
+  font-size: 22rpx !important;
+  min-width: auto !important;
 }
 
 .desc-section,

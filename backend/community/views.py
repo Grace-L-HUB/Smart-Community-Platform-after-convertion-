@@ -313,27 +313,53 @@ class HelpPostDetailView(generics.RetrieveUpdateDestroyAPIView):
     description="对指定求助帖进行回复"
 )
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([])
 def create_help_response(request, pk):
     """回复求助帖"""
-    
+
+    # 获取当前用户
+    user = get_user_from_token(request)
+    if not user:
+        return Response({'error': '未授权访问'}, status=status.HTTP_401_UNAUTHORIZED)
+
     help_post = get_object_or_404(NeighborHelpPost, pk=pk, is_active=True)
-    
+
+    # 检查是否是自己的求助帖
+    if help_post.publisher_id == user.id:
+        return Response({'error': '不能响应自己的求助帖'},
+                       status=status.HTTP_400_BAD_REQUEST)
+
+    # 检查是否已经响应过
+    existing_response = HelpResponse.objects.filter(
+        help_post=help_post,
+        responder_id=user.id
+    ).first()
+
+    if existing_response:
+        return Response({'error': '您已经响应过此求助帖'},
+                       status=status.HTTP_400_BAD_REQUEST)
+
+    # 将用户添加到 request context 中
+    request.user = user
+
+    data = request.data.copy()
+    data['responder'] = user.id
+
     serializer = HelpResponseSerializer(
-        data=request.data, 
+        data=data,
         context={'request': request}
     )
-    
+
     if serializer.is_valid():
         serializer.save(help_post=help_post)
-        
+
         # 增加回复计数
         NeighborHelpPost.objects.filter(pk=help_post.pk).update(
             response_count=F('response_count') + 1
         )
-        
+
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-    
+
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -372,33 +398,18 @@ class ConversationListView(generics.ListAPIView):
 
     def get_queryset(self):
         # 从 Authorization header 获取用户
-        user_id = self.get_user_from_token()
-        if not user_id:
+        user = get_user_from_token(self.request)
+        if not user:
             return ChatConversation.objects.none()
 
+        # 保存用户到 context，供序列化器使用
+        self.request.cached_user = user
+
         return ChatConversation.objects.filter(
-            Q(participant1_id=user_id) | Q(participant2_id=user_id)
+            Q(participant1_id=user.id) | Q(participant2_id=user.id)
         ).select_related(
             'participant1', 'participant2', 'market_item', 'last_message'
         ).order_by('-last_message_time')
-
-    def get_user_from_token(self):
-        """从 token 获取用户ID"""
-        auth_header = self.request.META.get('HTTP_AUTHORIZATION', '')
-        if auth_header.startswith('Bearer '):
-            token = auth_header[7:]
-            # 这里可以根据 token 解析出 user_id，暂时从缓存或数据库查找
-            User = get_user_model()
-            try:
-                # 临时方案：假设 token 就是 user_id（需要改为真正的 JWT 解析）
-                # 实际应该从 token 解析出 user_id
-                from django.core.cache import cache
-                user_id = cache.get(f'token_{token}')
-                if user_id:
-                    return user_id
-            except:
-                pass
-        return None
 
     @extend_schema(
         summary="获取聊天会话列表",
@@ -440,15 +451,31 @@ class ConversationMessagesView(generics.ListAPIView):
 
     def get_user_id_from_token(self):
         """从token获取用户ID"""
+        import re
         auth_header = self.request.META.get('HTTP_AUTHORIZATION', '')
         if auth_header.startswith('Bearer '):
             token = auth_header[7:]
-            User = get_user_model()
-            try:
-                user = User.objects.get(token=token)
-                return user.id
-            except User.DoesNotExist:
-                pass
+
+            # Token格式匹配
+            wechat_pattern = r'^wechat_token_(\d+)_xyz789$'
+            sms_pattern = r'^sms_token_(\d+)_abc123$'
+            merchant_pattern = r'^merchant_token_(\d+)_verified$'
+
+            user_id = None
+            wechat_match = re.match(wechat_pattern, token)
+            if wechat_match:
+                user_id = wechat_match.group(1)
+            else:
+                sms_match = re.match(sms_pattern, token)
+                if sms_match:
+                    user_id = sms_match.group(1)
+                else:
+                    merchant_match = re.match(merchant_pattern, token)
+                    if merchant_match:
+                        user_id = merchant_match.group(1)
+
+            if user_id:
+                return int(user_id)
         return None
 
     def mark_conversation_as_read(self, conversation, user_id):
@@ -470,14 +497,35 @@ class ConversationMessagesView(generics.ListAPIView):
 # 辅助函数：从请求中获取用户
 def get_user_from_token(request):
     """从token获取用户（临时方案）"""
+    import re
     auth_header = request.META.get('HTTP_AUTHORIZATION', '')
     if auth_header.startswith('Bearer '):
         token = auth_header[7:]
         User = get_user_model()
-        try:
-            return User.objects.get(token=token)
-        except User.DoesNotExist:
-            pass
+
+        # Token格式匹配
+        wechat_pattern = r'^wechat_token_(\d+)_xyz789$'
+        sms_pattern = r'^sms_token_(\d+)_abc123$'
+        merchant_pattern = r'^merchant_token_(\d+)_verified$'
+
+        user_id = None
+        wechat_match = re.match(wechat_pattern, token)
+        if wechat_match:
+            user_id = wechat_match.group(1)
+        else:
+            sms_match = re.match(sms_pattern, token)
+            if sms_match:
+                user_id = sms_match.group(1)
+            else:
+                merchant_match = re.match(merchant_pattern, token)
+                if merchant_match:
+                    user_id = merchant_match.group(1)
+
+        if user_id:
+            try:
+                return User.objects.get(id=user_id, is_active=True)
+            except User.DoesNotExist:
+                pass
     return None
 
 
@@ -507,11 +555,10 @@ def send_message(request, conversation_id):
 
     # 创建消息
     data = request.data.copy()
-    data['sender'] = user.id
-    data['receiver'] = receiver_id
+    data['receiver_id'] = receiver_id
     data['market_item'] = conversation.market_item_id if conversation.market_item else None
 
-    serializer = ChatMessageSerializer(data=data, context={'request': request})
+    serializer = ChatMessageSerializer(data=data, context={'request': request, 'sender_user': user})
 
     if serializer.is_valid():
         message = serializer.save()

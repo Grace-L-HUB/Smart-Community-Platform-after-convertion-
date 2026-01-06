@@ -122,6 +122,15 @@ Page({
   // 我来帮忙
   onHelp() {
     const { id, publisher, phone, location } = this.data
+    const userInfo = wx.getStorageSync('userInfo') || {}
+
+    if (!userInfo.user_id) {
+      wx.showToast({
+        title: '请先登录',
+        icon: 'none'
+      })
+      return
+    }
 
     // 构建回复消息
     let message = `你好，我看到你发布的求助"${this.data.title}"`
@@ -136,14 +145,39 @@ Page({
       content: '是否确认响应此求助？',
       success: (res) => {
         if (res.confirm) {
-          // 这里应该调用API创建响应记录
-          // 暂时只显示提示
-          wx.showToast({
-            title: '响应成功',
-            icon: 'success'
+          // 调用API创建响应记录
+          wx.request({
+            url: API_BASE_URL + '/community/help-posts/' + id + '/responses/',
+            method: 'POST',
+            data: {
+              message: message
+            },
+            header: {
+              'Authorization': 'Bearer ' + (userInfo.token || ''),
+              'Content-Type': 'application/json'
+            },
+            success: (res) => {
+              if (res.statusCode === 201) {
+                wx.showToast({
+                  title: '响应成功',
+                  icon: 'success'
+                })
+                // 重新加载数据
+                this.loadPostDetail(id)
+              } else {
+                wx.showToast({
+                  title: res.data.error || res.data.message || '响应失败',
+                  icon: 'none'
+                })
+              }
+            },
+            fail: () => {
+              wx.showToast({
+                title: '网络错误',
+                icon: 'none'
+              })
+            }
           })
-          // 重新加载数据
-          this.loadPostDetail(id)
         }
       }
     })
