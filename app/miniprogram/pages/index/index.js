@@ -3,12 +3,13 @@ const API_BASE_URL = require('../../config/api.js').API_BASE_URL
 const API_PROPERTY_URL = API_BASE_URL + '/property'
 
 // 快捷服务配置
-const DEFAULT_QUICK_ACTIONS = ['repair', 'visitor', 'contacts', 'announcements']
+const DEFAULT_QUICK_ACTIONS = ['repair', 'visitor', 'contacts', 'notification']
 
 const ALL_AVAILABLE_ACTIONS = [
   { id: 'repair', name: '报事报修', icon: 'setting-o', url: '/pages/repair/repair', action: 'repair' },
   { id: 'visitor', name: '访客邀请', icon: 'friends-o', url: '/pages/services/visitor/visitor' },
   { id: 'contacts', name: '常用电话', icon: 'phone-o', url: '/pages/services/contacts/contacts', action: 'call' },
+  { id: 'notification', name: '物业通知', icon: 'bell', url: '/pages/notification/notification' },
   { id: 'announcements', name: '社区公告', icon: 'volume-o', url: '/pages/services/announcements/announcements' },
   { id: 'coupon', name: '优惠券', icon: 'coupon-o', url: '/pages/coupon/list/list' },
   { id: 'house', name: '房屋管理', icon: 'home-o', url: '/pages/house/index/index' }

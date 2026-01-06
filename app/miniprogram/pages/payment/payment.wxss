@@ -8,7 +8,7 @@ page {
 }
 
 .header-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #07c160 0%, #06ae56 100%);
   padding: 40rpx 30rpx;
   margin-bottom: 20rpx;
 }
@@ -68,7 +68,7 @@ page {
 
 .refresh-btn {
   font-size: 28rpx;
-  color: #667eea;
+  color: #07c160;
 }
 
 .bill-item {
@@ -109,7 +109,7 @@ page {
 .bill-amount {
   font-size: 36rpx;
   font-weight: bold;
-  color: #f44;
+  color: #07c160;
 }
 
 .bill-detail {

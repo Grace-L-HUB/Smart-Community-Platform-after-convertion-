@@ -41,7 +41,8 @@
     "pages/coupon/market/market",
     "pages/order/create/create",
     "pages/profile/home/home",
-    "pages/shop/cart/cart"
+    "pages/shop/cart/cart",
+    "pages/notification/notification"
   ],
   "window": {
     "navigationBarTextStyle": "black",

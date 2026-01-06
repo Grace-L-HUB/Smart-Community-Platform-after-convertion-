@@ -1,0 +1,52 @@
+<view class="container">
+  <!-- 加载状态 -->
+  <view wx:if="{{loading}}" class="loading-container">
+    <van-loading type="spinner" size="24px">加载中...</van-loading>
+  </view>
+
+  <!-- 空状态 -->
+  <view wx:elif="{{notifications.length === 0}}" class="empty-container">
+    <van-empty description="暂无通知消息" />
+  </view>
+
+  <!-- 通知列表 -->
+  <view wx:else class="notification-list">
+    <!-- 顶部操作栏 -->
+    <view class="header-bar">
+      <view class="unread-info">
+        <text class="count">{{unreadCount}}</text>
+        <text class="label">条未读</text>
+      </view>
+      <van-button wx:if="{{unreadCount > 0}}" size="small" type="primary" plain bind:click="markAllAsRead">
+        全部已读
+      </van-button>
+    </view>
+
+    <!-- 通知列表项 -->
+    <view class="notification-item"
+          wx:for="{{notifications}}"
+          wx:key="id"
+          bindtap="onNotificationTap"
+          data-id="{{item.id}}"
+          data-isread="{{item.is_read}}">
+
+      <!-- 未读标记 -->
+      <view wx:if="{{!item.is_read}}" class="unread-dot"></view>
+
+      <!-- 左侧图标 -->
+      <view class="icon-wrapper" style="background-color: {{item.color}}20;">
+        <van-icon name="{{item.icon}}" size="20px" color="{{item.color}}" />
+      </view>
+
+      <!-- 右侧内容 -->
+      <view class="content-wrapper">
+        <view class="title-row">
+          <text class="title">{{item.title}}</text>
+          <text wx:if="{{!item.is_read}}" class="unread-tag">未读</text>
+        </view>
+        <view class="content">{{item.content}}</view>
+        <view class="time">{{item.created_at}}</view>
+      </view>
+    </view>
+  </view>
+</view>
