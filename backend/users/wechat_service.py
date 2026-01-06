@@ -25,9 +25,13 @@ class WeChatService:
         logger.debug(f"WeChatService.get_session_info called - appid={masked_appid}, js_code_len={len(code) if code else 0}")
 
         try:
-            response = requests.get(url, params={k: v for k, v in params.items() if k != 'secret'}, timeout=5)
-            # Log full request URL without secret for debugging
-            logger.debug(f"WeChat API request url: {response.url}")
+            # Build a log-friendly URL without the secret to avoid leaking secrets in logs
+            log_query = '&'.join(f"{k}={v}" for k, v in params.items() if k != 'secret')
+            log_url = f"{url}?{log_query}"
+            logger.debug(f"WeChat API request url (no secret): {log_url}")
+
+            # Send the actual request including the secret
+            response = requests.get(url, params=params, timeout=5)
 
             # Try to parse JSON; if fails, include raw text in logs
             try:
