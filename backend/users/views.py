@@ -145,7 +145,7 @@ class SMSLoginView(APIView):
                 "code": 200,
                 "message": "登录成功",
                 "data": {
-                    "token": f"sms_token_{user.id}_abc123",  # 模拟token
+                    "token": f"sms_token_{user.id}_abc123",
                     "user_id": user.id,
                     "phone": user.phone,
                     "role": user.role

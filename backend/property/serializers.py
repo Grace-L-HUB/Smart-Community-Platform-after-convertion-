@@ -151,15 +151,25 @@ class HouseUserBindingSerializer(serializers.ModelSerializer):
                 'building_name': obj.application.building_name,
                 'unit_name': obj.application.unit_name,
                 'room_number': obj.application.room_number,
-                'full_address': f"{obj.application.building_name}{obj.application.unit_name}{obj.application.room_number}"
+                'full_address': f"{obj.application.building_name}{obj.application.unit_name}{obj.application.room_number}",
+                # 兼容前端字段
+                'unit': obj.application.unit_name,
+                'floor': '',
+                'room': obj.application.room_number,
+                'area': ''
             }
         elif obj.house:
             return {
-                'community_name': "阳光花园",  # 临时硬编码
+                'community_name': "阳光花园",
                 'building_name': obj.house.building.name,
                 'unit_name': obj.house.unit,
                 'room_number': obj.house.room_number,
-                'full_address': f"{obj.house.building.name}{obj.house.unit}{obj.house.room_number}"
+                'full_address': f"{obj.house.building.name}{obj.house.unit}{obj.house.room_number}",
+                # 兼容前端字段
+                'unit': obj.house.unit,
+                'floor': str(obj.house.floor),
+                'room': obj.house.room_number,
+                'area': str(obj.house.area) if obj.house.area else ''
             }
         return None
     
@@ -403,7 +413,7 @@ class ParkingUserBindingSerializer(serializers.ModelSerializer):
             }
         elif obj.parking_space:
             return {
-                'community_name': "阳光花园",  # 临时硬编码
+                'community_name': "阳光花园", 
                 'parking_area': obj.parking_space.area_name,
                 'parking_no': obj.parking_space.space_number,
                 'parking_type': obj.parking_space.parking_type,
