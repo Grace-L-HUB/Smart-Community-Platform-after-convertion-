@@ -2,6 +2,18 @@
 const API_BASE_URL = require('../../config/api.js').API_BASE_URL
 const API_PROPERTY_URL = API_BASE_URL + '/property'
 
+// 快捷服务配置
+const DEFAULT_QUICK_ACTIONS = ['repair', 'visitor', 'contacts', 'announcements']
+
+const ALL_AVAILABLE_ACTIONS = [
+  { id: 'repair', name: '报事报修', icon: 'setting-o', url: '/pages/repair/repair', action: 'repair' },
+  { id: 'visitor', name: '访客邀请', icon: 'friends-o', url: '/pages/services/visitor/visitor' },
+  { id: 'contacts', name: '常用电话', icon: 'phone-o', url: '/pages/services/contacts/contacts', action: 'call' },
+  { id: 'announcements', name: '社区公告', icon: 'volume-o', url: '/pages/services/announcements/announcements' },
+  { id: 'coupon', name: '优惠券', icon: 'coupon-o', url: '/pages/coupon/list/list' },
+  { id: 'house', name: '房屋管理', icon: 'home-o', url: '/pages/house/index/index' }
+]
+
 Page({
     data: {
         userInfo: {
@@ -24,12 +36,32 @@ Page({
         weatherInfo: {
             condition: '晴',
             temperature: '26'
-        }
+        },
+        quickActions: []
     },
 
     onLoad() {
+        this.loadQuickActionsConfig();
         this.loadUserBuildings();
         this.loadLatestNotice();
+    },
+
+    onShow() {
+        // 从配置页返回时刷新快捷服务
+        this.loadQuickActionsConfig();
+    },
+
+    loadQuickActionsConfig() {
+        const savedConfig = wx.getStorageSync('quickActionsConfig')
+        const selectedIds = savedConfig || DEFAULT_QUICK_ACTIONS
+        const quickActions = selectedIds.map(id => ALL_AVAILABLE_ACTIONS.find(a => a.id === id)).filter(Boolean)
+        this.setData({ quickActions })
+    },
+
+    onEditQuickActions() {
+        wx.navigateTo({
+            url: '/pages/quick-actions-config/quick-actions-config'
+        })
     },
 
     loadLatestNotice() {
@@ -140,15 +172,19 @@ Page({
     },
 
     onQuickAction(e) {
-        const action = e.currentTarget.dataset.action;
-        if (action === 'repair') {
-            wx.navigateTo({
-                url: '/pages/repair/repair'
-            });
-        } else if (action === 'call') {
-            wx.navigateTo({
-                url: '/pages/services/contacts/contacts'
-            });
+        const item = e.currentTarget.dataset.item
+        if (!item) return
+
+        if (item.action) {
+            // 兼容旧的 action 处理方式
+            if (item.action === 'repair') {
+                wx.navigateTo({ url: '/pages/repair/repair' })
+            } else if (item.action === 'call') {
+                wx.navigateTo({ url: '/pages/services/contacts/contacts' })
+            }
+        } else if (item.url) {
+            // 使用 url 跳转
+            wx.navigateTo({ url: item.url })
         }
     }
 });
