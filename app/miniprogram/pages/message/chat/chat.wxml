@@ -1,7 +1,7 @@
 <view class="chat-container">
   <!-- 商品信息 -->
   <view wx:if="{{ marketItem }}" class="product-bar" bindtap="viewProduct">
-    <van-image class="product-image" src="{{ marketItem.image }}" fit="cover" />
+    <van-image class="product-image" src="{{ marketItem.first_image }}" fit="cover" />
     <view class="product-info">
       <text class="product-title">{{ marketItem.title }}</text>
       <text class="product-price">¥{{ marketItem.price }}</text>
@@ -17,36 +17,18 @@
       <view id="msg-{{item.id}}" class="message-item {{item.isSelf ? 'self' : 'other'}}">
         <!-- 对方消息 -->
         <block wx:if="{{!item.isSelf}}">
-          <van-image
-            class="avatar"
-            round
-            src="{{item.senderAvatar}}"
-            fit="cover"
-            error-icon="user-o"
-          >
-            <text slot="error" class="avatar-placeholder">{{ item.senderName.charAt(0) }}</text>
-          </van-image>
           <view class="message-content">
+            <text class="nickname">{{item.senderName}}</text>
             <text class="bubble">{{item.content}}</text>
-            <text class="time">{{item.time}}</text>
           </view>
         </block>
 
         <!-- 自己消息 -->
         <block wx:if="{{item.isSelf}}">
           <view class="message-content self-content">
+            <text class="nickname self-nickname">我</text>
             <text class="bubble self-bubble">{{item.content}}</text>
-            <text class="time">{{item.time}}</text>
           </view>
-          <van-image
-            class="avatar"
-            round
-            src="{{item.senderAvatar}}"
-            fit="cover"
-            error-icon="user-o"
-          >
-            <text slot="error" class="avatar-placeholder">{{ item.senderName.charAt(0) }}</text>
-          </van-image>
         </block>
       </view>
     </block>
@@ -74,6 +56,7 @@
       bind:click="onSend"
       disabled="{{!inputContent}}"
       color="#07c160"
+      custom-class="send-button"
     >
       发送
     </van-button>

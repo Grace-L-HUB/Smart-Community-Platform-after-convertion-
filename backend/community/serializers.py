@@ -209,12 +209,14 @@ class ChatMessageSerializer(serializers.ModelSerializer):
     sender = UserSimpleSerializer(read_only=True)
     receiver = UserSimpleSerializer(read_only=True)
     receiver_id = serializers.IntegerField(write_only=True, required=True)
+    market_item_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     time_ago = serializers.SerializerMethodField()
+    market_item = MarketItemListSerializer(read_only=True)
 
     class Meta:
         model = ChatMessage
         fields = [
-            'id', 'market_item', 'sender', 'receiver', 'receiver_id', 'content',
+            'id', 'market_item', 'market_item_id', 'sender', 'receiver', 'receiver_id', 'content',
             'message_type', 'is_read', 'time_ago', 'created_at'
         ]
         read_only_fields = ['sender', 'receiver', 'is_read']
@@ -227,6 +229,17 @@ class ChatMessageSerializer(serializers.ModelSerializer):
         sender_user = self.context.get('sender_user')
         if sender_user:
             validated_data['sender'] = sender_user
+
+        # 处理market_item_id
+        market_item_id = validated_data.pop('market_item_id', None)
+        if market_item_id:
+            from .models import MarketItem
+            try:
+                market_item = MarketItem.objects.get(id=market_item_id)
+                validated_data['market_item'] = market_item
+            except MarketItem.DoesNotExist:
+                pass
+
         return super().create(validated_data)
 
 
@@ -312,7 +325,7 @@ class ActivityRegistrationSerializer(serializers.ModelSerializer):
 
 class ActivityListSerializer(serializers.ModelSerializer):
     """活动列表序列化器"""
-    
+
     organizer = UserSimpleSerializer(read_only=True)
     time_ago = serializers.SerializerMethodField()
     start_time = serializers.DateTimeField(format='%Y-%m-%d %H:%M')
@@ -320,14 +333,15 @@ class ActivityListSerializer(serializers.ModelSerializer):
     registration_progress = serializers.SerializerMethodField()
     can_register = serializers.SerializerMethodField()
     user_registered = serializers.SerializerMethodField()
-    
+    image = serializers.CharField(required=False, allow_null=True)
+
     class Meta:
         model = Activity
         fields = [
             'id', 'title', 'description', 'location', 'start_time', 'end_time',
             'max_participants', 'current_participants', 'status', 'organizer',
             'time_ago', 'view_count', 'registration_progress', 'can_register',
-            'user_registered'
+            'user_registered', 'image'
         ]
     
     def get_time_ago(self, obj):
@@ -368,7 +382,7 @@ class ActivityListSerializer(serializers.ModelSerializer):
 
 class ActivityDetailSerializer(serializers.ModelSerializer):
     """活动详情序列化器"""
-    
+
     organizer = UserSimpleSerializer(read_only=True)
     images = ActivityImageSerializer(many=True, read_only=True)
     registrations = ActivityRegistrationSerializer(many=True, read_only=True)
@@ -380,12 +394,13 @@ class ActivityDetailSerializer(serializers.ModelSerializer):
     uploaded_images = serializers.ListField(
         child=serializers.ImageField(), write_only=True, required=False
     )
-    
+    image = serializers.CharField(required=False, allow_null=True)
+
     # 重新定义时间字段，用于前端显示和编辑
     start_time = serializers.DateTimeField(format='%Y-%m-%dT%H:%M')
     end_time = serializers.DateTimeField(format='%Y-%m-%dT%H:%M')
     created_at = serializers.DateTimeField(format='%Y-%m-%d %H:%M:%S')
-    
+
     class Meta:
         model = Activity
         fields = [
@@ -393,7 +408,8 @@ class ActivityDetailSerializer(serializers.ModelSerializer):
             'max_participants', 'current_participants', 'status', 'organizer',
             'is_active', 'images', 'registrations',
             'time_ago', 'view_count', 'registration_progress', 'can_register',
-            'user_registered', 'is_organizer', 'uploaded_images', 'created_at'
+            'user_registered', 'is_organizer', 'uploaded_images', 'created_at',
+            'image'
         ]
         read_only_fields = ['organizer', 'current_participants', 'view_count', 'created_at']
     
@@ -456,14 +472,15 @@ class ActivityDetailSerializer(serializers.ModelSerializer):
 
 class ActivityCreateSerializer(serializers.ModelSerializer):
     """活动创建序列化器（简化版）"""
-    
+
+    image = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     start_time = serializers.DateTimeField(format='%Y-%m-%dT%H:%M', input_formats=['%Y-%m-%dT%H:%M'])
     end_time = serializers.DateTimeField(format='%Y-%m-%dT%H:%M', input_formats=['%Y-%m-%dT%H:%M'])
-    
+
     class Meta:
         model = Activity
         fields = [
-            'title', 'description', 'location', 'start_time', 'end_time',
+            'image', 'title', 'description', 'location', 'start_time', 'end_time',
             'max_participants'
         ]
     

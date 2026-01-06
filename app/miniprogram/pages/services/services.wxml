@@ -20,7 +20,7 @@
           <van-grid column-num="4" border="{{ false }}">
              <van-grid-item icon="flower-o" text="家政保洁" link-type="navigateTo" url="/pages/services/housekeeping/housekeeping" />
              <van-grid-item icon="coupon-o" text="优惠券" link-type="navigateTo" url="/pages/coupon/market/market" />
-             <van-grid-item icon="orders-o" text="云打印" />
+             <van-grid-item icon="bell" text="物业通知" link-type="navigateTo" url="/pages/notification/notification" />
              <van-grid-item icon="phone-circle-o" text="常用电话" link-type="navigateTo" url="/pages/services/contacts/contacts" />
           </van-grid>
         </view>

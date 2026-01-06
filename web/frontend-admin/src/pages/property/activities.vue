@@ -13,7 +13,7 @@
       <v-col v-for="activity in activities" :key="activity.id" cols="12" sm="6" lg="4">
         <v-card rounded="lg" class="activity-card">
           <v-img
-            :src="`https://picsum.photos/seed/${activity.id}/400/200`"
+            :src="activity.image || `https://picsum.photos/seed/${activity.id}/400/200`"
             height="160"
             cover
             class="position-relative"
@@ -78,6 +78,18 @@
       <v-card>
         <v-card-title>{{ isEditing ? '编辑活动' : '发布活动' }}</v-card-title>
         <v-card-text>
+          <!-- 活动图片上传 -->
+          <v-file-input
+            v-model="form.imageFile"
+            label="活动图片"
+            variant="outlined"
+            prepend-icon=""
+            prepend-inner-icon="mdi-camera"
+            accept="image/*"
+            show-size
+            class="mb-4"
+          />
+
           <v-text-field
             v-model="form.title"
             label="活动名称"
@@ -257,6 +269,7 @@ interface Activity {
   registration_progress: number
   can_register: boolean
   user_registered: boolean
+  image: string | null
 }
 
 interface Participant {
@@ -314,6 +327,8 @@ const form = reactive({
   startTime: '',
   endTime: '',
   maxParticipants: 50,
+  image: '',
+  imageFile: null as File[] | null,
 })
 
 function openEditor(activity: Activity | null) {
@@ -326,6 +341,8 @@ function openEditor(activity: Activity | null) {
     form.startTime = dayjs(activity.start_time).format('YYYY-MM-DDTHH:mm')
     form.endTime = dayjs(activity.end_time).format('YYYY-MM-DDTHH:mm')
     form.maxParticipants = activity.max_participants
+    form.image = activity.image || ''
+    form.imageFile = null
   } else {
     isEditing.value = false
     editingId.value = null
@@ -335,6 +352,8 @@ function openEditor(activity: Activity | null) {
     form.startTime = ''
     form.endTime = ''
     form.maxParticipants = 50
+    form.image = ''
+    form.imageFile = null
   }
   editorDialog.value = true
 }
@@ -423,25 +442,84 @@ async function fetchParticipants(activityId: number) {
   }
 }
 
+// 上传活动图片
+async function uploadActivityImage(file: File): Promise<string | null> {
+  try {
+    const formData = new FormData()
+    formData.append('image', file)
+
+    const response = await fetch(`${API_BASE}/community/upload/image/`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: formData
+    })
+
+    const result = await response.json()
+    if (result.code === 200 && result.data?.url) {
+      return result.data.url
+    } else {
+      showSnackbar(result.message || '图片上传失败', 'error')
+      return null
+    }
+  } catch (error) {
+    console.error('图片上传异常:', error)
+    showSnackbar('图片上传失败，请重试', 'error')
+    return null
+  }
+}
+
 // 保存活动
 async function saveActivity() {
   saving.value = true
   try {
-    const url = isEditing.value && editingId.value
-      ? `${API_BASE}/community/activities/${editingId.value}/`
-      : `${API_BASE}/community/activities/`
-    
-    const method = isEditing.value ? 'PUT' : 'POST'
+    // 获取文件（如果有）
+    let file = null
+    if (form.imageFile) {
+      if (Array.isArray(form.imageFile)) {
+        file = form.imageFile.length > 0 ? form.imageFile[0] : null
+      } else {
+        file = form.imageFile
+      }
+    }
+
+    let imageUrl = form.image
+    console.log('原始图片URL:', imageUrl)
+
+    // 如果有新文件，先上传图片
+    if (file) {
+      console.log('上传图片文件:', file)
+      const uploadedUrl = await uploadActivityImage(file)
+      if (uploadedUrl) {
+        imageUrl = uploadedUrl
+        console.log('上传后的图片URL:', imageUrl)
+      }
+    }
 
     // 构造请求数据
-    const payload = {
+    const payload: Record<string, any> = {
       title: form.title,
       description: form.description,
       location: form.location,
       start_time: form.startTime,
       end_time: form.endTime,
-      max_participants: form.maxParticipants
+      max_participants: form.maxParticipants,
     }
+
+    // 只有在有有效图片URL时才添加image字段
+    if (imageUrl && imageUrl.trim() !== '') {
+      payload.image = imageUrl
+    }
+    console.log('发送的payload:', JSON.stringify(payload, null, 2))
+
+    const url = isEditing.value && editingId.value
+      ? `${API_BASE}/community/activities/${editingId.value}/`
+      : `${API_BASE}/community/activities/`
+
+    const method = isEditing.value ? 'PUT' : 'POST'
+    console.log('请求URL:', url)
+    console.log('请求方法:', method)
 
     const response = await fetch(url, {
       method,
@@ -452,8 +530,11 @@ async function saveActivity() {
       body: JSON.stringify(payload),
     })
 
+    console.log('响应状态:', response.status)
     const data = await response.json()
-    if (data.code === 200) {
+    console.log('响应数据:', data)
+
+    if (data.code === 200 || response.status === 201) {
       showSnackbar(isEditing.value ? '活动已更新' : '活动已发布')
       editorDialog.value = false
       fetchActivities()
@@ -496,6 +577,7 @@ async function deleteActivityApi(id: number) {
 
 function cancelEdit() {
   editorDialog.value = false
+  form.imageFile = null
 }
 
 onMounted(() => {
