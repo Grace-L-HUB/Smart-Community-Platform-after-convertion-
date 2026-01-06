@@ -56,17 +56,20 @@ Page({
       },
       success: (res) => {
         if (res.statusCode === 200) {
+          console.log('完整响应数据:', res.data)
           const results = res.data.results || res.data || []
+          console.log('原始消息数据:', results)
           const messages = results.map(item => ({
             id: item.id,
             content: item.content,
-            isSelf: item.sender.id === userInfo.user_id,
-            senderId: item.sender.id,
-            senderName: item.sender.username || item.sender.display_name,
-            senderAvatar: item.sender.avatar || '',
+            isSelf: item.sender && item.sender.id === userInfo.user_id,
+            senderId: item.sender && item.sender.id,
+            senderName: (item.sender && (item.sender.nickname || item.sender.display_name)) || '未知用户',
+            senderAvatar: (item.sender && item.sender.avatar) || '',
             time: item.created_at,
             messageType: item.message_type
           }))
+          console.log('处理后的消息数据:', messages)
 
           // 获取对方用户信息
           let otherUser = null
@@ -74,7 +77,10 @@ Page({
           if (results.length > 0) {
             const firstMsg = results[0]
             otherUser = firstMsg.sender.id === userInfo.user_id ? firstMsg.receiver : firstMsg.sender
-            marketItem = firstMsg.market_item
+            if (firstMsg.market_item) {
+              // market_item 现在是完整的 MarketItemListSerializer 对象
+              marketItem = firstMsg.market_item
+            }
           }
 
           this.setData({
@@ -82,6 +88,7 @@ Page({
             otherUser,
             marketItem
           })
+          console.log('setData后的messages:', this.data.messages)
           this.scrollToBottom()
         }
       },
@@ -130,10 +137,10 @@ Page({
           const newMessages = res.data.map(item => ({
             id: item.id,
             content: item.content,
-            isSelf: item.sender.id === userInfo.user_id,
-            senderId: item.sender.id,
-            senderName: item.sender.username || item.sender.display_name,
-            senderAvatar: item.sender.avatar || '',
+            isSelf: item.sender && item.sender.id === userInfo.user_id,
+            senderId: item.sender && item.sender.id,
+            senderName: (item.sender && (item.sender.nickname || item.sender.display_name)) || '未知用户',
+            senderAvatar: (item.sender && item.sender.avatar) || '',
             time: item.created_at,
             messageType: item.message_type
           }))

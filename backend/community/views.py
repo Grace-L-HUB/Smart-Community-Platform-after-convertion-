@@ -556,7 +556,7 @@ def send_message(request, conversation_id):
     # 创建消息
     data = request.data.copy()
     data['receiver_id'] = receiver_id
-    data['market_item'] = conversation.market_item_id if conversation.market_item else None
+    data['market_item_id'] = conversation.market_item_id if conversation.market_item else None
 
     serializer = ChatMessageSerializer(data=data, context={'request': request, 'sender_user': user})
 
@@ -998,22 +998,79 @@ def activity_participants(request, pk):
 @permission_classes([IsAuthenticated])
 def my_activities(request):
     """获取用户参与的活动"""
-    
+
     # 获取用户报名的活动
     registrations = ActivityRegistration.objects.filter(
         user=request.user,
         status='approved'
     ).select_related('activity').order_by('-created_at')
-    
+
     activities = [reg.activity for reg in registrations if reg.activity.is_active]
-    
+
     # 分页
     paginator = StandardResultsSetPagination()
     page = paginator.paginate_queryset(activities, request)
-    
+
     if page is not None:
         serializer = ActivityListSerializer(page, many=True, context={'request': request})
         return paginator.get_paginated_response(serializer.data)
-    
+
     serializer = ActivityListSerializer(activities, many=True, context={'request': request})
     return Response(serializer.data)
+
+
+# =============================================================================
+# 社区图片上传接口
+# =============================================================================
+
+from rest_framework.views import APIView
+from rest_framework import permissions
+from rest_framework.parsers import MultiPartParser, FormParser
+
+class CommunityImageUploadView(APIView):
+    """社区图片上传接口"""
+
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        """上传社区图片（活动、求助帖、商品等）"""
+        try:
+            # 获取上传的文件
+            if 'image' not in request.FILES:
+                return Response({
+                    'code': 400,
+                    'message': '请选择图片文件'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            image_file = request.FILES['image']
+
+            # 生成唯一的文件名
+            import uuid
+            import os
+            file_ext = os.path.splitext(image_file.name)[1].lower()
+            new_filename = f"{uuid.uuid4().hex}{file_ext}"
+
+            # 使用临时ActivityImage实例来保存文件（不保存到数据库）
+            # save=False: 只保存文件到磁盘，不保存模型记录到数据库
+            from .models import ActivityImage
+            temp_image = ActivityImage()
+            temp_image.image.save(new_filename, image_file, save=False)
+
+            # 构建完整的URL
+            image_url = request.build_absolute_uri(temp_image.image.url)
+
+            return Response({
+                'code': 200,
+                'message': '图片上传成功',
+                'data': {
+                    'url': image_url,
+                    'filename': new_filename
+                }
+            })
+
+        except Exception as e:
+            return Response({
+                'code': 500,
+                'message': f'图片上传失败: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
