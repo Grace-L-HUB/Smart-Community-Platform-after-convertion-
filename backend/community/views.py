@@ -365,19 +365,41 @@ def resolve_help_post(request, pk):
 
 class ConversationListView(generics.ListAPIView):
     """聊天会话列表"""
-    
+
     serializer_class = ChatConversationSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = []
     pagination_class = StandardResultsSetPagination
-    
+
     def get_queryset(self):
-        user = self.request.user
+        # 从 Authorization header 获取用户
+        user_id = self.get_user_from_token()
+        if not user_id:
+            return ChatConversation.objects.none()
+
         return ChatConversation.objects.filter(
-            Q(participant1=user) | Q(participant2=user)
+            Q(participant1_id=user_id) | Q(participant2_id=user_id)
         ).select_related(
             'participant1', 'participant2', 'market_item', 'last_message'
         ).order_by('-last_message_time')
-    
+
+    def get_user_from_token(self):
+        """从 token 获取用户ID"""
+        auth_header = self.request.META.get('HTTP_AUTHORIZATION', '')
+        if auth_header.startswith('Bearer '):
+            token = auth_header[7:]
+            # 这里可以根据 token 解析出 user_id，暂时从缓存或数据库查找
+            User = get_user_model()
+            try:
+                # 临时方案：假设 token 就是 user_id（需要改为真正的 JWT 解析）
+                # 实际应该从 token 解析出 user_id
+                from django.core.cache import cache
+                user_id = cache.get(f'token_{token}')
+                if user_id:
+                    return user_id
+            except:
+                pass
+        return None
+
     @extend_schema(
         summary="获取聊天会话列表",
         description="获取当前用户的所有聊天会话"
@@ -388,30 +410,55 @@ class ConversationListView(generics.ListAPIView):
 
 class ConversationMessagesView(generics.ListAPIView):
     """聊天消息列表"""
-    
+
     serializer_class = ChatMessageSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = []  # 临时禁用
     pagination_class = StandardResultsSetPagination
-    
+
     def get_queryset(self):
         conversation_id = self.kwargs['conversation_id']
         conversation = get_object_or_404(ChatConversation, pk=conversation_id)
-        
-        # 检查权限
-        user = self.request.user
-        if user not in [conversation.participant1, conversation.participant2]:
+
+        # 获取当前用户ID
+        user_id = self.get_user_id_from_token()
+        if not user_id:
             return ChatMessage.objects.none()
-        
+
+        # 检查权限
+        if user_id not in [conversation.participant1_id, conversation.participant2_id]:
+            return ChatMessage.objects.none()
+
         # 标记为已读
-        conversation.mark_as_read(user)
-        
+        self.mark_conversation_as_read(conversation, user_id)
+
         return ChatMessage.objects.filter(
-            Q(sender=conversation.participant1, receiver=conversation.participant2) |
-            Q(sender=conversation.participant2, receiver=conversation.participant1)
+            Q(sender_id=conversation.participant1_id, receiver_id=conversation.participant2_id) |
+            Q(sender_id=conversation.participant2_id, receiver_id=conversation.participant1_id)
         ).filter(
             market_item=conversation.market_item
         ).select_related('sender', 'receiver').order_by('created_at')
-    
+
+    def get_user_id_from_token(self):
+        """从token获取用户ID"""
+        auth_header = self.request.META.get('HTTP_AUTHORIZATION', '')
+        if auth_header.startswith('Bearer '):
+            token = auth_header[7:]
+            User = get_user_model()
+            try:
+                user = User.objects.get(token=token)
+                return user.id
+            except User.DoesNotExist:
+                pass
+        return None
+
+    def mark_conversation_as_read(self, conversation, user_id):
+        """标记会话为已读"""
+        if user_id == conversation.participant1_id:
+            conversation.unread_count_p1 = 0
+        else:
+            conversation.unread_count_p2 = 0
+        conversation.save()
+
     @extend_schema(
         summary="获取会话消息列表",
         description="获取指定会话的消息记录"
@@ -420,50 +467,69 @@ class ConversationMessagesView(generics.ListAPIView):
         return super().get(request, *args, **kwargs)
 
 
+# 辅助函数：从请求中获取用户
+def get_user_from_token(request):
+    """从token获取用户（临时方案）"""
+    auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+    if auth_header.startswith('Bearer '):
+        token = auth_header[7:]
+        User = get_user_model()
+        try:
+            return User.objects.get(token=token)
+        except User.DoesNotExist:
+            pass
+    return None
+
+
 @extend_schema(
     summary="发送消息",
     description="在指定会话中发送消息"
 )
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([])
 def send_message(request, conversation_id):
     """发送消息"""
-    
+
     conversation = get_object_or_404(ChatConversation, pk=conversation_id)
-    user = request.user
-    
+
+    # 获取当前用户
+    user = get_user_from_token(request)
+    if not user:
+        return Response({'error': '未授权访问'}, status=status.HTTP_401_UNAUTHORIZED)
+
     # 检查权限
-    if user not in [conversation.participant1, conversation.participant2]:
-        return Response({'error': '无权限访问此会话'}, 
+    if user.id not in [conversation.participant1_id, conversation.participant2_id]:
+        return Response({'error': '无权限访问此会话'},
                        status=status.HTTP_403_FORBIDDEN)
-    
+
     # 确定接收者
-    receiver = conversation.participant2 if user == conversation.participant1 else conversation.participant1
-    
+    receiver_id = conversation.participant2_id if user.id == conversation.participant1_id else conversation.participant1_id
+
     # 创建消息
     data = request.data.copy()
-    data['receiver'] = receiver.id
-    data['market_item'] = conversation.market_item.id if conversation.market_item else None
-    
+    data['sender'] = user.id
+    data['receiver'] = receiver_id
+    data['market_item'] = conversation.market_item_id if conversation.market_item else None
+
     serializer = ChatMessageSerializer(data=data, context={'request': request})
-    
+
     if serializer.is_valid():
         message = serializer.save()
-        
+
         # 更新会话信息
-        conversation.last_message = message
+        conversation.last_message_id = message.id
         conversation.last_message_time = message.created_at
-        
+
         # 更新未读计数
-        if receiver == conversation.participant1:
+        if receiver_id == conversation.participant1_id:
             conversation.unread_count_p1 += 1
         else:
             conversation.unread_count_p2 += 1
-        
+
         conversation.save()
-        
+
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-    
+
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -472,9 +538,13 @@ def send_message(request, conversation_id):
     description="开始与指定用户的新聊天会话"
 )
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([])
 def start_conversation(request):
     """开始新会话"""
+
+    user = get_user_from_token(request)
+    if not user:
+        return Response({'error': '未授权访问'}, status=status.HTTP_401_UNAUTHORIZED)
 
     User = get_user_model()
 
@@ -485,26 +555,30 @@ def start_conversation(request):
         return Response({'error': '缺少目标用户ID'},
                        status=status.HTTP_400_BAD_REQUEST)
 
+    if int(target_user_id) == user.id:
+        return Response({'error': '不能与自己创建会话'},
+                       status=status.HTTP_400_BAD_REQUEST)
+
     target_user = get_object_or_404(User, pk=target_user_id)
     market_item = None
-    
+
     if market_item_id:
         market_item = get_object_or_404(MarketItem, pk=market_item_id)
-    
+
     # 查找或创建会话
     conversation = ChatConversation.objects.filter(
-        Q(participant1=request.user, participant2=target_user) |
-        Q(participant1=target_user, participant2=request.user),
+        Q(participant1_id=user.id, participant2_id=target_user_id) |
+        Q(participant1_id=target_user_id, participant2_id=user.id),
         market_item=market_item
     ).first()
-    
+
     if not conversation:
         conversation = ChatConversation.objects.create(
-            participant1=request.user,
-            participant2=target_user,
+            participant1_id=user.id,
+            participant2_id=target_user_id,
             market_item=market_item
         )
-    
+
     serializer = ChatConversationSerializer(conversation, context={'request': request})
     return Response(serializer.data)
 
@@ -514,39 +588,48 @@ def start_conversation(request):
     description="轮询指定会话的新消息"
 )
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([])
 def poll_messages(request, conversation_id):
     """轮询新消息"""
-    
+
     conversation = get_object_or_404(ChatConversation, pk=conversation_id)
-    user = request.user
-    
+
+    # 获取当前用户
+    user = get_user_from_token(request)
+    if not user:
+        return Response({'error': '未授权访问'}, status=status.HTTP_401_UNAUTHORIZED)
+
     # 检查权限
-    if user not in [conversation.participant1, conversation.participant2]:
-        return Response({'error': '无权限访问此会话'}, 
+    if user.id not in [conversation.participant1_id, conversation.participant2_id]:
+        return Response({'error': '无权限访问此会话'},
                        status=status.HTTP_403_FORBIDDEN)
-    
+
     # 获取指定时间之后的消息
     since = request.query_params.get('since')
     if since:
         try:
-            since_time = timezone.datetime.fromisoformat(since.replace('Z', '+00:00'))
+            from datetime import datetime
+            since_time = datetime.fromisoformat(since.replace('Z', '+00:00'))
             messages = ChatMessage.objects.filter(
-                Q(sender=conversation.participant1, receiver=conversation.participant2) |
-                Q(sender=conversation.participant2, receiver=conversation.participant1),
+                Q(sender_id=conversation.participant1_id, receiver_id=conversation.participant2_id) |
+                Q(sender_id=conversation.participant2_id, receiver_id=conversation.participant1_id),
                 market_item=conversation.market_item,
                 created_at__gt=since_time
             ).select_related('sender', 'receiver').order_by('created_at')
         except (ValueError, TypeError):
-            return Response({'error': '时间格式错误'}, 
+            return Response({'error': '时间格式错误'},
                            status=status.HTTP_400_BAD_REQUEST)
     else:
         messages = ChatMessage.objects.none()
-    
+
     # 标记为已读
     if messages.exists():
-        conversation.mark_as_read(user)
-    
+        if user.id == conversation.participant1_id:
+            conversation.unread_count_p1 = 0
+        else:
+            conversation.unread_count_p2 = 0
+        conversation.save()
+
     serializer = ChatMessageSerializer(messages, many=True, context={'request': request})
     return Response(serializer.data)
 

@@ -55,7 +55,7 @@
   <!-- 底部支付栏 -->
   <van-submit-bar
     wx:if="{{ bills.length > 0 }}"
-    price="{{ totalAmount }}"
+    price="{{ selectedAmount }}"
     button-text="立即缴费 ({{ selectedBills.length }})"
     bind:submit="onSubmit"
     tip="{{ hasOverdueBills }}"

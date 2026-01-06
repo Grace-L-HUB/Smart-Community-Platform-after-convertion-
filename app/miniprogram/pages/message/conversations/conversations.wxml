@@ -1,0 +1,49 @@
+<view class="container">
+  <!-- 加载状态 -->
+  <van-loading wx:if="{{ loading }}" type="spinner" size="20px">加载中...</van-loading>
+
+  <!-- 会话列表 -->
+  <view wx:if="{{ !loading && conversations.length > 0 }}" class="conversation-list">
+    <view
+      class="conversation-item"
+      wx:for="{{ conversations }}"
+      wx:key="id"
+      bindtap="onConversationTap"
+      data-id="{{ item.id }}"
+    >
+      <!-- 头像 -->
+      <view class="avatar-section">
+        <van-image
+          class="avatar"
+          round
+          src="{{ item.userAvatar }}"
+          fit="cover"
+          error-icon="user-o"
+        >
+          <text slot="error" class="avatar-placeholder">{{ item.userName.charAt(0) }}</text>
+        </van-image>
+        <view wx:if="{{ item.unreadCount > 0 }}" class="unread-badge">{{ item.unreadCount > 99 ? '99+' : item.unreadCount }}</view>
+      </view>
+
+      <!-- 内容 -->
+      <view class="content-section">
+        <view class="top-row">
+          <text class="username">{{ item.userName }}</text>
+          <text class="time">{{ item.lastMessageTime }}</text>
+        </view>
+        <view class="bottom-row">
+          <text class="last-message">{{ item.lastMessage }}</text>
+          <view wx:if="{{ item.marketItem }}" class="product-tag">
+            <van-icon name="shop-o" size="12" />
+            <text>{{ item.marketItem.title }}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 空状态 -->
+  <view wx:if="{{ !loading && conversations.length === 0 }}" class="empty-state">
+    <van-empty description="暂无聊天记录" />
+  </view>
+</view>

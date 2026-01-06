@@ -1,17 +1,81 @@
 <view class="chat-container">
-  <scroll-view class="message-list" scroll-y scroll-into-view="{{scrollToView}}">
+  <!-- 商品信息 -->
+  <view wx:if="{{ marketItem }}" class="product-bar" bindtap="viewProduct">
+    <van-image class="product-image" src="{{ marketItem.image }}" fit="cover" />
+    <view class="product-info">
+      <text class="product-title">{{ marketItem.title }}</text>
+      <text class="product-price">¥{{ marketItem.price }}</text>
+    </view>
+    <van-icon name="arrow" color="#969799" />
+  </view>
+
+  <!-- 消息列表 -->
+  <scroll-view class="message-list" scroll-y scroll-into-view="{{scrollToView}}" scroll-top="{{scrollTop}}" scroll-with-animation>
+    <van-loading wx:if="{{ loading }}" type="spinner" size="20px">加载中...</van-loading>
+
     <block wx:for="{{messages}}" wx:key="id">
-      <view id="{{item.id}}" class="message-item {{item.isMe ? 'me' : 'other'}}">
-        <image class="avatar" src="{{item.isMe ? '/image/default-avatar.png' : '/image/default-avatar.png'}}"></image>
-        <view class="content">
-            <view class="bubble">{{item.content}}</view>
-        </view>
+      <view id="msg-{{item.id}}" class="message-item {{item.isSelf ? 'self' : 'other'}}">
+        <!-- 对方消息 -->
+        <block wx:if="{{!item.isSelf}}">
+          <van-image
+            class="avatar"
+            round
+            src="{{item.senderAvatar}}"
+            fit="cover"
+            error-icon="user-o"
+          >
+            <text slot="error" class="avatar-placeholder">{{ item.senderName.charAt(0) }}</text>
+          </van-image>
+          <view class="message-content">
+            <text class="bubble">{{item.content}}</text>
+            <text class="time">{{item.time}}</text>
+          </view>
+        </block>
+
+        <!-- 自己消息 -->
+        <block wx:if="{{item.isSelf}}">
+          <view class="message-content self-content">
+            <text class="bubble self-bubble">{{item.content}}</text>
+            <text class="time">{{item.time}}</text>
+          </view>
+          <van-image
+            class="avatar"
+            round
+            src="{{item.senderAvatar}}"
+            fit="cover"
+            error-icon="user-o"
+          >
+            <text slot="error" class="avatar-placeholder">{{ item.senderName.charAt(0) }}</text>
+          </van-image>
+        </block>
       </view>
     </block>
+
+    <view wx:if="{{messages.length === 0 && !loading}}" class="empty-tip">
+      <text>开始聊天吧~</text>
+    </view>
   </scroll-view>
 
+  <!-- 输入框 -->
   <view class="input-area">
-    <input class="input" type="text" confirm-type="send" value="{{inputValue}}" bindinput="onInput" bindconfirm="onSend" placeholder="发送消息..." />
-    <van-button size="small" type="primary" bind:click="onSend" disabled="{{!inputValue}}">发送</van-button>
+    <input
+      class="input"
+      type="text"
+      confirm-type="send"
+      value="{{inputContent}}"
+      bindinput="onInputChange"
+      bindconfirm="onSend"
+      placeholder="发消息..."
+      placeholder-class="input-placeholder"
+    />
+    <van-button
+      size="small"
+      type="primary"
+      bind:click="onSend"
+      disabled="{{!inputContent}}"
+      color="#07c160"
+    >
+      发送
+    </van-button>
   </view>
 </view>
