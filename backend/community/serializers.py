@@ -205,54 +205,62 @@ class NeighborHelpPostDetailSerializer(serializers.ModelSerializer):
 
 class ChatMessageSerializer(serializers.ModelSerializer):
     """私聊消息序列化器"""
-    
+
     sender = UserSimpleSerializer(read_only=True)
     receiver = UserSimpleSerializer(read_only=True)
+    receiver_id = serializers.IntegerField(write_only=True, required=True)
     time_ago = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = ChatMessage
         fields = [
-            'id', 'market_item', 'sender', 'receiver', 'content', 
+            'id', 'market_item', 'sender', 'receiver', 'receiver_id', 'content',
             'message_type', 'is_read', 'time_ago', 'created_at'
         ]
-        read_only_fields = ['sender', 'is_read']
-    
+        read_only_fields = ['sender', 'receiver', 'is_read']
+
     def get_time_ago(self, obj):
         return MarketItemListSerializer().get_time_ago(obj)
-    
+
     def create(self, validated_data):
-        validated_data['sender'] = self.context['request'].user
+        # 从context中获取发送者用户
+        sender_user = self.context.get('sender_user')
+        if sender_user:
+            validated_data['sender'] = sender_user
         return super().create(validated_data)
 
 
 class ChatConversationSerializer(serializers.ModelSerializer):
     """聊天会话序列化器"""
-    
+
     participant1 = UserSimpleSerializer(read_only=True)
     participant2 = UserSimpleSerializer(read_only=True)
     market_item = MarketItemListSerializer(read_only=True)
     last_message = ChatMessageSerializer(read_only=True)
     unread_count = serializers.SerializerMethodField()
     other_user = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = ChatConversation
         fields = [
-            'id', 'participant1', 'participant2', 'market_item', 
+            'id', 'participant1', 'participant2', 'market_item',
             'last_message', 'unread_count', 'other_user', 'last_message_time'
         ]
-    
+
     def get_unread_count(self, obj):
+        # 从 context 中获取用户，优先使用 cached_user
         request = self.context.get('request')
-        if request and request.user.is_authenticated:
-            return obj.get_unread_count(request.user)
+        user = getattr(request, 'cached_user', None) if request else None
+        if user and user.is_authenticated:
+            return obj.get_unread_count(user)
         return 0
-    
+
     def get_other_user(self, obj):
+        # 从 context 中获取用户，优先使用 cached_user
         request = self.context.get('request')
-        if request and request.user.is_authenticated:
-            if obj.participant1 == request.user:
+        user = getattr(request, 'cached_user', None) if request else None
+        if user:
+            if obj.participant1_id == user.id:
                 return UserSimpleSerializer(obj.participant2).data
             else:
                 return UserSimpleSerializer(obj.participant1).data
