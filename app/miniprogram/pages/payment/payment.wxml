@@ -26,7 +26,7 @@
     
     <van-checkbox-group value="{{ selectedBills }}" bind:change="onBillChange">
       <view class="bill-item" wx:for="{{ bills }}" wx:key="id">
-        <van-checkbox name="{{ item.id || '' }}" checked-color="#07c160" label-class="bill-checkbox-label">
+        <van-checkbox name="{{ item.id }}" checked-color="#07c160" label-class="bill-checkbox-label">
           <view class="bill-content">
             <view class="bill-header">
               <view class="bill-title-section">

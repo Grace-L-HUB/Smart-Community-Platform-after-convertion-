@@ -7,6 +7,7 @@ Page({
     unit: '',
     room: '',
     identity: '',
+    identityText: '',
     name: '',
     phone: '',
     idCard: '',
@@ -14,11 +15,15 @@ Page({
     showPicker: false,
     pickerTitle: '',
     currentColumns: [],
-    pickerType: ''
+    pickerType: '',
+    buildings: [],    // 从后端获取的楼栋列表
+    units: [],        // 从后端获取的单元列表
+    rooms: []         // 从后端获取的房号列表
   },
 
   onLoad() {
     this.loadCommunityInfo()
+    this.loadBuildingOptions()
   },
 
   loadCommunityInfo() {
@@ -28,35 +33,92 @@ Page({
     }
   },
 
+  // 从后端加载楼栋选项
+  loadBuildingOptions() {
+    wx.request({
+      url: API_BASE_URL + '/property/house/options/buildings',
+      method: 'GET',
+      success: (res) => {
+        if (res.statusCode === 200 && res.data.code === 200) {
+          this.setData({ buildings: res.data.data || [] })
+          console.log('楼栋列表加载成功:', this.data.buildings)
+        }
+      },
+      fail: (err) => {
+        console.error('加载楼栋列表失败:', err)
+      }
+    })
+  },
+
+  // 从后端加载单元选项
+  loadUnitOptions(building) {
+    if (!building) return
+
+    wx.request({
+      url: API_BASE_URL + '/property/house/options/units',
+      method: 'GET',
+      data: { building: building },
+      success: (res) => {
+        if (res.statusCode === 200 && res.data.code === 200) {
+          this.setData({ units: res.data.data || [] })
+          console.log('单元列表加载成功:', this.data.units)
+        }
+      },
+      fail: (err) => {
+        console.error('加载单元列表失败:', err)
+      }
+    })
+  },
+
+  // 从后端加载房号选项
+  loadRoomOptions(building, unit) {
+    if (!building || !unit) return
+
+    wx.request({
+      url: API_BASE_URL + '/property/house/options/rooms',
+      method: 'GET',
+      data: { building: building, unit: unit },
+      success: (res) => {
+        if (res.statusCode === 200 && res.data.code === 200) {
+          this.setData({ rooms: res.data.data || [] })
+          console.log('房号列表加载成功:', this.data.rooms)
+        }
+      },
+      fail: (err) => {
+        console.error('加载房号列表失败:', err)
+      }
+    })
+  },
+
   onNameChange(e) {
-    console.log('Name change:', e.detail)
     const value = e.detail || e.detail.value || ''
     this.setData({ name: value })
   },
 
   onPhoneChange(e) {
-    console.log('Phone change:', e.detail)
     const value = e.detail || e.detail.value || ''
     this.setData({ phone: value })
   },
 
   onIdCardChange(e) {
-    console.log('IdCard change:', e.detail)
     const value = e.detail || e.detail.value || ''
     this.setData({ idCard: value })
   },
 
   showBuildingPicker() {
-    const buildings = []
-    for (let i = 1; i <= 20; i++) {
-      buildings.push(`${i}栋`)
+    if (this.data.buildings.length === 0) {
+      wx.showToast({
+        title: '楼栋列表加载中，请稍候',
+        icon: 'none'
+      })
+      return
     }
-    
+
     this.setData({
       showPicker: true,
       pickerTitle: '选择楼栋',
       pickerType: 'building',
-      currentColumns: buildings
+      currentColumns: this.data.buildings
     })
   },
 
@@ -68,17 +130,20 @@ Page({
       })
       return
     }
-    
-    const units = []
-    for (let i = 1; i <= 6; i++) {
-      units.push(`${i}单元`)
+
+    if (this.data.units.length === 0) {
+      wx.showToast({
+        title: '单元列表加载中，请稍候',
+        icon: 'none'
+      })
+      return
     }
-    
+
     this.setData({
       showPicker: true,
       pickerTitle: '选择单元',
       pickerType: 'unit',
-      currentColumns: units
+      currentColumns: this.data.units
     })
   },
 
@@ -90,17 +155,20 @@ Page({
       })
       return
     }
-    
-    const rooms = []
-    for (let i = 1; i <= 30; i++) {
-      rooms.push(`${i}室`)
+
+    if (this.data.rooms.length === 0) {
+      wx.showToast({
+        title: '房号列表加载中或已全部绑定',
+        icon: 'none'
+      })
+      return
     }
-    
+
     this.setData({
       showPicker: true,
       pickerTitle: '选择房号',
       pickerType: 'room',
-      currentColumns: rooms
+      currentColumns: this.data.rooms
     })
   },
 
@@ -123,42 +191,49 @@ Page({
 
   onPickerConfirm(e) {
     console.log('Picker confirm event:', e.detail)
-    const { value, selectedOptions, index } = e.detail
-    const { pickerType } = this.data
-    
+    const { value, index } = e.detail
+    const { pickerType, currentColumns } = this.data
+
     let selectedValue = ''
-    
-    console.log('Picker value:', value)
-    console.log('Picker selectedOptions:', selectedOptions)
-    console.log('Picker index:', index)
-    
-    if (selectedOptions && selectedOptions.length > 0) {
-      selectedValue = selectedOptions[0].value || selectedOptions[0].text
-    } else if (value && value.length > 0) {
-      selectedValue = value[0]
-    } else if (index !== undefined) {
-      const columns = this.data.currentColumns
-      if (columns && columns[index]) {
-        if (typeof columns[index] === 'object') {
-          selectedValue = columns[index].value || columns[index].text
+    let displayValue = ''  // 用于显示的文字
+
+    // Vant Weapp Picker 返回的 index 是正确的0-based索引
+    if (index !== undefined && index !== null) {
+      const actualIndex = index
+      console.log('Picker index:', actualIndex)
+
+      if (Array.isArray(currentColumns) && actualIndex >= 0 && actualIndex < currentColumns.length) {
+        const item = currentColumns[actualIndex]
+        console.log('Selected item:', item)
+
+        if (typeof item === 'object') {
+          selectedValue = item.value !== undefined ? item.value : item.text
+          displayValue = item.text || item.value  // 优先使用 text 作为显示
         } else {
-          selectedValue = columns[index]
+          selectedValue = item
+          displayValue = item
         }
       }
     }
-    
-    console.log('Selected value:', selectedValue)
-    
+
+    console.log('Selected value:', selectedValue, 'Display value:', displayValue)
+
     if (pickerType === 'building') {
-      this.setData({ building: selectedValue })
+      this.setData({ building: displayValue })  // 显示文字
+      // 选择楼栋后，清空单元和房号，并加载单元列表
+      this.setData({ unit: '', room: '' })
+      this.loadUnitOptions(displayValue)
     } else if (pickerType === 'unit') {
-      this.setData({ unit: selectedValue })
+      this.setData({ unit: displayValue })  // 显示文字
+      // 选择单元后，清空房号，并加载房号列表
+      this.setData({ room: '' })
+      this.loadRoomOptions(this.data.building, displayValue)
     } else if (pickerType === 'room') {
-      this.setData({ room: selectedValue })
+      this.setData({ room: displayValue })  // 显示文字
     } else if (pickerType === 'identity') {
-      this.setData({ identity: selectedValue })
+      this.setData({ identity: selectedValue, identityText: displayValue })  // 保存数字和文字
     }
-    
+
     this.setData({ showPicker: false })
   },
 
@@ -185,7 +260,7 @@ Page({
 
     const userInfo = wx.getStorageSync('userInfo')
     console.log('User info:', userInfo)
-    
+
     if (!userInfo || !userInfo.user_id) {
       wx.showToast({
         title: '请先登录',
@@ -201,29 +276,24 @@ Page({
       building_name: building,
       unit_name: unit,
       room_number: room,
-      identity,
+      identity: parseInt(identity),
       applicant_name: name,
       applicant_phone: phone,
       id_card_number: idCard
     }
-    
+
     console.log('Request data:', requestData)
-    console.log('Request data JSON:', JSON.stringify(requestData))
 
     wx.request({
       url: API_BASE_URL + '/property/house/binding/apply',
       method: 'POST',
-      data: JSON.stringify(requestData),
+      data: requestData,
       header: {
-        'Authorization': 'Bearer ' + (wx.getStorageSync('token') || ''),
+        'Authorization': 'Bearer ' + (userInfo.token || ''),
         'Content-Type': 'application/json'
       },
       success: (res) => {
         console.log('Response:', res)
-        console.log('Response data:', res.data)
-        console.log('Response message:', res.data?.message)
-        console.log('Response errors:', res.data?.errors)
-        
         if (res.statusCode === 200 && res.data.code === 200) {
           wx.showToast({
             title: '绑定成功',
@@ -233,25 +303,11 @@ Page({
             wx.navigateBack()
           }, 1500)
         } else {
-          const errorMsg = res.data?.message || res.data?.data?.message || '绑定失败'
-          const errors = res.data?.errors
-          
-          if (errors) {
-            let errorDetails = ''
-            for (const key in errors) {
-              errorDetails += `${key}: ${errors[key].join(', ')}\n`
-            }
-            wx.showModal({
-              title: '提交失败',
-              content: errorMsg + '\n\n' + errorDetails,
-              showCancel: false
-            })
-          } else {
-            wx.showToast({
-              title: errorMsg,
-              icon: 'none'
-            })
-          }
+          const errorMsg = res.data?.message || '绑定失败'
+          wx.showToast({
+            title: errorMsg,
+            icon: 'none'
+          })
         }
       },
       fail: (err) => {
