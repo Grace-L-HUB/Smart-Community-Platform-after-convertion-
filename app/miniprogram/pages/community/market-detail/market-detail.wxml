@@ -27,10 +27,6 @@
           <text class="seller-name">{{seller.name}}</text>
         </view>
       </view>
-      <view class="seller-actions">
-        <van-button size="small" round plain type="primary" icon="chat-o" bind:click="onChat">私聊</van-button>
-        <van-button size="small" round plain type="primary" icon="phone-o" bind:click="onContact">电话</van-button>
-      </view>
     </view>
   </view>
 

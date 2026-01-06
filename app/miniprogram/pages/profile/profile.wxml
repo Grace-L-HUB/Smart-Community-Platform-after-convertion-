@@ -61,6 +61,19 @@
     </van-grid>
   </view>
 
+  <!-- Message -->
+  <view class="section-card mt-20 p-30">
+    <van-cell-group inset>
+      <van-cell
+        title="我的消息"
+        icon="chat-o"
+        is-link
+        link-type="navigateTo"
+        url="/pages/message/conversations/conversations"
+        value="查看所有聊天" />
+    </van-cell-group>
+  </view>
+
     <!-- Menu List -->
     <view class="menu-list mt-20 p-30">
       <van-cell-group inset>
