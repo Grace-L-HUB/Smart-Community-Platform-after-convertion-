@@ -235,7 +235,7 @@ import dayjs from 'dayjs'
 import { useAuthStore } from '@/stores/auth'
 
 // API服务
-const API_BASE = 'http://127.0.0.1:8000/api'
+const API_BASE = 'http://139.224.17.154:8000/api'
 
 // 认证store
 const authStore = useAuthStore()
