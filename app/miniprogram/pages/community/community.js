@@ -114,7 +114,8 @@ Page({
                 can_register: item.can_register || false,
                 user_registered: item.user_registered || false,
                 organizer: item.organizer,
-                banner: 'https://picsum.photos/seed/' + item.id + '/400/200',
+                image: item.image || null,
+                banner: item.image || 'https://picsum.photos/seed/' + item.id + '/400/200',
                 time_display: this.formatDateTime(item.start_time, item.end_time),
                 status_text: this.getStatusText(item.status),
                 status_color: this.getStatusColor(item.status)
