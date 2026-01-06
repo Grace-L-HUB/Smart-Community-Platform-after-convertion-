@@ -239,12 +239,16 @@ class WeChatLoginView(APIView):
 
     def post(self, request):
         serializer = WeChatLoginSerializer(data=request.data)
+        # Log incoming request for debugging (do not log secrets)
+        received_code = request.data.get('code')
+        logger.debug(f"WeChatLoginView POST received keys={list(request.data.keys())}, code_len={len(received_code) if received_code else 0}")
         if serializer.is_valid():
             code = serializer.validated_data['code']
             
             # 1. 换取 openid
             success, message, data = WeChatService.get_session_info(code)
             if not success:
+                logger.error(f"WeChatLogin failed during session exchange: {message}")
                 return Response({"code": 400, "message": message}, status=status.HTTP_400_BAD_REQUEST)
             
             openid = data.get("openid")
@@ -281,6 +285,7 @@ class WeChatLoginView(APIView):
                     }
                 })
         
+        logger.debug(f"WeChatLogin serializer errors: {serializer.errors}")
         return Response({"code": 400, "message": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 
