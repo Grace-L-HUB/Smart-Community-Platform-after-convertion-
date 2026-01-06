@@ -27,7 +27,10 @@
           <text class="seller-name">{{seller.name}}</text>
         </view>
       </view>
-      <van-button size="small" round plain type="primary" bind:click="onContact">联系卖家</van-button>
+      <view class="seller-actions">
+        <van-button size="small" round plain type="primary" icon="chat-o" bind:click="onChat">私聊</van-button>
+        <van-button size="small" round plain type="primary" icon="phone-o" bind:click="onContact">电话</van-button>
+      </view>
     </view>
   </view>
 
@@ -54,7 +57,7 @@
       <text class="action-text" style="color: {{isFavorited ? '#ff6034' : ''}}">{{isFavorited ? '已收藏' : '收藏'}}</text>
     </view>
     <view class="action-buttons">
-      <van-button round plain type="primary" bind:click="onContact">联系卖家</van-button>
+      <van-button round plain type="primary" icon="chat-o" bind:click="onChat">私聊</van-button>
       <van-button round color="#07c160" bind:click="onWant">我想要</van-button>
     </view>
   </view>

@@ -36,6 +36,7 @@
     "pages/express/express",
     "pages/quick-actions-config/quick-actions-config",
     "pages/qrcode/qrcode",
+    "pages/message/conversations/conversations",
     "pages/message/chat/chat",
     "pages/coupon/list/list",
     "pages/coupon/market/market",

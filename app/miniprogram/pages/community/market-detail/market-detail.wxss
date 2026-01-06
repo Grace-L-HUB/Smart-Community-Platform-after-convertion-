@@ -77,6 +77,11 @@
   color: var(--text-gray);
 }
 
+.seller-actions {
+  display: flex;
+  gap: 16rpx;
+}
+
 .desc-section,
 .details-section {
   margin: 0 24rpx 24rpx;

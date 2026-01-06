@@ -116,6 +116,71 @@ Page({
     }
   },
 
+  onChat() {
+    const { item, seller } = this.data
+    const userInfo = wx.getStorageSync('userInfo') || {}
+
+    if (!userInfo.user_id) {
+      wx.showToast({
+        title: '请先登录',
+        icon: 'none'
+      })
+      return
+    }
+
+    // 检查是否是自己的商品
+    if (item.seller?.id === userInfo.user_id) {
+      wx.showToast({
+        title: '不能与自己聊天',
+        icon: 'none'
+      })
+      return
+    }
+
+    if (!item.seller?.id) {
+      wx.showToast({
+        title: '卖家信息错误',
+        icon: 'none'
+      })
+      return
+    }
+
+    wx.showLoading({ title: '加载中...' })
+
+    wx.request({
+      url: API_BASE_URL + '/community/conversations/start/',
+      method: 'POST',
+      data: {
+        target_user_id: item.seller.id,
+        market_item_id: item.id
+      },
+      header: {
+        'Authorization': 'Bearer ' + (userInfo.token || ''),
+        'Content-Type': 'application/json'
+      },
+      success: (res) => {
+        wx.hideLoading()
+        if (res.statusCode === 200 || res.statusCode === 201) {
+          wx.navigateTo({
+            url: '/pages/message/chat/chat?id=' + res.data.id
+          })
+        } else {
+          wx.showToast({
+            title: '创建会话失败',
+            icon: 'none'
+          })
+        }
+      },
+      fail: () => {
+        wx.hideLoading()
+        wx.showToast({
+          title: '网络错误',
+          icon: 'none'
+        })
+      }
+    })
+  },
+
   onWant() {
     const { item } = this.data
 

@@ -260,10 +260,6 @@ Page({
         });
     },
 
-    onChatClick(_e) {
-        wx.showToast({ title: '打开聊天窗口', icon: 'none' });
-    },
-
     onHelpClick(e) {
         const id = e.currentTarget.dataset.id;
         wx.navigateTo({
