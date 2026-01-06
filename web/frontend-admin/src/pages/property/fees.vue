@@ -403,12 +403,14 @@
                 density="compact"
                 class="mb-2"
               >
-                <template v-slot prepend>
+                <template v-slot:prepend>
                   <v-icon icon="mdi-information" />
                 </template>
-                <span class="text-caption">
-                  {{ selectedBill.is_overdue ? '此账单已逾期，请尽快催缴' : '此账单待缴费' }}
-                </span>
+                <template v-slot:default>
+                  <span class="text-caption">
+                    {{ selectedBill.is_overdue ? '此账单已逾期，请尽快催缴' : '此账单待缴费' }}
+                  </span>
+                </template>
               </v-alert>
 
               <v-alert
@@ -417,10 +419,12 @@
                 variant="tonal"
                 density="compact"
               >
-                <template v-slot prepend>
+                <template v-slot:prepend>
                   <v-icon icon="mdi-check-circle" />
                 </template>
-                <span class="text-caption">此账单已完成缴费</span>
+                <template v-slot:default>
+                  <span class="text-caption">此账单已完成缴费</span>
+                </template>
               </v-alert>
             </v-col>
           </v-row>
