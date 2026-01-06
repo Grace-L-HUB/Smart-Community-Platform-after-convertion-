@@ -194,8 +194,8 @@ SPECTACULAR_SETTINGS = {
 AUTH_USER_MODEL = 'users.User'
 
 # WeChat Configuration
-WECHAT_APP_ID = os.getenv('WECHAT_APP_ID') or 'wx76f88d4df468af72'  # Fallback if env var is empty or unset
-WECHAT_APP_SECRET = os.getenv('WECHAT_APP_SECRET') or 'e8d2cd917739c6c4d20116fbd5c7f5fc'  # Fallback if env var is empty or unset
+WECHAT_APP_ID = os.getenv('WECHAT_APP_ID') or 'wx1cf1167b27de2500'  # Fallback if env var is empty or unset
+WECHAT_APP_SECRET = os.getenv('WECHAT_APP_SECRET') or ''  # Fallback if env var is empty or unset
 
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
@@ -248,3 +248,41 @@ CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',') if os.ge
 # 部分API不需要CSRF token
 CSRF_COOKIE_SECURE = False
 CSRF_COOKIE_SAMESITE = None
+
+# Logging configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
+            'propagate': False,
+        },
+        'users': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    },
+}

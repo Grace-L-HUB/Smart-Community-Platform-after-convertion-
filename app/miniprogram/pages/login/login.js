@@ -110,13 +110,16 @@ Page({
 
         wx.login({
             success: (res) => {
+                console.log('wx.login success:', res)
                 if (res.code) {
+                    console.log('Sending code to backend:', res.code)
                     wx.request({
                         url: API_AUTH_URL + '/auth/wechat-login',
                         method: 'POST',
                         data: { code: res.code },
                         success: (apiRes) => {
                             wx.hideLoading()
+                            console.log('WeChat login response:', apiRes)
                             if (apiRes.statusCode === 200 && apiRes.data.code === 200) {
                                 const data = apiRes.data.data
                                 if (data.need_profile) {
@@ -129,18 +132,26 @@ Page({
                                     this.loginSuccess(data)
                                 }
                             } else {
+                                console.error('WeChat login failed:', apiRes.data)
                                 wx.showToast({ title: apiRes.data.message || '登录失败', icon: 'none' })
                             }
                         },
-                        fail: () => {
+                        fail: (err) => {
                             wx.hideLoading()
+                            console.error('WeChat login request failed:', err)
                             wx.showToast({ title: '请求失败', icon: 'none' })
                         }
                     })
                 } else {
                     wx.hideLoading()
+                    console.error('Failed to get code from wx.login')
                     wx.showToast({ title: '获取code失败', icon: 'none' })
                 }
+            },
+            fail: (err) => {
+                wx.hideLoading()
+                console.error('wx.login failed:', err)
+                wx.showToast({ title: '微信登录失败', icon: 'none' })
             }
         })
     },
