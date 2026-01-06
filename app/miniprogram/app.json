@@ -34,6 +34,7 @@
     "pages/profile/my-posts/my-posts",
     "pages/profile/settings/settings",
     "pages/express/express",
+    "pages/quick-actions-config/quick-actions-config",
     "pages/qrcode/qrcode",
     "pages/message/chat/chat",
     "pages/coupon/list/list",

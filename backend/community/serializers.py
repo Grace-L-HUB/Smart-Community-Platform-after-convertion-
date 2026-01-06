@@ -376,6 +376,7 @@ class ActivityDetailSerializer(serializers.ModelSerializer):
     # 重新定义时间字段，用于前端显示和编辑
     start_time = serializers.DateTimeField(format='%Y-%m-%dT%H:%M')
     end_time = serializers.DateTimeField(format='%Y-%m-%dT%H:%M')
+    created_at = serializers.DateTimeField(format='%Y-%m-%d %H:%M:%S')
     
     class Meta:
         model = Activity
@@ -384,9 +385,9 @@ class ActivityDetailSerializer(serializers.ModelSerializer):
             'max_participants', 'current_participants', 'status', 'organizer',
             'is_active', 'images', 'registrations',
             'time_ago', 'view_count', 'registration_progress', 'can_register',
-            'user_registered', 'is_organizer', 'uploaded_images'
+            'user_registered', 'is_organizer', 'uploaded_images', 'created_at'
         ]
-        read_only_fields = ['organizer', 'current_participants', 'view_count']
+        read_only_fields = ['organizer', 'current_participants', 'view_count', 'created_at']
     
     def get_time_ago(self, obj):
         return ActivityListSerializer().get_time_ago(obj)

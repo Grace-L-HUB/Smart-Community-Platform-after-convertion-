@@ -22,11 +22,11 @@
         <view class="house-info">
           <view class="info-item">
             <van-icon name="user-o" size="16px" />
-            <text>业主：{{item.house_info.owner_name}}</text>
+            <text>业主：{{item.applicant_info.name}}</text>
           </view>
           <view class="info-item">
             <van-icon name="phone-o" size="16px" />
-            <text>{{item.house_info.owner_phone}}</text>
+            <text>{{item.applicant_info.phone}}</text>
           </view>
           <view class="info-item" wx:if="{{item.house_info.area}}">
             <van-icon name="wap-home-o" size="16px" />

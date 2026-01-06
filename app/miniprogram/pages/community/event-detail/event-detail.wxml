@@ -1,37 +1,47 @@
-<view class="container">
+<view class="container" wx:if="{{!loading}}">
   <!-- Event Banner -->
-  <image class="event-banner" src="{{banner}}" mode="aspectFill"></image>
+  <swiper class="event-banner" indicator-dots="{{event.images.length > 1}}" autoplay circular>
+    <swiper-item wx:if="{{event.images.length === 0}}">
+      <image class="banner-image" src="https://picsum.photos/seed/{{event.id}}/750/400" mode="aspectFill"></image>
+    </swiper-item>
+    <swiper-item wx:for="{{event.images}}" wx:key="*this">
+      <image class="banner-image" src="{{item}}" mode="aspectFill" bind:tap="onImagePreview" data-src="{{item}}"></image>
+    </swiper-item>
+  </swiper>
 
   <!-- Event Info -->
   <view class="card event-info">
-    <text class="event-title">{{title}}</text>
-    
+    <text class="event-title">{{event.title}}</text>
+
     <view class="info-row">
       <van-icon name="clock-o" size="18px" color="#07c160" />
-      <text class="info-text">{{time}}</text>
+      <text class="info-text">{{event.startTime}} - {{event.endTime}}</text>
     </view>
-    
+
     <view class="info-row">
       <van-icon name="location-o" size="18px" color="#07c160" />
-      <text class="info-text">{{location}}</text>
+      <text class="info-text">{{event.location}}</text>
     </view>
-    
+
     <view class="info-row">
-      <van-icon name="friends-o" size="18px" color="#07c160" />
-      <text class="info-text">已报名 {{enrolledCount}}/{{maxCount}} 人</text>
+      <van-icon name="eye-o" size="18px" color="#07c160" />
+      <text class="info-text">{{event.viewCount}} 次浏览</text>
     </view>
 
     <view class="tags-row">
-      <van-tag type="{{status_color}}">{{status_text}}</van-tag>
+      <van-tag type="{{event.statusColor || 'default'}}">{{event.statusText}}</van-tag>
     </view>
 
     <!-- 报名进度条 -->
-    <view class="progress-section">
-      <text class="progress-text">报名进度</text>
-      <van-progress 
-        percentage="{{(enrolledCount/maxCount)*100}}" 
-        stroke-width="6" 
-        color="#07c160" 
+    <view class="progress-section" wx:if="{{event.maxParticipants > 0}}">
+      <view class="progress-header">
+        <text class="progress-text">报名进度</text>
+        <text class="progress-count">{{event.currentParticipants}}/{{event.maxParticipants}}人</text>
+      </view>
+      <van-progress
+        percentage="{{event.registrationProgress}}"
+        stroke-width="6"
+        color="#07c160"
         inactive-color="#f2f3f5"
         show-pivot="{{false}}"
       />
@@ -39,94 +49,40 @@
   </view>
 
   <!-- Event Description -->
-  <view class="card desc-section">
+  <view class="card desc-section" wx:if="{{event.description}}">
     <view class="section-title">活动详情</view>
-    <text class="desc-text">{{description}}</text>
-  </view>
-
-  <!-- Activity Status -->
-  <view class="card status-section">
-    <view class="section-title">活动状态</view>
-    <view class="status-info">
-      <view class="status-item">
-        <text class="status-label">当前状态：</text>
-        <van-tag type="{{status_color}}">{{status_text}}</van-tag>
-      </view>
-      <view class="status-item" wx:if="{{user_registered}}">
-        <text class="status-label">您的状态：</text>
-        <van-tag type="primary">已报名</van-tag>
-      </view>
-    </view>
-  </view>
-
-  <!-- Enrolled Users -->
-  <view class="card enrolled-section">
-    <view class="section-header">
-      <text class="section-title">已报名用户</text>
-      <text class="count-text">{{enrolledCount}}人</text>
-    </view>
-    
-    <view class="enrolled-list" wx:if="{{participants.length > 0}}">
-      <view class="participant-item" wx:for="{{participants}}" wx:key="id">
-        <image 
-          class="enrolled-avatar" 
-          src="{{item.avatar}}"
-        ></image>
-        <view class="participant-info">
-          <text class="participant-name">{{item.name}}</text>
-        </view>
-      </view>
-      <view class="more-users" wx:if="{{enrolledCount > participants.length}}">
-        <text>+{{enrolledCount - participants.length}}</text>
-      </view>
-    </view>
-
-    <view class="empty-enrolled" wx:else>
-      <text class="empty-text">暂无报名</text>
-    </view>
+    <text class="desc-text">{{event.description}}</text>
   </view>
 
   <!-- Organizer Info -->
   <view class="card organizer-section">
     <view class="section-title">组织者</view>
     <view class="organizer-info">
-      <image 
-        class="organizer-logo" 
-        src="{{organizer.logo || '/image/default-avatar.png'}}"
+      <image
+        class="organizer-avatar"
+        src="{{event.organizerAvatar}}"
+        binderror="onImageError"
       ></image>
       <view class="organizer-details">
-        <text class="organizer-name">{{organizer.name}}</text>
-        <text class="organizer-desc">{{organizer.description}}</text>
+        <text class="organizer-name">{{event.organizer}}</text>
+        <text class="organizer-time">发布于 {{event.createdAt}}</text>
       </view>
     </view>
   </view>
 
   <!-- Action Button -->
   <view class="action-bar">
-    <view class="action-left">
-      <van-icon 
-        name="{{isFavorite ? 'star' : 'star-o'}}" 
-        size="24px" 
-        color="{{isFavorite ? '#ff9800' : '#999'}}"
-        bind:click="onFavorite" 
-      />
-      <text class="action-text">收藏</text>
-    </view>
-    
-    <view class="action-buttons">
-      <van-button round plain bind:click="onShare">
-        <van-icon name="share-o" size="16px" />
-        分享
-      </van-button>
-      <van-button 
-        round 
-        color="{{user_registered ? '#ff6b6b' : '#07c160'}}" 
-        bind:click="onEnroll"
-        disabled="{{!can_register && !user_registered}}"
-        loading="{{loading}}"
-      >
-        {{user_registered ? '取消报名' : (can_register ? '立即报名' : '暂不可报名')}}
-      </van-button>
-    </view>
+    <van-button
+      block
+      round
+      color="{{isRegistered ? '#ff6b6b' : '#07c160'}}"
+      bind:click="{{isRegistered ? 'onCancelRegistration' : 'onJoinEvent'}}"
+      disabled="{{!isRegistered && !canRegister}}"
+    >
+      {{isRegistered ? '取消报名' : (canRegister ? '立即报名' : '暂不可报名')}}
+    </van-button>
   </view>
 </view>
+
+<!-- Loading -->
+<van-loading wx:if="{{loading}}" type="spinner" color="#07c160" vertical>加载中...</van-loading>
