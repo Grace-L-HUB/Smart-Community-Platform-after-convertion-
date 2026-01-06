@@ -307,7 +307,10 @@ class Activity(models.Model):
     # 发布者信息
     organizer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
                                  related_name='organized_activities', verbose_name="组织者")
-    
+
+    # 活动封面图
+    image = models.ImageField(upload_to='activity_images/', null=True, blank=True, verbose_name="活动封面图")
+
     # 活动设置
     is_active = models.BooleanField(default=True, verbose_name="是否有效")
     

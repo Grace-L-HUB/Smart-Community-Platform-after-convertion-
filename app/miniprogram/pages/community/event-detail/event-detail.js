@@ -79,6 +79,7 @@ Page({
             organizer: data.organizer?.display_name || data.organizer?.nickname || '未知',
             organizerAvatar: data.organizer?.avatar || 'https://picsum.photos/seed/default/100/100',
             viewCount: data.view_count || 0,
+            image: data.image || null,
             images: data.images?.map(img => img.image) || [],
             createdAt: this.formatCreatedTime(data.created_at)
         };
@@ -143,12 +144,16 @@ Page({
                 'Content-Type': 'application/json'
             },
             success: (res) => {
-                if (res.statusCode === 200 && res.data.code === 200) {
+                if ((res.statusCode === 200 || res.statusCode === 201) && res.data.code === 200) {
                     wx.showToast({
                         title: '报名成功',
-                        icon: 'success'
+                        icon: 'success',
+                        duration: 1500
                     });
-                    this.loadEventDetail(eventId);
+                    // 延迟刷新，确保 Toast 显示后再刷新
+                    setTimeout(() => {
+                        this.loadEventDetail(eventId);
+                    }, 200);
                 } else {
                     wx.showToast({
                         title: res.data?.message || '报名失败',
@@ -180,7 +185,7 @@ Page({
 
         wx.request({
             url: API_BASE_URL + '/community/activities/' + eventId + '/cancel/',
-            method: 'POST',
+            method: 'DELETE',
             header: {
                 'Authorization': 'Bearer ' + token,
                 'Content-Type': 'application/json'
@@ -189,9 +194,13 @@ Page({
                 if (res.statusCode === 200 && res.data.code === 200) {
                     wx.showToast({
                         title: '已取消报名',
-                        icon: 'success'
+                        icon: 'success',
+                        duration: 1500
                     });
-                    this.loadEventDetail(eventId);
+                    // 延迟刷新，确保 Toast 显示后再刷新
+                    setTimeout(() => {
+                        this.loadEventDetail(eventId);
+                    }, 200);
                 } else {
                     wx.showToast({
                         title: res.data?.message || '取消失败',

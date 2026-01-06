@@ -1,13 +1,10 @@
 <view class="container" wx:if="{{!loading}}">
   <!-- Event Banner -->
-  <swiper class="event-banner" indicator-dots="{{event.images.length > 1}}" autoplay circular>
-    <swiper-item wx:if="{{event.images.length === 0}}">
-      <image class="banner-image" src="https://picsum.photos/seed/{{event.id}}/750/400" mode="aspectFill"></image>
-    </swiper-item>
-    <swiper-item wx:for="{{event.images}}" wx:key="*this">
-      <image class="banner-image" src="{{item}}" mode="aspectFill" bind:tap="onImagePreview" data-src="{{item}}"></image>
-    </swiper-item>
-  </swiper>
+  <image
+    class="event-banner"
+    src="{{event.image || 'https://picsum.photos/seed/' + event.id + '/750/400'}}"
+    mode="aspectFill"
+  ></image>
 
   <!-- Event Info -->
   <view class="card event-info">

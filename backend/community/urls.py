@@ -13,7 +13,10 @@ from .views import (
 
     # 社区活动相关
     ActivityListCreateView, ActivityDetailView, register_activity,
-    cancel_registration, activity_participants, my_activities
+    cancel_registration, activity_participants, my_activities,
+
+    # 图片上传相关
+    CommunityImageUploadView,
 )
 
 urlpatterns = [
@@ -89,4 +92,7 @@ urlpatterns = [
     
     # 用户参与的活动
     path('my-activities/', my_activities, name='my_activities'),
+
+    # 图片上传
+    path('upload/image/', CommunityImageUploadView.as_view(), name='community_image_upload'),
 ]
