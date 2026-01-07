@@ -11,10 +11,10 @@ class SMSService:
     """短信验证服务"""
     
     # 短信验证码模板ID
-    TEMPLATE_ID = "BYEgRjn7dXrw5x7o"
+    TEMPLATE_ID = "VenlAgylR9C6STLb9PxKQA"
     
     # 短信验证API基础URL
-    BASE_URL = "https://push.spug.cc/send"
+    BASE_URL = "https://push.spug.cc"
     
     # 验证码有效期（秒）- 10分钟
     CODE_EXPIRE_TIME = 600
@@ -27,13 +27,13 @@ class SMSService:
     @classmethod
     def send_sms(cls, phone, code):
         try:
-            url = f"{cls.BASE_URL}/{cls.TEMPLATE_ID}"
-            params = {
+            url = f"{cls.BASE_URL}/sms/{cls.TEMPLATE_ID}"
+            body = {
                 "code": code,
-                "targets": phone
+                "to": phone
             }
             
-            response = requests.get(url, params=params, timeout=30)
+            response = requests.post(url, json=body, timeout=30)
             response_data = response.json()
             
             # 根据返回的状态码判断是否成功
