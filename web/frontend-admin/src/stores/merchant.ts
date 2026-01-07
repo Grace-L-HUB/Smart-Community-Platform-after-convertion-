@@ -252,10 +252,39 @@ export const useMerchantStore = defineStore('merchant', {
             }
         },
 
-        deleteProduct(id: number) {
-            const index = this.products.findIndex(p => p.id === id)
-            if (index > -1) {
-                this.products.splice(index, 1)
+        async deleteProduct(id: number) {
+            try {
+                const response = await merchantProductApi.deleteProduct(id)
+                if (response.success) {
+                    // 从本地移除商品
+                    const index = this.products.findIndex(p => p.id === id)
+                    if (index > -1) {
+                        this.products.splice(index, 1)
+                    }
+                } else {
+                    throw new Error(response.message || '删除失败')
+                }
+            } catch (error) {
+                console.error('删除商品失败:', error)
+                throw error
+            }
+        },
+
+        async toggleProductStatus(id: number) {
+            try {
+                const response = await merchantProductApi.toggleProductStatus(id)
+                if (response.success && response.data) {
+                    // 更新本地商品状态（只更新返回的字段）
+                    const index = this.products.findIndex(p => p.id === id)
+                    if (index > -1 && this.products[index]) {
+                        Object.assign(this.products[index] as object, response.data)
+                    }
+                    return response.data as MerchantProduct
+                }
+                throw new Error(response.message || '操作失败')
+            } catch (error) {
+                console.error('切换商品状态失败:', error)
+                throw error
             }
         },
 
