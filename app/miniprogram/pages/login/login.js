@@ -50,11 +50,6 @@ Page({
                     wx.showToast({ title: '验证码已发送', icon: 'success' })
                     const userExists = res.data.data.user_exists
                     this.setData({ isUserExists: userExists })
-
-                    if (res.data.data.code) {
-                        console.log('DEV ONLY: SMS Code is', res.data.data.code)
-                        wx.showModal({ title: '测试验证码', content: res.data.data.code, showCancel: false })
-                    }
                 } else {
                     wx.showToast({ title: res.data.message || '发送失败', icon: 'none' })
                 }

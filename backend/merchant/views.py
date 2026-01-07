@@ -728,12 +728,10 @@ class MerchantProductDetailView(APIView):
             )
 
             if serializer.is_valid():
-                # 如果有通过 URL 上传的图片路径，手动设置
+                # 如果有通过 URL 上传的图片路径，先设置到serializer的validated_data
                 if hasattr(serializer, '_image_url_path') and serializer._image_url_path:
-                    product.image = serializer._image_url_path
-                    product.save()
-                else:
-                    product = serializer.save()
+                    serializer.validated_data['image'] = serializer._image_url_path
+                product = serializer.save()
 
                 return Response({
                     'success': True,
